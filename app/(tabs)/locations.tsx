@@ -1,52 +1,246 @@
-import { View, Text, ScrollView, Pressable } from 'react-native';
-import { useStyles } from '../../src/theme';
+import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert, Switch } from 'react-native';
+import { useState, useEffect } from 'react';
+import { useStyles, useTokens } from '../../src/theme';
+import { useLocationsStore } from '../../src/stores/locationsStore';
+import { useAuthStore } from '../../src/stores/authStore';
+import { useDeviceLocation } from '../../src/hooks/useLocation';
+import { TIER_LIMITS } from '../../src/types';
 import type { ThemeTokens } from '../../src/theme';
+import type { WatchLocation } from '../../src/types';
 
 export default function LocationsScreen() {
   const styles = useStyles(createStyles);
+  const tokens = useTokens();
+  const profile = useAuthStore((s) => s.profile);
+  const { locations, loading, loadLocations, addLocation, removeLocation, toggleLocation } =
+    useLocationsStore();
+  const { getLocation, loading: geoLoading, error: geoError } = useDeviceLocation();
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [name, setName] = useState('');
+  const [lat, setLat] = useState('');
+  const [lon, setLon] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const tier = profile?.subscription_tier ?? 'free';
+  const limits = TIER_LIMITS[tier];
+  const atLimit = locations.length >= limits.maxLocations;
+
+  useEffect(() => {
+    loadLocations();
+  }, []);
+
+  const handleUseDeviceLocation = async () => {
+    const result = await getLocation();
+    if (result) {
+      setLat(result.latitude.toString());
+      setLon(result.longitude.toString());
+    }
+  };
+
+  const handleAdd = async () => {
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lon);
+    if (!name.trim() || isNaN(latitude) || isNaN(longitude)) return;
+
+    setSaving(true);
+    await addLocation(name.trim(), latitude, longitude);
+    setShowAdd(false);
+    setName('');
+    setLat('');
+    setLon('');
+    setSaving(false);
+  };
+
+  const handleDelete = (loc: WatchLocation) => {
+    Alert.alert(
+      'Remove Location',
+      `Remove "${loc.name}"? Alert rules for this location will also be deleted.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: () => removeLocation(loc.id) },
+      ]
+    );
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Monitored Locations</Text>
-      <Text style={styles.subtitle}>
-        Add locations to monitor weather conditions. Free tier: 1 location.
-      </Text>
-
-      {/* Empty state */}
-      <View style={styles.emptyCard}>
-        <Text style={styles.emptyIcon}>📍</Text>
-        <Text style={styles.emptyTitle}>No locations yet</Text>
-        <Text style={styles.emptyBody}>
-          Add your first location to start receiving weather alerts.
-        </Text>
-        <Pressable style={styles.addButton}>
-          <Text style={styles.addButtonText}>+ Add Location</Text>
-        </Pressable>
+      <View style={styles.headerRow}>
+        <View>
+          <Text style={styles.title}>Locations</Text>
+          <Text style={styles.subtitle}>
+            {locations.length}/{limits.maxLocations} locations ({tier} tier)
+          </Text>
+        </View>
+        {!atLimit && (
+          <Pressable
+            style={styles.addHeaderButton}
+            onPress={() => setShowAdd(!showAdd)}
+          >
+            <Text style={styles.addHeaderButtonText}>{showAdd ? 'Cancel' : '+ Add'}</Text>
+          </Pressable>
+        )}
       </View>
+
+      {/* Add location form */}
+      {showAdd && (
+        <View style={styles.addCard}>
+          <TextInput
+            style={styles.input}
+            placeholder="Location name (e.g., North Pasture)"
+            placeholderTextColor={tokens.textTertiary}
+            value={name}
+            onChangeText={setName}
+          />
+          <Pressable style={styles.geoButton} onPress={handleUseDeviceLocation} disabled={geoLoading}>
+            {geoLoading ? (
+              <ActivityIndicator size="small" color={tokens.primary} />
+            ) : (
+              <Text style={styles.geoButtonText}>Use My Current Location</Text>
+            )}
+          </Pressable>
+          {geoError && <Text style={styles.errorText}>{geoError}</Text>}
+          <View style={styles.coordRow}>
+            <TextInput
+              style={[styles.input, styles.coordInput]}
+              placeholder="Latitude"
+              placeholderTextColor={tokens.textTertiary}
+              keyboardType="numeric"
+              value={lat}
+              onChangeText={setLat}
+            />
+            <TextInput
+              style={[styles.input, styles.coordInput]}
+              placeholder="Longitude"
+              placeholderTextColor={tokens.textTertiary}
+              keyboardType="numeric"
+              value={lon}
+              onChangeText={setLon}
+            />
+          </View>
+          <Pressable
+            style={[
+              styles.saveButton,
+              (!name.trim() || !lat || !lon) && styles.saveButtonDisabled,
+            ]}
+            onPress={handleAdd}
+            disabled={!name.trim() || !lat || !lon || saving}
+          >
+            <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Location'}</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* Location list */}
+      {loading && locations.length === 0 ? (
+        <ActivityIndicator size="large" color={tokens.primary} style={{ marginTop: 40 }} />
+      ) : locations.length === 0 && !showAdd ? (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyIcon}>📍</Text>
+          <Text style={styles.emptyTitle}>No locations yet</Text>
+          <Text style={styles.emptyBody}>
+            Add your first location to start receiving weather alerts.
+          </Text>
+          <Pressable style={styles.emptyButton} onPress={() => setShowAdd(true)}>
+            <Text style={styles.emptyButtonText}>+ Add Location</Text>
+          </Pressable>
+        </View>
+      ) : (
+        locations.map((loc) => (
+          <View key={loc.id} style={styles.locationCard}>
+            <View style={styles.locationHeader}>
+              <Text style={styles.locationName}>{loc.name}</Text>
+              <Switch
+                value={loc.is_active}
+                onValueChange={(val) => toggleLocation(loc.id, val)}
+                trackColor={{ false: tokens.border, true: tokens.primaryLight }}
+                thumbColor={loc.is_active ? tokens.primary : tokens.textTertiary}
+              />
+            </View>
+            <Text style={styles.locationCoords}>
+              {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}
+            </Text>
+            <Pressable onPress={() => handleDelete(loc)}>
+              <Text style={styles.deleteText}>Remove</Text>
+            </Pressable>
+          </View>
+        ))
+      )}
+
+      {atLimit && !showAdd && (
+        <View style={styles.limitCard}>
+          <Text style={styles.limitText}>
+            You've reached the {tier} tier limit of {limits.maxLocations} location
+            {limits.maxLocations > 1 ? 's' : ''}. Upgrade to add more.
+          </Text>
+        </View>
+      )}
     </ScrollView>
   );
 }
 
 const createStyles = (t: ThemeTokens) => ({
-  container: {
-    flex: 1 as const,
-    backgroundColor: t.background,
+  container: { flex: 1 as const, backgroundColor: t.background },
+  content: { padding: 20, paddingBottom: 40 },
+  headerRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'flex-start' as const,
+    marginBottom: 16,
   },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
+  title: { fontSize: 24, fontWeight: '700' as const, color: t.textPrimary },
+  subtitle: { fontSize: 13, color: t.textTertiary, marginTop: 2 },
+  addHeaderButton: {
+    backgroundColor: t.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700' as const,
+  addHeaderButtonText: { color: t.textOnPrimary, fontWeight: '600' as const, fontSize: 14 },
+
+  // Add form
+  addCard: {
+    backgroundColor: t.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: t.borderLight,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: t.border,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    fontSize: 15,
     color: t.textPrimary,
-    marginBottom: 4,
+    backgroundColor: t.inputBackground,
+    marginBottom: 10,
   },
-  subtitle: {
-    fontSize: 14,
-    color: t.textSecondary,
-    marginBottom: 20,
+  geoButton: {
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: t.primary,
+    alignItems: 'center' as const,
+    marginBottom: 10,
   },
+  geoButtonText: { color: t.primary, fontWeight: '600' as const, fontSize: 14 },
+  errorText: { color: t.error, fontSize: 13, marginBottom: 8 },
+  coordRow: { flexDirection: 'row' as const, gap: 10 },
+  coordInput: { flex: 1 as const },
+  saveButton: {
+    backgroundColor: t.primary,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center' as const,
+    marginTop: 4,
+  },
+  saveButtonDisabled: { backgroundColor: t.primaryDisabled },
+  saveButtonText: { color: t.textOnPrimary, fontWeight: '600' as const, fontSize: 16 },
+
+  // Empty state
   emptyCard: {
     backgroundColor: t.card,
     borderRadius: 12,
@@ -55,32 +249,36 @@ const createStyles = (t: ThemeTokens) => ({
     borderWidth: 1,
     borderColor: t.borderLight,
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
+  emptyIcon: { fontSize: 48, marginBottom: 12 },
+  emptyTitle: { fontSize: 18, fontWeight: '600' as const, color: t.textPrimary, marginBottom: 8 },
+  emptyBody: { fontSize: 14, color: t.textSecondary, textAlign: 'center' as const, marginBottom: 20, lineHeight: 20 },
+  emptyButton: { backgroundColor: t.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8 },
+  emptyButtonText: { color: t.textOnPrimary, fontSize: 16, fontWeight: '600' as const },
+
+  // Location card
+  locationCard: {
+    backgroundColor: t.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: t.borderLight,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600' as const,
-    color: t.textPrimary,
-    marginBottom: 8,
+  locationHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
   },
-  emptyBody: {
-    fontSize: 14,
-    color: t.textSecondary,
-    textAlign: 'center' as const,
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  addButton: {
-    backgroundColor: t.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+  locationName: { fontSize: 17, fontWeight: '600' as const, color: t.textPrimary },
+  locationCoords: { fontSize: 13, color: t.textTertiary, marginTop: 4, marginBottom: 8 },
+  deleteText: { color: t.error, fontSize: 14, fontWeight: '500' as const },
+
+  // Limit warning
+  limitCard: {
+    backgroundColor: t.warningLight,
     borderRadius: 8,
+    padding: 14,
+    marginTop: 12,
   },
-  addButtonText: {
-    color: t.textOnPrimary,
-    fontSize: 16,
-    fontWeight: '600' as const,
-  },
+  limitText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' as const },
 });
