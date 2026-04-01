@@ -1,0 +1,59 @@
+import { Tabs } from 'expo-router';
+import { Text } from 'react-native';
+import { useThemeStore } from '../../src/stores/themeStore';
+
+export default function TabLayout() {
+  const tokens = useThemeStore((s) => s.tokens);
+
+  return (
+    <Tabs
+      screenOptions={{
+        headerStyle: { backgroundColor: tokens.headerBackground },
+        headerTintColor: tokens.headerTint,
+        tabBarActiveTintColor: tokens.tabBarActiveTint,
+        tabBarInactiveTintColor: tokens.tabBarInactiveTint,
+        tabBarStyle: {
+          backgroundColor: tokens.tabBarBackground,
+          borderTopColor: tokens.tabBarBorder,
+        },
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Dashboard',
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>{'📊'}</Text>,
+        }}
+      />
+      <Tabs.Screen
+        name="alerts"
+        options={{
+          title: 'Alerts',
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>{'🔔'}</Text>,
+        }}
+      />
+      <Tabs.Screen
+        name="locations"
+        options={{
+          title: 'Locations',
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>{'📍'}</Text>,
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: 'History',
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>{'📜'}</Text>,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          href: null, // hidden from tab bar, accessed via gear icon
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>{'⚙️'}</Text>,
+        }}
+      />
+    </Tabs>
+  );
+}
