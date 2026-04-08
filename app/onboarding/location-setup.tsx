@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useTokens } from '../../src/theme';
 import { useDeviceLocation } from '../../src/hooks/useLocation';
 import { useLocationsStore } from '../../src/stores/locationsStore';
+import { LocationSearchInput } from '../../src/components/LocationSearchInput';
 
 export default function LocationSetupScreen() {
   const router = useRouter();
@@ -11,7 +12,6 @@ export default function LocationSetupScreen() {
   const { getLocation, loading: locLoading, error: locError } = useDeviceLocation();
   const addLocation = useLocationsStore((s) => s.addLocation);
   const [locationName, setLocationName] = useState('');
-  const [addressSearch, setAddressSearch] = useState('');
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -60,19 +60,12 @@ export default function LocationSetupScreen() {
         />
 
         {/* Address/place search — FR-ONBOARD-005 / FR-LOC-002 */}
-        <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: t.inputBackground,
-              borderColor: t.border,
-              color: t.textPrimary,
-            },
-          ]}
+        <LocationSearchInput
+          onSelect={(result) => {
+            setLocationName(result.name);
+            setCoords({ latitude: result.latitude, longitude: result.longitude });
+          }}
           placeholder="Search place or address"
-          placeholderTextColor={t.textTertiary}
-          value={addressSearch}
-          onChangeText={setAddressSearch}
         />
 
         <Pressable

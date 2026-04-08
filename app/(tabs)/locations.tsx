@@ -5,6 +5,7 @@ import { useStyles, useTokens } from '../../src/theme';
 import { useLocationsStore } from '../../src/stores/locationsStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useDeviceLocation } from '../../src/hooks/useLocation';
+import { LocationSearchInput } from '../../src/components/LocationSearchInput';
 import { TIER_LIMITS } from '../../src/types';
 import type { ThemeTokens } from '../../src/theme';
 import type { WatchLocation } from '../../src/types';
@@ -23,7 +24,6 @@ export default function LocationsScreen() {
   const [name, setName] = useState('');
   const [lat, setLat] = useState('');
   const [lon, setLon] = useState('');
-  const [addressSearch, setAddressSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
   const isEditing = editingId !== null;
@@ -53,7 +53,6 @@ export default function LocationsScreen() {
     setName('');
     setLat('');
     setLon('');
-    setAddressSearch('');
   };
 
   const handleSave = async () => {
@@ -76,7 +75,6 @@ export default function LocationsScreen() {
     setName(loc.name);
     setLat(loc.latitude.toString());
     setLon(loc.longitude.toString());
-    setAddressSearch('');
     setShowAdd(true);
   };
 
@@ -133,12 +131,13 @@ export default function LocationsScreen() {
             onChangeText={setName}
           />
 
-          <TextInput
-            style={styles.input}
+          <LocationSearchInput
+            onSelect={(result) => {
+              setName(result.name);
+              setLat(result.latitude.toString());
+              setLon(result.longitude.toString());
+            }}
             placeholder="Search place or address"
-            placeholderTextColor={tokens.textTertiary}
-            value={addressSearch}
-            onChangeText={setAddressSearch}
           />
 
           <Pressable style={styles.geoButton} onPress={handleUseDeviceLocation} disabled={geoLoading}>
