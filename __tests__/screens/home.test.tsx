@@ -88,8 +88,8 @@ describe('HomeScreen', () => {
       loadLocations: jest.fn(),
     };
     render(<HomeScreen />);
-    // TDD — location picker not yet implemented
-    expect(screen.getByText(/Cabin|Home/)).toBeTruthy();
+    // Location picker exists when multiple locations are available
+    expect(screen.getAllByText(/Cabin|Home/).length).toBeGreaterThan(0);
   });
 
   // FR-HOME-003: Active alerts section, tappable rule rows
@@ -110,7 +110,7 @@ describe('HomeScreen', () => {
   // FR-HOME-005: empty state for no locations
   it('shows empty state with Add Location button when no locations', () => {
     render(<HomeScreen />);
-    expect(screen.getByText(/Add.*location/i)).toBeTruthy();
+    expect(screen.getAllByText(/Add.*location/i).length).toBeGreaterThan(0);
   });
 
   // FR-HOME-005: empty state for no rules

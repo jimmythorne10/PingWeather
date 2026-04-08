@@ -18,8 +18,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>{'📊'}</Text>,
+          title: 'Home',
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>{'🏠'}</Text>,
         }}
       />
       <Tabs.Screen
@@ -44,19 +44,18 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>{'⚙️'}</Text>,
+        }}
+      />
+      <Tabs.Screen
         name="history"
         options={{
           title: 'History',
           tabBarButton: () => null,
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>{'📜'}</Text>,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarButton: () => null,
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>{'⚙️'}</Text>,
         }}
       />
     </Tabs>
