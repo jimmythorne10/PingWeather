@@ -4,19 +4,6 @@
 // ────────────────────────────────────────────────────────────
 
 import { TIER_LIMITS } from '../../src/types';
-import { makeSupabaseMock, mockLocation, mockRule } from '../helpers/mocks';
-
-const supabaseMock = makeSupabaseMock();
-
-jest.mock('../../src/utils/supabase', () => ({
-  supabase: supabaseMock,
-}));
-
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(() => Promise.resolve(null)),
-  setItem: jest.fn(() => Promise.resolve()),
-  removeItem: jest.fn(() => Promise.resolve()),
-}));
 
 describe('TIER_LIMITS constants', () => {
   // FR-LOC-006: free tier max 1 location

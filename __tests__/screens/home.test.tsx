@@ -14,26 +14,26 @@ jest.mock('expo-router', () => ({
 }));
 
 // Stores
-let authState: any = { profile: mockProfile() };
-let locationsState: any = { locations: [], loadLocations: jest.fn() };
-let rulesState: any = { rules: [], loadRules: jest.fn() };
-let historyState: any = { entries: [], loadHistory: jest.fn() };
-let settingsState: any = { temperatureUnit: 'fahrenheit', windSpeedUnit: 'mph' };
+let mockAuthState: any = { profile: mockProfile() };
+let mockLocationsState: any = { locations: [], loadLocations: jest.fn() };
+let mockRulesState: any = { rules: [], loadRules: jest.fn() };
+let mockHistoryState: any = { entries: [], loadHistory: jest.fn() };
+let mockSettingsState: any = { temperatureUnit: 'fahrenheit', windSpeedUnit: 'mph' };
 
 jest.mock('../../src/stores/authStore', () => ({
-  useAuthStore: (selector?: any) => (selector ? selector(authState) : authState),
+  useAuthStore: (selector?: any) => (selector ? selector(mockAuthState) : mockAuthState),
 }));
 jest.mock('../../src/stores/locationsStore', () => ({
-  useLocationsStore: (selector?: any) => (selector ? selector(locationsState) : locationsState),
+  useLocationsStore: (selector?: any) => (selector ? selector(mockLocationsState) : mockLocationsState),
 }));
 jest.mock('../../src/stores/alertRulesStore', () => ({
-  useAlertRulesStore: (selector?: any) => (selector ? selector(rulesState) : rulesState),
+  useAlertRulesStore: (selector?: any) => (selector ? selector(mockRulesState) : mockRulesState),
 }));
 jest.mock('../../src/stores/alertHistoryStore', () => ({
-  useAlertHistoryStore: (selector?: any) => (selector ? selector(historyState) : historyState),
+  useAlertHistoryStore: (selector?: any) => (selector ? selector(mockHistoryState) : mockHistoryState),
 }));
 jest.mock('../../src/stores/settingsStore', () => ({
-  useSettingsStore: (selector?: any) => (selector ? selector(settingsState) : settingsState),
+  useSettingsStore: (selector?: any) => (selector ? selector(mockSettingsState) : mockSettingsState),
 }));
 
 // weatherApi mock
@@ -66,16 +66,16 @@ import HomeScreen from '../../app/(tabs)/index';
 describe('HomeScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    authState = { profile: mockProfile() };
-    locationsState = { locations: [], loadLocations: jest.fn() };
-    rulesState = { rules: [], loadRules: jest.fn() };
-    historyState = { entries: [], loadHistory: jest.fn() };
-    settingsState = { temperatureUnit: 'fahrenheit', windSpeedUnit: 'mph' };
+    mockAuthState = { profile: mockProfile() };
+    mockLocationsState = { locations: [], loadLocations: jest.fn() };
+    mockRulesState = { rules: [], loadRules: jest.fn() };
+    mockHistoryState = { entries: [], loadHistory: jest.fn() };
+    mockSettingsState = { temperatureUnit: 'fahrenheit', windSpeedUnit: 'mph' };
   });
 
   // FR-HOME-001: Card titled "Forecast" (not location name)
   it('shows forecast card titled "Forecast"', () => {
-    locationsState = { locations: [mockLocation()], loadLocations: jest.fn() };
+    mockLocationsState = { locations: [mockLocation()], loadLocations: jest.fn() };
     render(<HomeScreen />);
     // TDD: current implementation uses location name — PRD requires "Forecast"
     expect(screen.getByText('Forecast')).toBeTruthy();
@@ -83,7 +83,7 @@ describe('HomeScreen', () => {
 
   // FR-HOME-001: Location picker dropdown
   it('shows a location picker on the forecast card', () => {
-    locationsState = {
+    mockLocationsState = {
       locations: [mockLocation(), mockLocation({ id: 'loc-2', name: 'Cabin' })],
       loadLocations: jest.fn(),
     };
@@ -94,8 +94,8 @@ describe('HomeScreen', () => {
 
   // FR-HOME-003: Active alerts section, tappable rule rows
   it('shows Active Alerts section', () => {
-    rulesState = { rules: [mockRule()], loadRules: jest.fn() };
-    locationsState = { locations: [mockLocation()], loadLocations: jest.fn() };
+    mockRulesState = { rules: [mockRule()], loadRules: jest.fn() };
+    mockLocationsState = { locations: [mockLocation()], loadLocations: jest.fn() };
     render(<HomeScreen />);
     expect(screen.getByText('Active Alerts')).toBeTruthy();
     expect(screen.getByText('Freeze Warning')).toBeTruthy();
@@ -128,7 +128,7 @@ describe('HomeScreen', () => {
 
   // FR-HOME-002: forecast card is tappable (expandable to 14-day)
   it('forecast card is tappable to expand to 14-day view', () => {
-    locationsState = { locations: [mockLocation()], loadLocations: jest.fn() };
+    mockLocationsState = { locations: [mockLocation()], loadLocations: jest.fn() };
     render(<HomeScreen />);
     // TDD: expanded 14-day view not yet implemented — look for hint
     expect(screen.getByText(/14-day|Tap.*expand|View.*forecast/i)).toBeTruthy();

@@ -14,29 +14,29 @@ jest.mock('expo-router', () => ({
 }));
 
 const mockSignOut = jest.fn();
-let authState: any = { profile: mockProfile({ email: 'me@test.com' }), signOut: mockSignOut };
+let mockAuthState: any = { profile: mockProfile({ email: 'me@test.com' }), signOut: mockSignOut };
 const settingsActions = {
   setTemperatureUnit: jest.fn(),
   setWindSpeedUnit: jest.fn(),
   setNotificationsEnabled: jest.fn(),
 };
-let settingsState: any = {
+let mockSettingsState: any = {
   temperatureUnit: 'fahrenheit',
   windSpeedUnit: 'mph',
   notificationsEnabled: true,
   ...settingsActions,
 };
 const mockSetTheme = jest.fn();
-let themeState: any = { themeName: 'classic', setTheme: mockSetTheme };
+let mockThemeState: any = { themeName: 'classic', setTheme: mockSetTheme };
 
 jest.mock('../../src/stores/authStore', () => ({
-  useAuthStore: (selector?: any) => (selector ? selector(authState) : authState),
+  useAuthStore: (selector?: any) => (selector ? selector(mockAuthState) : mockAuthState),
 }));
 jest.mock('../../src/stores/settingsStore', () => ({
-  useSettingsStore: (selector?: any) => (selector ? selector(settingsState) : settingsState),
+  useSettingsStore: (selector?: any) => (selector ? selector(mockSettingsState) : mockSettingsState),
 }));
 jest.mock('../../src/stores/themeStore', () => ({
-  useThemeStore: (selector?: any) => (selector ? selector(themeState) : themeState),
+  useThemeStore: (selector?: any) => (selector ? selector(mockThemeState) : mockThemeState),
 }));
 
 jest.mock('../../src/theme', () => {
@@ -52,14 +52,14 @@ import SettingsScreen from '../../app/(tabs)/settings';
 describe('SettingsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    authState = { profile: mockProfile({ email: 'me@test.com' }), signOut: mockSignOut };
-    settingsState = {
+    mockAuthState = { profile: mockProfile({ email: 'me@test.com' }), signOut: mockSignOut };
+    mockSettingsState = {
       temperatureUnit: 'fahrenheit',
       windSpeedUnit: 'mph',
       notificationsEnabled: true,
       ...settingsActions,
     };
-    themeState = { themeName: 'classic', setTheme: mockSetTheme };
+    mockThemeState = { themeName: 'classic', setTheme: mockSetTheme };
   });
 
   // FR-SET-001: account email and tier shown

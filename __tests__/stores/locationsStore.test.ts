@@ -6,39 +6,11 @@
  * TDD — they don't exist in the current store and SHOULD fail.
  */
 
-jest.mock('expo-secure-store', () => ({
-  getItemAsync: jest.fn(),
-  setItemAsync: jest.fn(),
-  deleteItemAsync: jest.fn(),
-}));
-
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  __esModule: true,
-  default: {
-    getItem: jest.fn(() => Promise.resolve(null)),
-    setItem: jest.fn(() => Promise.resolve()),
-    removeItem: jest.fn(() => Promise.resolve()),
-    multiGet: jest.fn(() => Promise.resolve([])),
-    multiSet: jest.fn(() => Promise.resolve()),
-  },
-}));
-
-const mockFrom = jest.fn();
-
-jest.mock('@supabase/supabase-js', () => ({
-  createClient: () => ({
-    auth: {
-      getSession: jest.fn().mockResolvedValue({ data: { session: null } }),
-      onAuthStateChange: jest.fn(() => ({ data: { subscription: { unsubscribe: jest.fn() } } })),
-    },
-    from: mockFrom,
-  }),
-}));
-
-jest.mock('react-native-url-polyfill/auto', () => ({}));
-
 import { useLocationsStore } from '../../src/stores/locationsStore';
 import { useAuthStore } from '../../src/stores/authStore';
+import { supabase } from '../../src/utils/supabase';
+
+const mockFrom = supabase.from as jest.Mock;
 
 const mockUser = { id: 'user-123', email: 'test@example.com' };
 

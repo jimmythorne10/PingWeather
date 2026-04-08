@@ -6,34 +6,34 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { mockProfile, mockLocation, mockRule } from '../helpers/mocks';
 
-let localParams: any = {};
+let mockLocalParams: any = {};
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
   useSegments: () => [],
-  useLocalSearchParams: () => localParams,
+  useLocalSearchParams: () => mockLocalParams,
 }));
 
-let authState: any = { profile: mockProfile({ subscription_tier: 'pro' }) };
-let locationsState: any = {
+let mockAuthState: any = { profile: mockProfile({ subscription_tier: 'pro' }) };
+let mockLocationsState: any = {
   locations: [mockLocation()],
   loadLocations: jest.fn(),
 };
 const mockCreateRule = jest.fn(() => Promise.resolve());
 const mockUpdateRule = jest.fn(() => Promise.resolve());
-let rulesState: any = {
+let mockRulesState: any = {
   rules: [],
   createRule: mockCreateRule,
   updateRule: mockUpdateRule,
 };
 
 jest.mock('../../src/stores/authStore', () => ({
-  useAuthStore: (selector?: any) => (selector ? selector(authState) : authState),
+  useAuthStore: (selector?: any) => (selector ? selector(mockAuthState) : mockAuthState),
 }));
 jest.mock('../../src/stores/locationsStore', () => ({
-  useLocationsStore: (selector?: any) => (selector ? selector(locationsState) : locationsState),
+  useLocationsStore: (selector?: any) => (selector ? selector(mockLocationsState) : mockLocationsState),
 }));
 jest.mock('../../src/stores/alertRulesStore', () => ({
-  useAlertRulesStore: (selector?: any) => (selector ? selector(rulesState) : rulesState),
+  useAlertRulesStore: (selector?: any) => (selector ? selector(mockRulesState) : mockRulesState),
 }));
 
 jest.mock('../../src/theme', () => {
@@ -49,10 +49,10 @@ import CreateRuleScreen from '../../app/create-rule';
 describe('CreateRuleScreen — Create mode', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    localParams = {};
-    authState = { profile: mockProfile({ subscription_tier: 'pro' }) };
-    locationsState = { locations: [mockLocation()], loadLocations: jest.fn() };
-    rulesState = { rules: [], createRule: mockCreateRule, updateRule: mockUpdateRule };
+    mockLocalParams = {};
+    mockAuthState = { profile: mockProfile({ subscription_tier: 'pro' }) };
+    mockLocationsState = { locations: [mockLocation()], loadLocations: jest.fn() };
+    mockRulesState = { rules: [], createRule: mockCreateRule, updateRule: mockUpdateRule };
   });
 
   // FR-ALERT-003: all 8 metric options
@@ -103,7 +103,7 @@ describe('CreateRuleScreen — Create mode', () => {
 
   // FR-ALERT-003: free tier polling filter (12h+)
   it('filters polling options by free tier minimum (12h min)', () => {
-    authState = { profile: mockProfile({ subscription_tier: 'free' }) };
+    mockAuthState = { profile: mockProfile({ subscription_tier: 'free' }) };
     render(<CreateRuleScreen />);
     expect(screen.queryByText('Every 4 hrs')).toBeNull();
     expect(screen.getByText('Every 12 hrs')).toBeTruthy();
@@ -142,10 +142,10 @@ describe('CreateRuleScreen — Create mode', () => {
 describe('CreateRuleScreen — Edit mode', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    localParams = { mode: 'edit', ruleId: 'rule-1' };
-    authState = { profile: mockProfile({ subscription_tier: 'pro' }) };
-    locationsState = { locations: [mockLocation()], loadLocations: jest.fn() };
-    rulesState = {
+    mockLocalParams = { mode: 'edit', ruleId: 'rule-1' };
+    mockAuthState = { profile: mockProfile({ subscription_tier: 'pro' }) };
+    mockLocationsState = { locations: [mockLocation()], loadLocations: jest.fn() };
+    mockRulesState = {
       rules: [mockRule({ id: 'rule-1', name: 'My Freeze Alert' })],
       createRule: mockCreateRule,
       updateRule: mockUpdateRule,
@@ -175,10 +175,10 @@ describe('CreateRuleScreen — Edit mode', () => {
 describe('CreateRuleScreen — Clone mode', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    localParams = { mode: 'clone', ruleId: 'rule-1' };
-    authState = { profile: mockProfile({ subscription_tier: 'pro' }) };
-    locationsState = { locations: [mockLocation()], loadLocations: jest.fn() };
-    rulesState = {
+    mockLocalParams = { mode: 'clone', ruleId: 'rule-1' };
+    mockAuthState = { profile: mockProfile({ subscription_tier: 'pro' }) };
+    mockLocationsState = { locations: [mockLocation()], loadLocations: jest.fn() };
+    mockRulesState = {
       rules: [mockRule({ id: 'rule-1', name: 'My Freeze Alert' })],
       createRule: mockCreateRule,
       updateRule: mockUpdateRule,

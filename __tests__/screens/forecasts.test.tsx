@@ -15,26 +15,26 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({}),
 }));
 
-let authState: any = { profile: mockProfile() };
-let locationsState: any = { locations: [mockLocation()], loadLocations: jest.fn() };
-let rulesState: any = { rules: [], loadRules: jest.fn() };
-let historyState: any = { entries: [], loadHistory: jest.fn() };
-let settingsState: any = { temperatureUnit: 'fahrenheit', windSpeedUnit: 'mph' };
+let mockAuthState: any = { profile: mockProfile() };
+let mockLocationsState: any = { locations: [mockLocation()], loadLocations: jest.fn() };
+let mockRulesState: any = { rules: [], loadRules: jest.fn() };
+let mockHistoryState: any = { entries: [], loadHistory: jest.fn() };
+let mockSettingsState: any = { temperatureUnit: 'fahrenheit', windSpeedUnit: 'mph' };
 
 jest.mock('../../src/stores/authStore', () => ({
-  useAuthStore: (selector?: any) => (selector ? selector(authState) : authState),
+  useAuthStore: (selector?: any) => (selector ? selector(mockAuthState) : mockAuthState),
 }));
 jest.mock('../../src/stores/locationsStore', () => ({
-  useLocationsStore: (selector?: any) => (selector ? selector(locationsState) : locationsState),
+  useLocationsStore: (selector?: any) => (selector ? selector(mockLocationsState) : mockLocationsState),
 }));
 jest.mock('../../src/stores/alertRulesStore', () => ({
-  useAlertRulesStore: (selector?: any) => (selector ? selector(rulesState) : rulesState),
+  useAlertRulesStore: (selector?: any) => (selector ? selector(mockRulesState) : mockRulesState),
 }));
 jest.mock('../../src/stores/alertHistoryStore', () => ({
-  useAlertHistoryStore: (selector?: any) => (selector ? selector(historyState) : historyState),
+  useAlertHistoryStore: (selector?: any) => (selector ? selector(mockHistoryState) : mockHistoryState),
 }));
 jest.mock('../../src/stores/settingsStore', () => ({
-  useSettingsStore: (selector?: any) => (selector ? selector(settingsState) : settingsState),
+  useSettingsStore: (selector?: any) => (selector ? selector(mockSettingsState) : mockSettingsState),
 }));
 
 jest.mock('../../src/services/weatherApi', () => ({
@@ -84,7 +84,7 @@ try {
 describe('ForecastsScreen (TDD — not yet implemented)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    locationsState = {
+    mockLocationsState = {
       locations: [
         mockLocation({ id: 'l1', name: 'Home' }),
         mockLocation({ id: 'l2', name: 'Cabin' }),
@@ -102,7 +102,7 @@ describe('ForecastsScreen (TDD — not yet implemented)', () => {
 
   // FR-FORECAST-001: empty state when no locations
   it('shows empty state when user has no locations', () => {
-    locationsState = { locations: [], loadLocations: jest.fn() };
+    mockLocationsState = { locations: [], loadLocations: jest.fn() };
     render(<ForecastsScreen />);
     expect(screen.getByText(/Add a location to see forecasts/i)).toBeTruthy();
   });
@@ -123,7 +123,7 @@ describe('ForecastsScreen (TDD — not yet implemented)', () => {
 
   // FR-FORECAST-003: rule trigger preview section
   it('shows Rule Status / trigger preview section when rules exist', () => {
-    rulesState = { rules: [mockRule()], loadRules: jest.fn() };
+    mockRulesState = { rules: [mockRule()], loadRules: jest.fn() };
     render(<ForecastsScreen />);
     expect(screen.getByText(/Rule Status|Would trigger|Clear/i)).toBeTruthy();
   });

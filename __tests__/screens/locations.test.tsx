@@ -12,8 +12,8 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({}),
 }));
 
-let authState: any = { profile: mockProfile({ subscription_tier: 'free' }) };
-let locationsState: any = {
+let mockAuthState: any = { profile: mockProfile({ subscription_tier: 'free' }) };
+let mockLocationsState: any = {
   locations: [],
   loading: false,
   loadLocations: jest.fn(),
@@ -23,10 +23,10 @@ let locationsState: any = {
 };
 
 jest.mock('../../src/stores/authStore', () => ({
-  useAuthStore: (selector?: any) => (selector ? selector(authState) : authState),
+  useAuthStore: (selector?: any) => (selector ? selector(mockAuthState) : mockAuthState),
 }));
 jest.mock('../../src/stores/locationsStore', () => ({
-  useLocationsStore: (selector?: any) => (selector ? selector(locationsState) : locationsState),
+  useLocationsStore: (selector?: any) => (selector ? selector(mockLocationsState) : mockLocationsState),
 }));
 
 jest.mock('../../src/hooks/useLocation', () => ({
@@ -50,8 +50,8 @@ import LocationsScreen from '../../app/(tabs)/locations';
 describe('LocationsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    authState = { profile: mockProfile({ subscription_tier: 'free' }) };
-    locationsState = {
+    mockAuthState = { profile: mockProfile({ subscription_tier: 'free' }) };
+    mockLocationsState = {
       locations: [],
       loading: false,
       loadLocations: jest.fn(),
@@ -69,7 +69,7 @@ describe('LocationsScreen', () => {
 
   // FR-LOC-001: renders location list
   it('renders location cards', () => {
-    locationsState.locations = [mockLocation({ name: 'Home Ranch' })];
+    mockLocationsState.locations = [mockLocation({ name: 'Home Ranch' })];
     render(<LocationsScreen />);
     expect(screen.getByText('Home Ranch')).toBeTruthy();
   });
@@ -104,14 +104,14 @@ describe('LocationsScreen', () => {
 
   // FR-LOC-004: trash icon for delete (not "Remove" text)
   it('uses trash icon for delete (not text)', () => {
-    locationsState.locations = [mockLocation()];
+    mockLocationsState.locations = [mockLocation()];
     render(<LocationsScreen />);
     expect(screen.getByLabelText(/delete|trash|remove/i)).toBeTruthy();
   });
 
   // FR-LOC-003: toggle switch for active/inactive
   it('renders toggle switch for each location', () => {
-    locationsState.locations = [mockLocation()];
+    mockLocationsState.locations = [mockLocation()];
     const { UNSAFE_getAllByType } = render(<LocationsScreen />);
     const Switch = require('react-native').Switch;
     expect(UNSAFE_getAllByType(Switch).length).toBeGreaterThan(0);
@@ -119,7 +119,7 @@ describe('LocationsScreen', () => {
 
   // FR-LOC-006: tier limit hides add button
   it('hides + Add button when at tier limit', () => {
-    locationsState.locations = [mockLocation()];
+    mockLocationsState.locations = [mockLocation()];
     render(<LocationsScreen />);
     expect(screen.queryByText('+ Add')).toBeNull();
     expect(screen.getByText(/reached.*limit|upgrade/i)).toBeTruthy();
@@ -127,14 +127,14 @@ describe('LocationsScreen', () => {
 
   // FR-LOC-008: default location indicator (TDD — not implemented)
   it('shows default location indicator', () => {
-    locationsState.locations = [mockLocation()];
+    mockLocationsState.locations = [mockLocation()];
     render(<LocationsScreen />);
     expect(screen.getByLabelText(/default.*location|star/i)).toBeTruthy();
   });
 
   // FR-LOC-005: downgraded locations shown dimmed (TDD)
   it('shows inactive banner when user has inactive locations over tier limit', () => {
-    locationsState.locations = [
+    mockLocationsState.locations = [
       mockLocation({ id: 'l1', is_active: true }),
       mockLocation({ id: 'l2', is_active: false }),
     ];

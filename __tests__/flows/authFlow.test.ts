@@ -2,21 +2,11 @@
 // Covers: FR-AUTH-001 through FR-AUTH-005
 // ────────────────────────────────────────────────────────────
 
-import { makeSupabaseMock, mockProfile } from '../helpers/mocks';
-
-const supabaseMock = makeSupabaseMock();
-
-jest.mock('../../src/utils/supabase', () => ({
-  supabase: supabaseMock,
-}));
-
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(() => Promise.resolve(null)),
-  setItem: jest.fn(() => Promise.resolve()),
-  removeItem: jest.fn(() => Promise.resolve()),
-}));
-
 import { useAuthStore } from '../../src/stores/authStore';
+import { supabase } from '../../src/utils/supabase';
+
+// Access the global Supabase mock from jest.setup.ts
+const supabaseMock = supabase as any;
 
 describe('Auth Flow', () => {
   beforeEach(() => {

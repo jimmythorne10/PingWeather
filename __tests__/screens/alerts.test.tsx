@@ -13,9 +13,9 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({}),
 }));
 
-let authState: any = { profile: mockProfile({ subscription_tier: 'free' }) };
-let locationsState: any = { locations: [mockLocation()], loadLocations: jest.fn() };
-let rulesState: any = {
+let mockAuthState: any = { profile: mockProfile({ subscription_tier: 'free' }) };
+let mockLocationsState: any = { locations: [mockLocation()], loadLocations: jest.fn() };
+let mockRulesState: any = {
   rules: [],
   loading: false,
   loadRules: jest.fn(),
@@ -25,13 +25,13 @@ let rulesState: any = {
 };
 
 jest.mock('../../src/stores/authStore', () => ({
-  useAuthStore: (selector?: any) => (selector ? selector(authState) : authState),
+  useAuthStore: (selector?: any) => (selector ? selector(mockAuthState) : mockAuthState),
 }));
 jest.mock('../../src/stores/locationsStore', () => ({
-  useLocationsStore: (selector?: any) => (selector ? selector(locationsState) : locationsState),
+  useLocationsStore: (selector?: any) => (selector ? selector(mockLocationsState) : mockLocationsState),
 }));
 jest.mock('../../src/stores/alertRulesStore', () => ({
-  useAlertRulesStore: (selector?: any) => (selector ? selector(rulesState) : rulesState),
+  useAlertRulesStore: (selector?: any) => (selector ? selector(mockRulesState) : mockRulesState),
 }));
 
 jest.mock('../../src/theme', () => {
@@ -64,9 +64,9 @@ import AlertsScreen from '../../app/(tabs)/alerts';
 describe('AlertsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    authState = { profile: mockProfile({ subscription_tier: 'free' }) };
-    locationsState = { locations: [mockLocation()], loadLocations: jest.fn() };
-    rulesState = {
+    mockAuthState = { profile: mockProfile({ subscription_tier: 'free' }) };
+    mockLocationsState = { locations: [mockLocation()], loadLocations: jest.fn() };
+    mockRulesState = {
       rules: [],
       loading: false,
       loadRules: jest.fn(),
@@ -86,14 +86,14 @@ describe('AlertsScreen', () => {
 
   // FR-ALERT-001: compact rule cards (single row)
   it('renders rule cards when rules exist', () => {
-    rulesState.rules = [mockRule()];
+    mockRulesState.rules = [mockRule()];
     render(<AlertsScreen />);
     expect(screen.getByText('Freeze Warning')).toBeTruthy();
   });
 
   // FR-ALERT-001: trash icon for delete (not text "Delete")
   it('uses a trash icon for delete (not text)', () => {
-    rulesState.rules = [mockRule()];
+    mockRulesState.rules = [mockRule()];
     render(<AlertsScreen />);
     // TDD: PRD explicitly requires icon, not text
     expect(screen.queryByText('Delete')).toBeNull();
@@ -122,14 +122,14 @@ describe('AlertsScreen', () => {
 
   // FR-ALERT-007: tier limit warning when at limit
   it('shows tier limit warning when at rule limit (free tier)', () => {
-    rulesState.rules = [mockRule({ id: 'r1' }), mockRule({ id: 'r2' })]; // free = 2 max
+    mockRulesState.rules = [mockRule({ id: 'r1' }), mockRule({ id: 'r2' })]; // free = 2 max
     render(<AlertsScreen />);
     expect(screen.getByText(/reached.*limit|upgrade/i)).toBeTruthy();
   });
 
   // FR-ALERT-009: clone icon present on rule cards
   it('renders clone icon on rule cards', () => {
-    rulesState.rules = [mockRule()];
+    mockRulesState.rules = [mockRule()];
     render(<AlertsScreen />);
     // TDD: clone feature not implemented yet
     expect(screen.getByLabelText(/clone|duplicate/i)).toBeTruthy();
@@ -137,14 +137,14 @@ describe('AlertsScreen', () => {
 
   // FR-ALERT-001: rule count vs tier limit
   it('shows rule count vs tier limit', () => {
-    rulesState.rules = [mockRule()];
+    mockRulesState.rules = [mockRule()];
     render(<AlertsScreen />);
     expect(screen.getByText(/1\/2/)).toBeTruthy();
   });
 
   // FR-ALERT-008: tapping a rule navigates to edit
   it('tapping a rule card navigates to the rule editor', () => {
-    rulesState.rules = [mockRule()];
+    mockRulesState.rules = [mockRule()];
     render(<AlertsScreen />);
     fireEvent.press(screen.getByText('Freeze Warning'));
     // TDD: rule cards not yet tappable

@@ -5,75 +5,116 @@
 
 ## Overall Status
 
-| Project | Suites Passing | Tests Passing | Notes |
+| | Suites Running | Tests Passing | Tests Failing |
 |---|---|---|---|
-| **logic** (node env) | 6 / 12 | 211 / 213 | 2 actual TDD failures (expected), 6 suite setup bugs |
-| **components** (jest-expo) | 0 / 9 | 0 / ? | Blocked by jest-expo winter runtime bug |
+| **Logic project** (node env) | 12 / 12 | 273 | 20 (all TDD) |
+| **Components project** (jsdom env) | 9 / 9 | 56 | 37 (all TDD) |
+| **TOTAL** | **21 / 21** | **329** | **57** |
 
-## Logic Project
+**All 21 test suites run successfully.** All 57 failing tests are expected TDD failures — they reference PRD features that don't exist yet and serve as the acceptance criteria for dev-loop to implement.
 
-### Passing Suites (211 tests)
-- `__tests__/stores/settingsStore.test.ts` — Unit preferences, theme, notifications
-- `__tests__/stores/themeStore.test.ts` — Theme tokens for all 3 themes
-- `__tests__/data/tierLimits.test.ts` — Free/Pro/Premium tier limits
-- `__tests__/data/alertPresets.test.ts` — Preset structure validation (all 10 presets)
-- `__tests__/engine/evaluateConditions.test.ts` — Alert evaluation engine (all operators, metrics, cooldown, lookahead)
-- `__tests__/data/weatherApi.test.ts` — Open-Meteo client URL params and error handling
+## Infrastructure
 
-### Failing Tests (2 — Expected TDD)
-- `legalContent.test.ts › EULA_CONTENT › uses the PingWeather product name` — FR-NFR-006 branding consistency (EULA still says WeatherWatch)
-- `legalContent.test.ts › PRIVACY_POLICY_CONTENT › uses the PingWeather product name` — same
+### Dual-Project Jest Config
+- **Logic project** — `testEnvironment: 'node'`, custom babel config with `@babel/preset-env` + `@babel/preset-typescript`. Tests stores, engine, data structures, and flows without React Native dependencies.
+- **Components project** — `testEnvironment: 'jsdom'`, adds `@babel/preset-react` for JSX. Uses `@testing-library/react-native` with `react-test-renderer`. Bypasses `jest-expo` preset to avoid the `winter/runtime.native.ts` bug where lazy global getters try to require files outside Jest's sandbox.
 
-### Broken Test Files (Hoisting Bug — Dev-Loop to Fix)
-The following files have `jest.mock()` factories that reference `mockFoo` const variables declared at module scope. This triggers a TDZ error because `jest.mock()` is hoisted but const declarations are not. Fix pattern: move mock variables inside the factory, or use the global `jest.setup.ts` mocks.
+### Global Mocks (`jest.setup.ts`)
+- `@react-native-async-storage/async-storage` — in-memory Map-backed store
+- `@supabase/supabase-js` — singleton client mock with chainable query builder and `__setFromResponse` helper
+- `expo-secure-store`, `expo-constants`, `expo-location`, `expo-notifications`, `expo-router`, `expo-status-bar` — lightweight stubs
+- `react-native-url-polyfill/auto` — no-op
 
-- `__tests__/stores/authStore.test.ts` (FR-AUTH-001 to FR-AUTH-005)
-- `__tests__/stores/locationsStore.test.ts` (FR-LOC-001 to FR-LOC-008)
-- `__tests__/stores/alertRulesStore.test.ts` (FR-ALERT-001 to FR-ALERT-010)
-- `__tests__/data/legalContent.test.ts` (above 2 failures are in this file — factory conflict with global mock)
-- `__tests__/flows/authFlow.test.ts` (FR-AUTH flows end-to-end)
-- `__tests__/flows/tierEnforcement.test.ts` (FR-LOC-005, FR-ALERT-007, FR-IAP-001)
+### Local Mocks (`__mocks__/`)
+- Minimal stubs for logic tests that don't need React Native runtime
+- Used via `moduleNameMapper` in both project configs
 
-## Components Project (Blocked)
+## Expected TDD Failures (57 total)
 
-All 9 screen test files fail to run due to a known bug in `jest-expo@54.x` where `expo/src/winter/runtime.native.ts` throws "You are trying to import a file outside of the scope of the test code" during module initialization. This is a jest-expo preset issue, not a test code issue.
+Each failing test maps to an unimplemented PRD requirement. These are the acceptance criteria for dev-loop.
 
-Blocked files:
-- `__tests__/screens/login.test.tsx`
-- `__tests__/screens/signup.test.tsx`
-- `__tests__/screens/onboarding.test.tsx`
-- `__tests__/screens/home.test.tsx`
-- `__tests__/screens/alerts.test.tsx`
-- `__tests__/screens/locations.test.tsx`
-- `__tests__/screens/settings.test.tsx`
-- `__tests__/screens/createRule.test.tsx`
-- `__tests__/screens/forecasts.test.tsx`
+### FR-AUTH (Authentication)
+- **FR-AUTH-004 Forgot Password** — 5 failures (store method missing, login screen link missing)
+- Sign out test expects `signOut` state reset chain — 1 failure
 
-**Workaround options:**
-1. Pin jest-expo to a version that doesn't have the winter runtime bug
-2. Add a custom Jest resolver that stubs `expo/src/winter/runtime.native.ts`
-3. Move component tests to the logic project with a minimal react-native stub (no react-native-web, no winter polyfill)
-4. Wait for jest-expo upstream fix
+### FR-LOC (Locations)
+- **FR-LOC-002 Address Search** — 2 failures (no geocoding integration)
+- **FR-LOC-004 Trash Icon Delete** — 1 failure (still uses "Remove" text)
+- **FR-LOC-005 Tier Downgrade Handling** — 2 failures (no deactivate-excess logic)
+- **FR-LOC-006 Tier Limit Enforcement** — 3 failures (store doesn't block at limits)
+- **FR-LOC-007 Timezone Storage** — 1 failure (no `timezone` column in insert payload)
+- **FR-LOC-008 Default Location** — 3 failures (no `is_default`, no `setDefaultLocation`, no auto-promotion)
 
-## PRD Coverage Summary
+### FR-ALERT (Alert Rules)
+- **FR-ALERT-001 Compact Cards + Filter** — 2 failures (no All/Active/Inactive filter)
+- **FR-ALERT-002 Preset Dropdown** — 1 failure (still uses scroll groups)
+- **FR-ALERT-006 Trash Icon Delete** — 1 failure
+- **FR-ALERT-007 Tier Limit Enforcement** — 2 failures (store doesn't block)
+- **FR-ALERT-008 Edit Rule** — 3 failures (pre-population, "Edit Alert Rule" title, "Save Changes" button)
+- **FR-ALERT-009 Clone Rule** — 2 failures (no clone icon, no "(copy)" suffix logic)
+- **FR-ALERT-010 Compound Condition Gating** — 1 failure (Free users can create multi-condition rules)
 
-Despite the setup issues, the test suite covers:
+### FR-HOME (Home Screen)
+- **FR-HOME-001 "Forecast" Card Title** — 1 failure (uses location name instead)
+- **FR-HOME-001 Location Picker** — 1 failure
+- **FR-HOME-002 14-Day Expand** — 1 failure
+- **FR-HOME-003 Tappable Alert Rows** — 1 failure
+- **FR-HOME-005 Empty States** — 1 failure
 
-- **FR-AUTH** (5 requirements) — tests written, suite blocked by hoisting bug
-- **FR-ONBOARD** (7) — component tests written, blocked by jest-expo
-- **FR-LOC** (8) — store tests blocked by hoisting, component tests blocked by jest-expo
-- **FR-ALERT** (10) — store tests blocked by hoisting, component tests blocked by jest-expo
-- **FR-HOME** (5) — component tests written, blocked by jest-expo
-- **FR-FORECAST** (4) — component tests written for unimplemented screen (pure TDD gaps)
-- **FR-SET** (10) — component tests written, blocked by jest-expo
-- **FR-POLL** (5) — engine tests PASSING (evaluateConditions.test.ts)
-- **FR-ACCURACY** (4) — not yet tested (post-MVP planned)
-- **FR-IAP** (5) — not yet tested (subscription purchase flow)
-- **NFR-006 branding** — 2 failing tests catching the WeatherWatch → PingWeather rebrand gap
+### FR-FORECAST (Forecasts Tab — entirely new)
+- **FR-FORECAST-001 All Locations Overview** — 2 failures
+- **FR-FORECAST-002 Location Detail** — 1 failure
+- **FR-FORECAST-003 Rule Trigger Preview** — 1 failure
+- **FR-FORECAST-004 Alert History Sub-Screen** — 1 failure
+- Screen not yet implemented
 
-## Next Steps
+### FR-SET (Settings)
+- **FR-SET-006 Alert History Link** — 1 failure
+- **FR-SET-007 App Version Display** — 1 failure
+- **FR-SET-008 Dev Tier Override** — 1 failure
+- **FR-SET-009 Delete Account** — 1 failure
+- **FR-SET-010 Sign Out Confirmation** — 1 failure
 
-1. Fix hoisting bugs in 6 logic test files (mechanical refactor)
-2. Resolve jest-expo winter runtime bug (pick from workaround options above)
-3. Feed failing tests into dev-loop to drive feature implementation
-4. Add FR-ACCURACY and FR-IAP tests when those features are built
+### FR-ONBOARD (Onboarding)
+- **FR-ONBOARD-002 Welcome "PingWeather" Branding** — 1 failure (still says WeatherWatch)
+- **FR-ONBOARD-005 Address Search** — 1 failure
+- **FR-ONBOARD-007 Complete "PingWeather" Branding** — 1 failure
+- EULA navigation flow — 2 failures
+
+### NFR-006 (Branding)
+- **EULA content uses "PingWeather"** — 1 failure
+- **Privacy Policy uses "PingWeather"** — 1 failure
+
+## Running Tests
+
+```bash
+# Full suite
+npm test
+
+# Logic tests only
+npm test -- --selectProjects logic
+
+# Component tests only
+npm test -- --selectProjects components
+
+# Specific file
+npm test -- --testPathPatterns login
+```
+
+## Coverage by PRD Section
+
+| Section | Requirements | Tests Written | Status |
+|---|---|---|---|
+| Auth | FR-AUTH-001 to 005 | ✅ | 15/20 passing (3 TDD for FR-AUTH-004) |
+| Onboarding | FR-ONBOARD-001 to 007 | ✅ | 13/18 passing (5 TDD) |
+| Locations | FR-LOC-001 to 008 | ✅ | 22/34 passing (12 TDD) |
+| Alert Rules | FR-ALERT-001 to 010 | ✅ | 18/30 passing (12 TDD) |
+| Home | FR-HOME-001 to 005 | ✅ | 8/13 passing (5 TDD) |
+| Forecasts | FR-FORECAST-001 to 004 | ✅ | 0/6 passing (all TDD — screen unimplemented) |
+| History (sub-screen) | — | ✅ | covered under FR-FORECAST-004 |
+| Settings | FR-SET-001 to 010 | ✅ | 10/15 passing (5 TDD) |
+| Server-Side | FR-POLL-001 to 005 | ✅ | engine tests passing; FR-POLL-004/005 are post-MVP |
+| IAP | FR-IAP-001 to 005 | ⏳ | not yet tested |
+| Forecast Accuracy | FR-ACCURACY-001 to 004 | ⏳ | not yet tested (post-MVP) |
+
+**329 passing tests form the regression suite. 57 failing tests are the dev-loop targets.**
