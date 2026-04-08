@@ -226,7 +226,10 @@ describe('authStore', () => {
   // TDD: This feature does not exist in the current store yet.
 
   describe('FR-AUTH-004: forgotPassword', () => {
-    it('calls Supabase resetPasswordForEmail', async () => {
+    it('calls Supabase resetPasswordForEmail with a redirectTo pointing at /reset-password', async () => {
+      // FR-AUTH-004: the reset email must deep-link back into the app's
+      // reset-password screen, not a web page. Without redirectTo, Supabase
+      // falls back to the project's Site URL, which is wrong for a mobile app.
       mockResetPasswordForEmail.mockResolvedValue({ data: {}, error: null });
 
       const store = useAuthStore.getState();
@@ -234,7 +237,13 @@ describe('authStore', () => {
 
       await (store as any).forgotPassword('test@example.com');
 
-      expect(mockResetPasswordForEmail).toHaveBeenCalledWith('test@example.com');
+      expect(mockResetPasswordForEmail).toHaveBeenCalledTimes(1);
+      const [emailArg, optionsArg] = mockResetPasswordForEmail.mock.calls[0];
+      expect(emailArg).toBe('test@example.com');
+      expect(optionsArg).toBeDefined();
+      // The mock for expo-linking in jest.setup.ts returns
+      // `pingweather://reset-password` for createURL('/reset-password').
+      expect(optionsArg.redirectTo).toBe('pingweather://reset-password');
     });
 
     it('does not confirm whether email exists (security)', async () => {

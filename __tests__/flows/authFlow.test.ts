@@ -70,13 +70,15 @@ describe('Auth Flow', () => {
     expect(state.profile).toBeNull();
   });
 
-  // FR-AUTH-004: forgot password calls resetPasswordForEmail (TDD — method not implemented)
-  it('forgotPassword: calls supabase.auth.resetPasswordForEmail', async () => {
+  // FR-AUTH-004: forgot password calls resetPasswordForEmail with a deep-link redirect
+  it('forgotPassword: calls supabase.auth.resetPasswordForEmail with redirectTo', async () => {
     const store: any = useAuthStore.getState();
-    // TDD: this method does not exist yet on the store
     expect(typeof store.resetPassword).toBe('function');
     await store.resetPassword('a@b.co');
-    expect(supabaseMock.auth.resetPasswordForEmail).toHaveBeenCalledWith('a@b.co');
+    expect(supabaseMock.auth.resetPasswordForEmail).toHaveBeenCalledTimes(1);
+    const [email, options] = supabaseMock.auth.resetPasswordForEmail.mock.calls[0];
+    expect(email).toBe('a@b.co');
+    expect(options?.redirectTo).toBe('pingweather://reset-password');
   });
 
   // FR-AUTH-003: session persistence via initialize

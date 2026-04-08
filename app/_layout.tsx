@@ -22,14 +22,31 @@ export default function RootLayout() {
     const inAuthGroup =
       segments[0] === 'login' ||
       segments[0] === 'signup' ||
-      segments[0] === 'forgot-password';
+      segments[0] === 'forgot-password' ||
+      segments[0] === 'reset-password';
     const inOnboarding = segments[0] === 'onboarding';
+    // reset-password is special: the screen activates a recovery session via
+    // supabase.auth.setSession, which flips `session` to truthy. Without this
+    // guard, the "authed user in auth group → /" branch would redirect the
+    // user off the screen before they set a new password.
+    const inRecovery = segments[0] === 'reset-password';
 
     if (!session && !inAuthGroup) {
       router.replace('/login');
-    } else if (session && profile && profile.onboarding_completed === false && !inOnboarding) {
+    } else if (
+      session &&
+      profile &&
+      profile.onboarding_completed === false &&
+      !inOnboarding &&
+      !inRecovery
+    ) {
       router.replace('/onboarding/welcome');
-    } else if (session && profile?.onboarding_completed === true && (inAuthGroup || inOnboarding)) {
+    } else if (
+      session &&
+      profile?.onboarding_completed === true &&
+      (inAuthGroup || inOnboarding) &&
+      !inRecovery
+    ) {
       router.replace('/');
     }
   }, [ready, session, profile, segments]);
@@ -51,6 +68,7 @@ export default function RootLayout() {
         <Stack.Screen name="login" />
         <Stack.Screen name="signup" />
         <Stack.Screen name="forgot-password" />
+        <Stack.Screen name="reset-password" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="create-rule" options={{ headerShown: true, title: 'Create Alert Rule' }} />

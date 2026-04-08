@@ -102,6 +102,16 @@ jest.mock('expo-status-bar', () => ({
   StatusBar: () => null,
 }));
 
+// ── Expo Linking ────────────────────────────────────────────────
+// createURL returns a deterministic value so tests can assert exact args.
+jest.mock('expo-linking', () => ({
+  createURL: jest.fn((path: string) => `pingweather://${path.replace(/^\//, '')}`),
+  useURL: jest.fn(() => null),
+  getInitialURL: jest.fn(() => Promise.resolve(null)),
+  addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+  parse: jest.fn((url: string) => ({ path: url, queryParams: {} })),
+}));
+
 // ── react-native-url-polyfill ───────────────────────────────────
 jest.mock('react-native-url-polyfill/auto', () => ({}), { virtual: true });
 

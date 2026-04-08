@@ -74,6 +74,15 @@ Hourly is the finest granularity any tier uses (Premium min = 1hr); the Edge Fun
 **Status:** fixed 2026-04-08
 **What:** BUG-001. Was previously a dead TextInput. Now uses real `<LocationSearchInput>` component backed by `searchPlaces` from the geocoding service. Debounced 300ms, race-guard via `lastSelectedLabelRef`, keeps selected label visible after tap-to-select, suppresses follow-up search via ref check in debounce effect.
 
+### Password reset deep link flow
+**Status:** code written 2026-04-08, requires rebuild + Supabase URL config before it works
+**What:** Full flow: `/forgot-password` → Supabase email → tap link → `pingweather://reset-password#access_token=...` → `app/reset-password.tsx` parses hash via `src/services/parseRecoveryUrl.ts` (pure, 11 unit tests) → `supabase.auth.setSession` → `supabase.auth.updateUser({ password })` → sign out → `/login`.
+- Critical gotcha: React Native Supabase client does NOT auto-detect recovery tokens (no `window.location`). Must parse URL manually. PASSWORD_RECOVERY event never fires on RN; you get a plain SIGNED_IN instead.
+- `app.json` now has `"scheme": "pingweather"` — NATIVE CHANGE, requires `eas build` before the OS will route links to the app.
+- Auth gate in `app/_layout.tsx` exempts `/reset-password` from both the unauthenticated-redirect and the authenticated-user-out-of-auth-group branches, otherwise `setSession` flips session to truthy and the gate would kick the user off mid-flow.
+- Supabase Site URL must be changed from `http://localhost:3000` to `pingweather://reset-password` and redirect URLs added. See `docs/JIMMY_HANDOFF.md` section 1.
+- `forgotPassword` in `authStore.ts` now passes `redirectTo: Linking.createURL('/reset-password')` which resolves to `pingweather://reset-password` in standalone/dev builds and `exp://HOST:8081/--/reset-password` in Expo Go.
+
 ### Expo Go cannot test push notifications
 **Status:** by-design
 **What:** expo-notifications was removed from Expo Go in SDK 53+. Any push notification work requires an EAS development build. Lazy-load the notifications module via `usePushNotifications.ts` (already done) so the app doesn't crash in Expo Go when the feature is unused.

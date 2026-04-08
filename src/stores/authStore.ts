@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import * as Linking from 'expo-linking';
 import { supabase } from '../utils/supabase';
 import type { Profile } from '../types';
 import type { Session, User } from '@supabase/supabase-js';
@@ -85,12 +86,16 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   forgotPassword: async (email) => {
     set({ error: null });
     try {
-      const { data: _, error } = await supabase.auth.resetPasswordForEmail(email);
-      // Security: do not reveal whether email exists or not
+      // Linking.createURL produces:
+      //   - pingweather://reset-password        in a standalone / dev build
+      //   - exp://HOST:8081/--/reset-password   in Expo Go / dev client
+      // Both must be whitelisted in Supabase Auth → URL Configuration → Redirect URLs.
+      const redirectTo = Linking.createURL('/reset-password');
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
       if (error) {
-        // Only set error on actual network/server failures, not on "email not found"
-        const message = error.message || 'Password reset request failed';
-        set({ error: message });
+        // Real DB / network errors surface. "Email not found" is deliberately
+        // returned as success by Supabase to avoid leaking which emails exist.
+        set({ error: error.message || 'Password reset request failed' });
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Password reset failed';

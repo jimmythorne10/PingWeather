@@ -92,17 +92,21 @@ export default function SettingsScreen() {
         </Text>
       </View>
 
-      {/* Upgrade CTA — everyone who isn't Premium sees this */}
-      {currentTier !== 'premium' && (
-        <Pressable style={styles.upgradeButton} onPress={() => router.push('/upgrade')}>
-          <Text style={styles.upgradeButtonText}>
-            {currentTier === 'free' ? 'Upgrade to Pro or Premium →' : 'Upgrade to Premium →'}
-          </Text>
-          <Text style={styles.upgradeButtonSubtext}>
-            More locations, faster polling, compound alerts
-          </Text>
-        </Pressable>
-      )}
+      {/* Plan CTA — always visible so Premium users can downgrade */}
+      <Pressable style={styles.upgradeButton} onPress={() => router.push('/upgrade')}>
+        <Text style={styles.upgradeButtonText}>
+          {currentTier === 'free'
+            ? 'Upgrade to Pro or Premium →'
+            : currentTier === 'pro'
+              ? 'Upgrade to Premium →'
+              : 'Manage Plan →'}
+        </Text>
+        <Text style={styles.upgradeButtonSubtext}>
+          {currentTier === 'premium'
+            ? 'Change plan or cancel subscription'
+            : 'More locations, faster polling, compound alerts'}
+        </Text>
+      </Pressable>
 
       {/* Developer Tier Override — only for the developer account */}
       {canOverrideTier && (
