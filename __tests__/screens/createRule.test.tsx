@@ -87,7 +87,11 @@ describe('CreateRuleScreen — Create mode', () => {
   // FR-ALERT-003: 7 lookahead options
   it('renders all 7 lookahead options', () => {
     render(<CreateRuleScreen />);
-    ['6 hours', '12 hours', '1 day', '2 days', '3 days', '5 days', '7 days'].forEach((l) => {
+    // Note: "6 hours" and "12 hours" also appear in cooldown options — use getAllByText
+    ['6 hours', '12 hours'].forEach((l) => {
+      expect(screen.getAllByText(l).length).toBeGreaterThan(0);
+    });
+    ['1 day', '2 days', '3 days', '5 days', '7 days'].forEach((l) => {
       expect(screen.getByText(l)).toBeTruthy();
     });
   });
@@ -112,7 +116,11 @@ describe('CreateRuleScreen — Create mode', () => {
   // FR-ALERT-003: cooldown options
   it('renders all 5 cooldown options', () => {
     render(<CreateRuleScreen />);
-    ['4 hours', '6 hours', '12 hours', '24 hours', '48 hours'].forEach((c) => {
+    // Note: "6 hours" and "12 hours" also appear in lookahead options — use getAllByText
+    ['6 hours', '12 hours'].forEach((c) => {
+      expect(screen.getAllByText(c).length).toBeGreaterThan(0);
+    });
+    ['4 hours', '24 hours', '48 hours'].forEach((c) => {
       expect(screen.getByText(c)).toBeTruthy();
     });
   });

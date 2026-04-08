@@ -1,4 +1,4 @@
-// Legal content for WeatherWatch
+// Legal content for PingWeather
 // Centralized, versioned EULA and Privacy Policy text.
 // Adapted from SocialUplink (Truth Centered Tech)
 
@@ -24,31 +24,31 @@ export const EULA_CONTENT: LegalDocument = {
   sections: [
     {
       title: 'Introduction',
-      body: 'Welcome to WeatherWatch\u2122. These Terms of Use ("Agreement") are a legal agreement between you ("User") and Truth Centered Tech ("Company," "we," "us," or "our"). By using the WeatherWatch mobile application and related services (the "Service"), you agree to be bound by these terms. If you do not agree, do not use the Service.',
+      body: 'Welcome to PingWeather\u2122. These Terms of Use ("Agreement") are a legal agreement between you ("User") and Truth Centered Tech ("Company," "we," "us," or "our"). By using the PingWeather mobile application and related services (the "Service"), you agree to be bound by these terms. If you do not agree, do not use the Service.',
     },
     {
       title: 'License Grant',
-      body: 'We grant you a limited, non-exclusive, non-transferable, revocable license to use the WeatherWatch application on your personal devices for your own personal or business use, subject to these terms. This license does not include the right to sublicense, modify, distribute, or create derivative works of the application. We reserve all rights not expressly granted to you.',
+      body: 'We grant you a limited, non-exclusive, non-transferable, revocable license to use the PingWeather application on your personal devices for your own personal or business use, subject to these terms. This license does not include the right to sublicense, modify, distribute, or create derivative works of the application. We reserve all rights not expressly granted to you.',
     },
     {
       title: 'Acceptable Use',
-      body: 'You agree to use WeatherWatch only for lawful purposes and in accordance with these terms. You may not: (a) use the Service for any illegal purpose; (b) interfere with or disrupt the Service or its servers; (c) attempt to gain unauthorized access to any part of the Service; (d) use automated tools to access the Service except as provided by us; (e) reverse engineer, decompile, or disassemble any part of the Service; or (f) violate any applicable local, state, national, or international law.',
+      body: 'You agree to use PingWeather only for lawful purposes and in accordance with these terms. You may not: (a) use the Service for any illegal purpose; (b) interfere with or disrupt the Service or its servers; (c) attempt to gain unauthorized access to any part of the Service; (d) use automated tools to access the Service except as provided by us; (e) reverse engineer, decompile, or disassemble any part of the Service; or (f) violate any applicable local, state, national, or international law.',
     },
     {
       title: 'Subscription Tiers',
-      body: 'WeatherWatch offers multiple subscription tiers:\n\nFree Tier: Includes 1 monitored location, 2 alert rules, 12-hour minimum polling interval, 7-day alert history, and single-condition alerts.\n\nPro Tier ($3.99/month): Includes 3 monitored locations, 5 alert rules, 4-hour minimum polling interval, 30-day alert history, and compound condition alerts (AND/OR logic).\n\nPremium Tier ($7.99/month): Includes 10 monitored locations, unlimited alert rules, 1-hour minimum polling interval, 90-day alert history, compound condition alerts, and SMS alerts (when available).\n\nPricing and features are subject to change. We will notify you of any changes before your next billing cycle.',
+      body: 'PingWeather offers multiple subscription tiers:\n\nFree Tier: Includes 1 monitored location, 2 alert rules, 12-hour minimum polling interval, 7-day alert history, and single-condition alerts.\n\nPro Tier ($3.99/month): Includes 3 monitored locations, 5 alert rules, 4-hour minimum polling interval, 30-day alert history, and compound condition alerts (AND/OR logic).\n\nPremium Tier ($7.99/month): Includes 10 monitored locations, unlimited alert rules, 1-hour minimum polling interval, 90-day alert history, compound condition alerts, and SMS alerts (when available).\n\nPricing and features are subject to change. We will notify you of any changes before your next billing cycle.',
     },
     {
       title: 'Weather Data Disclaimer',
-      body: 'WeatherWatch provides weather forecasts and alerts based on data from third-party weather services. WEATHER FORECASTS ARE INHERENTLY UNCERTAIN AND SHOULD NOT BE RELIED UPON AS THE SOLE BASIS FOR DECISIONS AFFECTING LIFE, SAFETY, OR PROPERTY. We do not guarantee the accuracy, completeness, or timeliness of any weather data or alerts. You acknowledge that weather conditions can change rapidly and that forecast accuracy decreases with longer time horizons. WeatherWatch is a supplementary notification tool, not a replacement for official weather warnings from the National Weather Service or equivalent authorities in your jurisdiction.',
+      body: 'PingWeather provides weather forecasts and alerts based on data from third-party weather services. WEATHER FORECASTS ARE INHERENTLY UNCERTAIN AND SHOULD NOT BE RELIED UPON AS THE SOLE BASIS FOR DECISIONS AFFECTING LIFE, SAFETY, OR PROPERTY. We do not guarantee the accuracy, completeness, or timeliness of any weather data or alerts. You acknowledge that weather conditions can change rapidly and that forecast accuracy decreases with longer time horizons. PingWeather is a supplementary notification tool, not a replacement for official weather warnings from the National Weather Service or equivalent authorities in your jurisdiction.',
     },
     {
       title: 'Notification Delivery',
-      body: 'While we make reasonable efforts to deliver notifications promptly, we do not guarantee that notifications will be delivered within any specific timeframe or at all. Notification delivery depends on factors outside our control, including your device settings, network connectivity, battery optimization settings, and push notification service availability. You are responsible for ensuring your device is configured to receive push notifications from WeatherWatch. We strongly recommend keeping official weather alert channels (NWS, emergency broadcasts) enabled as a backup.',
+      body: 'While we make reasonable efforts to deliver notifications promptly, we do not guarantee that notifications will be delivered within any specific timeframe or at all. Notification delivery depends on factors outside our control, including your device settings, network connectivity, battery optimization settings, and push notification service availability. You are responsible for ensuring your device is configured to receive push notifications from PingWeather. We strongly recommend keeping official weather alert channels (NWS, emergency broadcasts) enabled as a backup.',
     },
     {
       title: 'Intellectual Property',
-      body: 'The WeatherWatch application, including its design, code, logos, trademarks, and documentation, is owned by Truth Centered Tech and protected by intellectual property laws. "WeatherWatch" and the WeatherWatch logo are trademarks of the Company. You may not use our trademarks without prior written permission.',
+      body: 'The PingWeather application, including its design, code, logos, trademarks, and documentation, is owned by Truth Centered Tech and protected by intellectual property laws. "PingWeather" and the PingWeather logo are trademarks of the Company. You may not use our trademarks without prior written permission.',
     },
     {
       title: 'Limitation of Liability',
@@ -91,7 +91,7 @@ export const PRIVACY_POLICY_CONTENT: LegalDocument = {
   sections: [
     {
       title: 'Introduction',
-      body: 'Truth Centered Tech ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use the WeatherWatch mobile application and related services. Please read this policy carefully. If you do not agree with the terms of this Privacy Policy, please do not use the Service.',
+      body: 'Truth Centered Tech ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use the PingWeather mobile application and related services. Please read this policy carefully. If you do not agree with the terms of this Privacy Policy, please do not use the Service.',
     },
     {
       title: 'Data Collection',
@@ -99,11 +99,11 @@ export const PRIVACY_POLICY_CONTENT: LegalDocument = {
     },
     {
       title: 'How We Use Your Data',
-      body: 'We use the information we collect to:\n\n- Monitor weather conditions at your specified locations based on your alert rules.\n- Send push notifications when your alert conditions are met.\n- Maintain your alert history for the duration specified by your subscription tier.\n- Improve the Service, fix bugs, and develop new features.\n- Communicate with you about your account, billing, and service updates.\n\nWe do not use your data for advertising, marketing to third parties, or any purpose unrelated to providing the WeatherWatch Service.',
+      body: 'We use the information we collect to:\n\n- Monitor weather conditions at your specified locations based on your alert rules.\n- Send push notifications when your alert conditions are met.\n- Maintain your alert history for the duration specified by your subscription tier.\n- Improve the Service, fix bugs, and develop new features.\n- Communicate with you about your account, billing, and service updates.\n\nWe do not use your data for advertising, marketing to third parties, or any purpose unrelated to providing the PingWeather Service.',
     },
     {
       title: 'Weather Data Sources',
-      body: 'WeatherWatch retrieves forecast data from third-party weather APIs (currently Open-Meteo). Your location coordinates are sent to these services to retrieve local weather forecasts. These services receive only the coordinates, not your identity or account information. Please review the privacy policies of these services for information about how they handle location data.',
+      body: 'PingWeather retrieves forecast data from third-party weather APIs (currently Open-Meteo). Your location coordinates are sent to these services to retrieve local weather forecasts. These services receive only the coordinates, not your identity or account information. Please review the privacy policies of these services for information about how they handle location data.',
     },
     {
       title: 'Push Notification Services',
@@ -123,7 +123,7 @@ export const PRIVACY_POLICY_CONTENT: LegalDocument = {
     },
     {
       title: "Children's Privacy (COPPA Compliance)",
-      body: 'WeatherWatch is not intended for children under the age of 13 (or the applicable age of digital consent in your jurisdiction). We do not knowingly collect personal information from children. If you are a parent or guardian and believe your child has provided us with personal information, please contact us at privacy@truthcenteredtech.com and we will promptly delete such information.',
+      body: 'PingWeather is not intended for children under the age of 13 (or the applicable age of digital consent in your jurisdiction). We do not knowingly collect personal information from children. If you are a parent or guardian and believe your child has provided us with personal information, please contact us at privacy@truthcenteredtech.com and we will promptly delete such information.',
     },
     {
       title: 'Your Rights Under GDPR (European Users)',
@@ -139,7 +139,7 @@ export const PRIVACY_POLICY_CONTENT: LegalDocument = {
     },
     {
       title: 'International Data Transfers',
-      body: 'WeatherWatch processes data using servers located in the United States. If you are located outside the United States, your data may be transferred to and processed in the United States.\n\nWe ensure appropriate safeguards for international transfers through: (a) Standard Contractual Clauses approved by the European Commission; (b) compliance with applicable data protection frameworks; and (c) contractual obligations with our infrastructure providers that require them to protect your data.',
+      body: 'PingWeather processes data using servers located in the United States. If you are located outside the United States, your data may be transferred to and processed in the United States.\n\nWe ensure appropriate safeguards for international transfers through: (a) Standard Contractual Clauses approved by the European Commission; (b) compliance with applicable data protection frameworks; and (c) contractual obligations with our infrastructure providers that require them to protect your data.',
     },
     {
       title: 'Changes to This Privacy Policy',

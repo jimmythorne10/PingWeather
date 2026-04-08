@@ -11,6 +11,7 @@ export default function LocationSetupScreen() {
   const { getLocation, loading: locLoading, error: locError } = useDeviceLocation();
   const addLocation = useLocationsStore((s) => s.addLocation);
   const [locationName, setLocationName] = useState('');
+  const [addressSearch, setAddressSearch] = useState('');
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -56,6 +57,22 @@ export default function LocationSetupScreen() {
           placeholderTextColor={t.textTertiary}
           value={locationName}
           onChangeText={setLocationName}
+        />
+
+        {/* Address/place search — FR-ONBOARD-005 / FR-LOC-002 */}
+        <TextInput
+          style={[
+            styles.input,
+            {
+              backgroundColor: t.inputBackground,
+              borderColor: t.border,
+              color: t.textPrimary,
+            },
+          ]}
+          placeholder="Search place or address"
+          placeholderTextColor={t.textTertiary}
+          value={addressSearch}
+          onChangeText={setAddressSearch}
         />
 
         <Pressable

@@ -3,7 +3,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../utils/supabase';
 import { useAuthStore } from './authStore';
-import type { AlertRule, AlertCondition, LogicalOperator } from '../types';
+import { TIER_LIMITS } from '../types';
+import type { AlertRule, AlertCondition, LogicalOperator, SubscriptionTier } from '../types';
 
 interface AlertRulesState {
   rules: AlertRule[];
@@ -23,6 +24,7 @@ interface AlertRulesState {
   updateRule: (id: string, updates: Partial<AlertRule>) => Promise<void>;
   deleteRule: (id: string) => Promise<void>;
   toggleRule: (id: string, isActive: boolean) => Promise<void>;
+  enforceTierLimits: (tier: SubscriptionTier) => Promise<void>;
   clearError: () => void;
 }
 
@@ -52,6 +54,23 @@ export const useAlertRulesStore = create<AlertRulesState>()(
         try {
           const userId = useAuthStore.getState().user?.id;
           if (!userId) throw new Error('Not authenticated');
+
+          const tier = useAuthStore.getState().profile?.subscription_tier ?? 'free';
+          const limits = TIER_LIMITS[tier];
+
+          // Tier limit enforcement
+          const current = get().rules.length;
+          if (current >= limits.maxAlertRules) {
+            set({ loading: false, error: `Alert rule limit reached for your plan (${limits.maxAlertRules} max)` });
+            return;
+          }
+
+          // Compound condition gating
+          if (!limits.compoundConditions && rule.conditions.length > 1) {
+            set({ loading: false, error: 'Compound conditions require a Pro or Premium subscription' });
+            return;
+          }
+
           const { data, error } = await supabase
             .from('alert_rules')
             .insert({ ...rule, user_id: userId, is_active: true })
@@ -105,6 +124,36 @@ export const useAlertRulesStore = create<AlertRulesState>()(
           });
         } catch {
           set({ error: 'Failed to toggle alert rule' });
+        }
+      },
+
+      enforceTierLimits: async (tier) => {
+        const limit = TIER_LIMITS[tier].maxAlertRules;
+        const rules = get().rules;
+
+        const active = rules.filter((r) => r.is_active);
+        const inactive = rules.filter((r) => !r.is_active);
+
+        if (active.length <= limit) {
+          // Under limit — re-enable inactive rules up to the limit
+          const canActivate = limit - active.length;
+          const toActivate = inactive.slice(0, canActivate);
+          if (toActivate.length === 0) return;
+
+          const activateIds = new Set(toActivate.map((r) => r.id));
+          set({
+            rules: rules.map((r) =>
+              activateIds.has(r.id) ? { ...r, is_active: true } : r
+            ),
+          });
+        } else {
+          // Over limit — deactivate excess (keep first `limit` active ones)
+          const toKeep = new Set(active.slice(0, limit).map((r) => r.id));
+          set({
+            rules: rules.map((r) =>
+              toKeep.has(r.id) ? r : { ...r, is_active: false }
+            ),
+          });
         }
       },
 

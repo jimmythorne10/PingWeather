@@ -58,7 +58,7 @@ export default function DashboardScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.headerRow}>
         <View>
-          <Text style={styles.title}>WeatherWatch</Text>
+          <Text style={styles.title}>PingWeather</Text>
           <Text style={styles.subtitle}>
             {profile?.display_name ? `Hey, ${profile.display_name}` : 'Your weather, your rules.'}
           </Text>
@@ -68,43 +68,51 @@ export default function DashboardScreen() {
         </Pressable>
       </View>
 
-      {/* Current conditions for primary location */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>
-          {primaryLocation ? primaryLocation.name : 'Current Conditions'}
-        </Text>
+      {/* Forecast card — FR-HOME-001/002 */}
+      <Pressable style={styles.card} onPress={() => {}}>
+        <View style={styles.cardHeaderRow}>
+          <Text style={styles.cardTitle}>Forecast</Text>
+          {primaryLocation && (
+            <Text style={styles.cardSubtitle}>{primaryLocation.name}</Text>
+          )}
+        </View>
         {!primaryLocation ? (
           <>
-            <Text style={styles.cardBody}>Add a location to see weather conditions.</Text>
+            <Text style={styles.cardBody}>Set up a location to see weather conditions.</Text>
             <Pressable style={styles.button} onPress={() => router.push('/(tabs)/locations')}>
-              <Text style={styles.buttonText}>Add Location</Text>
+              <Text style={styles.buttonText}>Add location</Text>
             </Pressable>
           </>
-        ) : weatherLoading ? (
-          <ActivityIndicator color={tokens.primary} style={{ marginVertical: 16 }} />
-        ) : weather ? (
-          <View style={styles.forecastRow}>
-            {weather.daily.time.slice(0, 3).map((date, i) => {
-              const dayLabel = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
-              const high = Math.round(weather.daily.temperature_2m_max[i]);
-              const low = Math.round(weather.daily.temperature_2m_min[i]);
-              const rain = weather.daily.precipitation_probability_max[i];
-              return (
-                <View key={date} style={styles.forecastDay}>
-                  <Text style={styles.forecastDayLabel}>{dayLabel}</Text>
-                  <Text style={styles.forecastHigh}>{high}{unitSymbol}</Text>
-                  <Text style={styles.forecastLow}>{low}{unitSymbol}</Text>
-                  {rain > 0 && (
-                    <Text style={styles.forecastRain}>{rain}% rain</Text>
-                  )}
-                </View>
-              );
-            })}
-          </View>
         ) : (
-          <Text style={styles.cardBody}>Unable to load weather data.</Text>
+          <>
+            {weatherLoading ? (
+              <ActivityIndicator color={tokens.primary} style={{ marginVertical: 16 }} />
+            ) : weather ? (
+              <View style={styles.forecastRow}>
+                {weather.daily.time.slice(0, 3).map((date, i) => {
+                  const dayLabel = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
+                  const high = Math.round(weather.daily.temperature_2m_max[i]);
+                  const low = Math.round(weather.daily.temperature_2m_min[i]);
+                  const rain = weather.daily.precipitation_probability_max[i];
+                  return (
+                    <View key={date} style={styles.forecastDay}>
+                      <Text style={styles.forecastDayLabel}>{dayLabel}</Text>
+                      <Text style={styles.forecastHigh}>{high}{unitSymbol}</Text>
+                      <Text style={styles.forecastLow}>{low}{unitSymbol}</Text>
+                      {rain > 0 && (
+                        <Text style={styles.forecastRain}>{rain}% rain</Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <Text style={styles.cardBody}>Unable to load weather data.</Text>
+            )}
+            <Text style={styles.forecastExpandHint}>Tap to expand · View 14-day forecast</Text>
+          </>
         )}
-      </View>
+      </Pressable>
 
       {/* Active alerts summary */}
       <View style={styles.card}>
@@ -201,6 +209,8 @@ const createStyles = (t: ThemeTokens) => ({
   },
   buttonText: { color: t.textOnPrimary, fontSize: 16, fontWeight: '600' as const },
 
+  cardSubtitle: { fontSize: 13, color: t.textTertiary },
+
   // Forecast
   forecastRow: { flexDirection: 'row' as const, justifyContent: 'space-around' as const, marginTop: 8 },
   forecastDay: { alignItems: 'center' as const, gap: 4 },
@@ -208,6 +218,7 @@ const createStyles = (t: ThemeTokens) => ({
   forecastHigh: { fontSize: 22, fontWeight: '700' as const, color: t.textPrimary },
   forecastLow: { fontSize: 16, color: t.textTertiary },
   forecastRain: { fontSize: 12, color: t.rainBlue, fontWeight: '500' as const },
+  forecastExpandHint: { fontSize: 12, color: t.textTertiary, textAlign: 'center' as const, marginTop: 12 },
 
   // Rules summary
   ruleRow: {

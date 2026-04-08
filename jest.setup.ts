@@ -5,6 +5,11 @@
 // apply to all tests. Individual tests can override specific mock methods via
 // `(mockedMethod as jest.Mock).mockResolvedValue(...)`.
 
+// ── setImmediate polyfill (not available in jsdom) ──────────────
+if (typeof setImmediate === 'undefined') {
+  (global as any).setImmediate = (fn: () => void) => setTimeout(fn, 0);
+}
+
 // ── AsyncStorage ────────────────────────────────────────────────
 jest.mock('@react-native-async-storage/async-storage', () => {
   const storage = new Map<string, string>();
@@ -184,4 +189,51 @@ jest.mock('@supabase/supabase-js', () => {
   return {
     createClient: jest.fn(() => client),
   };
+});
+
+// ── Global test factory helpers ─────────────────────────────────
+// These are used by tierEnforcement.test.ts, authFlow.test.ts, and other flow tests
+// without explicit imports.
+(global as any).mockProfile = (overrides: Record<string, unknown> = {}) => ({
+  id: 'user-1',
+  email: 'test@example.com',
+  display_name: 'Test User',
+  subscription_tier: 'free',
+  onboarding_completed: true,
+  eula_accepted_version: '1.0.0',
+  eula_accepted_at: '2026-01-01T00:00:00Z',
+  push_token: null,
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+  ...overrides,
+});
+
+(global as any).mockLocation = (overrides: Record<string, unknown> = {}) => ({
+  id: 'loc-1',
+  user_id: 'user-1',
+  name: 'Home',
+  latitude: 40.7128,
+  longitude: -74.006,
+  is_active: true,
+  is_default: false,
+  timezone: null,
+  created_at: '2026-01-01T00:00:00Z',
+  ...overrides,
+});
+
+(global as any).mockRule = (overrides: Record<string, unknown> = {}) => ({
+  id: 'rule-1',
+  user_id: 'user-1',
+  location_id: 'loc-1',
+  name: 'Freeze Warning',
+  conditions: [{ metric: 'temperature_low', operator: 'lt', value: 32, unit: 'fahrenheit' }],
+  logical_operator: 'AND',
+  lookahead_hours: 24,
+  polling_interval_hours: 12,
+  is_active: true,
+  cooldown_hours: 12,
+  last_triggered_at: null,
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+  ...overrides,
 });

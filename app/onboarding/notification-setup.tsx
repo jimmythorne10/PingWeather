@@ -27,12 +27,12 @@ export default function NotificationSetupScreen() {
       <View style={styles.content}>
         <Text style={styles.icon}>{done ? '✅' : '🔔'}</Text>
         <Text style={[styles.title, { color: t.textPrimary }]}>
-          {done ? 'Notifications Enabled!' : 'Enable Notifications'}
+          {done ? 'Notifications Enabled!' : 'Stay Informed'}
         </Text>
         <Text style={[styles.subtitle, { color: t.textSecondary }]}>
           {done
             ? "You're all set to receive weather alerts."
-            : 'WeatherWatch needs push notifications to alert you when weather conditions match your rules. This is the core of what the app does.'}
+            : 'PingWeather needs push notifications to alert you when weather conditions match your rules. This is the core of what the app does.'}
         </Text>
 
         {!done && (

@@ -23,7 +23,7 @@ export default function LoginScreen() {
     >
       <View style={styles.header}>
         <Text style={styles.icon}>{'⛅'}</Text>
-        <Text style={[styles.title, { color: t.textPrimary }]}>WeatherWatch</Text>
+        <Text style={[styles.title, { color: t.textPrimary }]}>PingWeather</Text>
         <Text style={[styles.subtitle, { color: t.textSecondary }]}>Sign in to continue</Text>
       </View>
 
@@ -61,6 +61,12 @@ export default function LoginScreen() {
         >
           <Text style={[styles.buttonText, { color: t.textOnPrimary }]}>
             {loading ? 'Signing in...' : 'Sign In'}
+          </Text>
+        </Pressable>
+
+        <Pressable style={styles.link} onPress={() => router.push('/forgot-password')}>
+          <Text style={[styles.linkText, { color: t.primary }]}>
+            Forgot Password?
           </Text>
         </Pressable>
 

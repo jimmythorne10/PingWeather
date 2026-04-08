@@ -37,9 +37,17 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="forecasts"
+        options={{
+          title: 'Forecasts',
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>{'🌤️'}</Text>,
+        }}
+      />
+      <Tabs.Screen
         name="history"
         options={{
           title: 'History',
+          tabBarButton: () => null,
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>{'📜'}</Text>,
         }}
       />

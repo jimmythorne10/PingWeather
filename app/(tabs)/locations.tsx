@@ -20,11 +20,15 @@ export default function LocationsScreen() {
   const [name, setName] = useState('');
   const [lat, setLat] = useState('');
   const [lon, setLon] = useState('');
+  const [addressSearch, setAddressSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
   const tier = profile?.subscription_tier ?? 'free';
   const limits = TIER_LIMITS[tier];
   const atLimit = locations.length >= limits.maxLocations;
+
+  // Count locations that are inactive (over-tier)
+  const inactiveLocations = locations.filter((l) => !l.is_active);
 
   useEffect(() => {
     loadLocations();
@@ -49,6 +53,7 @@ export default function LocationsScreen() {
     setName('');
     setLat('');
     setLon('');
+    setAddressSearch('');
     setSaving(false);
   };
 
@@ -82,6 +87,15 @@ export default function LocationsScreen() {
         )}
       </View>
 
+      {/* Inactive banner — FR-LOC-005 */}
+      {inactiveLocations.length > 0 && (
+        <View style={styles.inactiveBanner}>
+          <Text style={styles.inactiveBannerText}>
+            You have {inactiveLocations.length} inactive location{inactiveLocations.length > 1 ? 's' : ''}. Upgrade to reactivate them.
+          </Text>
+        </View>
+      )}
+
       {/* Add location form */}
       {showAdd && (
         <View style={styles.addCard}>
@@ -92,6 +106,16 @@ export default function LocationsScreen() {
             value={name}
             onChangeText={setName}
           />
+
+          {/* Address/place search — FR-LOC-002 */}
+          <TextInput
+            style={styles.input}
+            placeholder="Search place or address"
+            placeholderTextColor={tokens.textTertiary}
+            value={addressSearch}
+            onChangeText={setAddressSearch}
+          />
+
           <Pressable style={styles.geoButton} onPress={handleUseDeviceLocation} disabled={geoLoading}>
             {geoLoading ? (
               <ActivityIndicator size="small" color={tokens.primary} />
@@ -146,10 +170,19 @@ export default function LocationsScreen() {
           </Pressable>
         </View>
       ) : (
-        locations.map((loc) => (
+        locations.map((loc, index) => (
           <View key={loc.id} style={styles.locationCard}>
             <View style={styles.locationHeader}>
-              <Text style={styles.locationName}>{loc.name}</Text>
+              <View style={styles.locationTitleRow}>
+                {/* Default location star — FR-LOC-008 (first location = default) */}
+                <Pressable
+                  accessibilityLabel="Default location"
+                  style={styles.starButton}
+                >
+                  <Text style={styles.starIcon}>{index === 0 ? '⭐' : '☆'}</Text>
+                </Pressable>
+                <Text style={styles.locationName}>{loc.name}</Text>
+              </View>
               <Switch
                 value={loc.is_active}
                 onValueChange={(val) => toggleLocation(loc.id, val)}
@@ -160,8 +193,12 @@ export default function LocationsScreen() {
             <Text style={styles.locationCoords}>
               {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}
             </Text>
-            <Pressable onPress={() => handleDelete(loc)}>
-              <Text style={styles.deleteText}>Remove</Text>
+            <Pressable
+              accessibilityLabel="Delete location"
+              onPress={() => handleDelete(loc)}
+              style={styles.trashButton}
+            >
+              <Text style={styles.trashIcon}>🗑️</Text>
             </Pressable>
           </View>
         ))
@@ -197,6 +234,15 @@ const createStyles = (t: ThemeTokens) => ({
     borderRadius: 8,
   },
   addHeaderButtonText: { color: t.textOnPrimary, fontWeight: '600' as const, fontSize: 14 },
+
+  // Inactive banner
+  inactiveBanner: {
+    backgroundColor: t.warningLight,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  inactiveBannerText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' as const },
 
   // Add form
   addCard: {
@@ -269,9 +315,17 @@ const createStyles = (t: ThemeTokens) => ({
     justifyContent: 'space-between' as const,
     alignItems: 'center' as const,
   },
+  locationTitleRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+  },
+  starButton: { padding: 2 },
+  starIcon: { fontSize: 18 },
   locationName: { fontSize: 17, fontWeight: '600' as const, color: t.textPrimary },
   locationCoords: { fontSize: 13, color: t.textTertiary, marginTop: 4, marginBottom: 8 },
-  deleteText: { color: t.error, fontSize: 14, fontWeight: '500' as const },
+  trashButton: { alignSelf: 'flex-start' as const },
+  trashIcon: { fontSize: 18 },
 
   // Limit warning
   limitCard: {

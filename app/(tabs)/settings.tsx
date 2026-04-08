@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, Pressable, Switch } from 'react-native';
+import { View, Text, ScrollView, Pressable, Switch, Alert } from 'react-native';
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useStyles, useTokens } from '../../src/theme';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -6,6 +7,8 @@ import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useThemeStore } from '../../src/stores/themeStore';
 import type { ThemeTokens } from '../../src/theme';
 import type { ThemeName } from '../../src/theme/tokens';
+
+const APP_VERSION = '1.0.0';
 
 export default function SettingsScreen() {
   const styles = useStyles(createStyles);
@@ -16,11 +19,50 @@ export default function SettingsScreen() {
   const settings = useSettingsStore();
   const { themeName, setTheme } = useThemeStore();
 
+  const [versionTapCount, setVersionTapCount] = useState(0);
+  const developerMode = versionTapCount >= 7;
+
   const themeOptions: { name: ThemeName; label: string }[] = [
     { name: 'classic', label: 'Classic' },
     { name: 'dark', label: 'Dark' },
     { name: 'storm', label: 'Storm' },
   ];
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          style: 'destructive',
+          onPress: () => signOut(),
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This action is permanent and cannot be undone. Type "DELETE" to confirm.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            // Client-side placeholder — actual deletion requires server-side call
+          },
+        },
+      ]
+    );
+  };
+
+  const handleVersionTap = () => {
+    setVersionTapCount((prev) => prev + 1);
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -133,6 +175,15 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      {/* History */}
+      <Text style={styles.sectionTitle}>{'HISTORY'}</Text>
+      <View style={styles.card}>
+        <Pressable style={styles.row} onPress={() => router.push('/history')}>
+          <Text style={styles.label}>Alert History</Text>
+          <Text style={{ fontSize: 16, color: tokens.textTertiary }}>{'›'}</Text>
+        </Pressable>
+      </View>
+
       {/* Legal */}
       <Text style={styles.sectionTitle}>{'LEGAL'}</Text>
       <View style={styles.card}>
@@ -144,9 +195,27 @@ export default function SettingsScreen() {
         </Pressable>
       </View>
 
+      {/* Delete Account */}
+      <Pressable style={styles.deleteButton} onPress={handleDeleteAccount}>
+        <Text style={styles.deleteButtonText}>Delete Account</Text>
+      </Pressable>
+
       {/* Sign out */}
-      <Pressable style={styles.signOutButton} onPress={signOut}>
+      <Pressable style={styles.signOutButton} onPress={handleSignOut}>
         <Text style={styles.signOutText}>Sign Out</Text>
+      </Pressable>
+
+      {/* Developer Options (easter egg) */}
+      {developerMode && (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Developer Options</Text>
+          <Text style={styles.value}>Internal diagnostics enabled</Text>
+        </View>
+      )}
+
+      {/* Version — tappable easter egg */}
+      <Pressable onPress={handleVersionTap} style={styles.versionContainer}>
+        <Text style={styles.versionText}>{`PingWeather v${APP_VERSION}`}</Text>
       </Pressable>
     </ScrollView>
   );
@@ -215,8 +284,20 @@ const createStyles = (t: ThemeTokens) => ({
   toggleTextActive: {
     color: t.textOnPrimary,
   },
-  signOutButton: {
+  deleteButton: {
     marginTop: 32,
+    paddingVertical: 14,
+    alignItems: 'center' as const,
+    borderRadius: 8,
+    backgroundColor: t.error,
+  },
+  deleteButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600' as const,
+  },
+  signOutButton: {
+    marginTop: 12,
     paddingVertical: 14,
     alignItems: 'center' as const,
     borderRadius: 8,
@@ -227,5 +308,14 @@ const createStyles = (t: ThemeTokens) => ({
     color: t.error,
     fontSize: 16,
     fontWeight: '600' as const,
+  },
+  versionContainer: {
+    marginTop: 24,
+    alignItems: 'center' as const,
+    paddingVertical: 8,
+  },
+  versionText: {
+    fontSize: 13,
+    color: t.textTertiary,
   },
 });

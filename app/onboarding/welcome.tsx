@@ -10,7 +10,7 @@ export default function WelcomeScreen() {
     <View style={[styles.container, { backgroundColor: t.primary }]}>
       <View style={styles.content}>
         <Text style={[styles.icon]}>{'⛅'}</Text>
-        <Text style={[styles.title, { color: t.textOnPrimary }]}>WeatherWatch</Text>
+        <Text style={[styles.title, { color: t.textOnPrimary }]}>PingWeather</Text>
         <Text style={[styles.subtitle, { color: t.textOnPrimary, opacity: 0.9 }]}>
           Weather alerts on your terms.
         </Text>

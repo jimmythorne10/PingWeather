@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet, Alert } from 'react-native';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTokens } from '../src/theme';
 import { useAlertRulesStore } from '../src/stores/alertRulesStore';
 import { useLocationsStore } from '../src/stores/locationsStore';
@@ -48,22 +48,47 @@ const COOLDOWN_OPTIONS = [
 export default function CreateRuleScreen() {
   const router = useRouter();
   const t = useTokens();
+  const params = useLocalSearchParams<{ mode?: string; ruleId?: string }>();
+  const mode = params.mode; // 'edit' | 'clone' | undefined (create)
+  const ruleId = params.ruleId;
+
   const profile = useAuthStore((s) => s.profile);
   const { locations, loadLocations } = useLocationsStore();
-  const createRule = useAlertRulesStore((s) => s.createRule);
+  const { rules, createRule, updateRule } = useAlertRulesStore();
 
   const tier = profile?.subscription_tier ?? 'free';
   const limits = TIER_LIMITS[tier];
 
-  const [name, setName] = useState('');
-  const [selectedLocationId, setSelectedLocationId] = useState('');
-  const [conditions, setConditions] = useState<AlertCondition[]>([
-    { metric: 'temperature_low', operator: 'lt', value: 32, unit: 'fahrenheit' },
-  ]);
-  const [logicalOp, setLogicalOp] = useState<LogicalOperator>('AND');
-  const [lookaheadHours, setLookaheadHours] = useState(24);
-  const [pollingHours, setPollingHours] = useState(limits.minPollingIntervalHours);
-  const [cooldownHours, setCooldownHours] = useState(12);
+  // Find source rule for edit/clone modes
+  const sourceRule = (mode === 'edit' || mode === 'clone') && ruleId
+    ? rules.find((r) => r.id === ruleId)
+    : undefined;
+
+  const [name, setName] = useState(() => {
+    if (sourceRule && mode === 'clone') return `${sourceRule.name} (copy)`;
+    if (sourceRule && mode === 'edit') return sourceRule.name;
+    return '';
+  });
+  const [selectedLocationId, setSelectedLocationId] = useState(() =>
+    sourceRule ? sourceRule.location_id : ''
+  );
+  const [conditions, setConditions] = useState<AlertCondition[]>(() =>
+    sourceRule
+      ? sourceRule.conditions
+      : [{ metric: 'temperature_low', operator: 'lt', value: 32, unit: 'fahrenheit' }]
+  );
+  const [logicalOp, setLogicalOp] = useState<LogicalOperator>(
+    sourceRule ? sourceRule.logical_operator : 'AND'
+  );
+  const [lookaheadHours, setLookaheadHours] = useState(
+    sourceRule ? sourceRule.lookahead_hours : 24
+  );
+  const [pollingHours, setPollingHours] = useState(
+    sourceRule ? sourceRule.polling_interval_hours : limits.minPollingIntervalHours
+  );
+  const [cooldownHours, setCooldownHours] = useState(
+    sourceRule ? sourceRule.cooldown_hours : 12
+  );
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -112,22 +137,42 @@ export default function CreateRuleScreen() {
     }
 
     setSaving(true);
-    await createRule({
-      location_id: selectedLocationId,
-      name: name.trim(),
-      conditions,
-      logical_operator: logicalOp,
-      lookahead_hours: lookaheadHours,
-      polling_interval_hours: Math.max(pollingHours, limits.minPollingIntervalHours),
-      cooldown_hours: cooldownHours,
-    });
+    if (mode === 'edit' && ruleId && updateRule) {
+      await updateRule(ruleId, {
+        location_id: selectedLocationId,
+        name: name.trim(),
+        conditions,
+        logical_operator: logicalOp,
+        lookahead_hours: lookaheadHours,
+        polling_interval_hours: Math.max(pollingHours, limits.minPollingIntervalHours),
+        cooldown_hours: cooldownHours,
+      });
+    } else {
+      await createRule({
+        location_id: selectedLocationId,
+        name: name.trim(),
+        conditions,
+        logical_operator: logicalOp,
+        lookahead_hours: lookaheadHours,
+        polling_interval_hours: Math.max(pollingHours, limits.minPollingIntervalHours),
+        cooldown_hours: cooldownHours,
+      });
+    }
     setSaving(false);
     router.back();
   };
 
+  const screenTitle =
+    mode === 'edit' ? 'Edit Alert Rule' :
+    mode === 'clone' ? 'Clone Alert Rule' :
+    'Custom Alert Rule';
+
+  const saveButtonLabel =
+    mode === 'edit' ? 'Save Changes' : 'Create Alert Rule';
+
   return (
     <ScrollView style={[styles.container, { backgroundColor: t.background }]} contentContainerStyle={styles.content}>
-      <Text style={[styles.title, { color: t.textPrimary }]}>Custom Alert Rule</Text>
+      <Text style={[styles.title, { color: t.textPrimary }]}>{screenTitle}</Text>
 
       {/* Rule Name */}
       <Text style={[styles.label, { color: t.textSecondary }]}>RULE NAME</Text>
@@ -378,7 +423,7 @@ export default function CreateRuleScreen() {
         disabled={saving || !name.trim() || !selectedLocationId}
       >
         <Text style={[styles.saveBtnText, { color: t.textOnPrimary }]}>
-          {saving ? 'Saving...' : 'Create Alert Rule'}
+          {saving ? 'Saving...' : saveButtonLabel}
         </Text>
       </Pressable>
 

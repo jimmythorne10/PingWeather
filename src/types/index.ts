@@ -1,5 +1,5 @@
 // ────────────────────────────────────────────────────────────
-// WeatherWatch Core Types
+// PingWeather Core Types
 // ────────────────────────────────────────────────────────────
 
 // Subscription tiers
@@ -63,6 +63,8 @@ export interface WatchLocation {
   latitude: number;
   longitude: number;
   is_active: boolean;
+  is_default?: boolean;
+  timezone?: string | null;
   created_at: string;
 }
 

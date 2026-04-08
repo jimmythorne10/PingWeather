@@ -21,7 +21,7 @@ export default function CompleteScreen() {
         <Text style={styles.icon}>{'✅'}</Text>
         <Text style={[styles.title, { color: t.textOnPrimary }]}>You're All Set!</Text>
         <Text style={[styles.subtitle, { color: t.textOnPrimary, opacity: 0.9 }]}>
-          WeatherWatch is ready to keep you informed. Set up your first alert
+          PingWeather is ready to keep you informed. Set up your first alert
           rule and never miss critical weather again.
         </Text>
 
@@ -44,7 +44,7 @@ export default function CompleteScreen() {
         style={[styles.button, { backgroundColor: t.textOnPrimary }]}
         onPress={handleComplete}
       >
-        <Text style={[styles.buttonText, { color: t.primary }]}>Start Using WeatherWatch</Text>
+        <Text style={[styles.buttonText, { color: t.primary }]}>Start Using PingWeather</Text>
       </Pressable>
     </View>
   );

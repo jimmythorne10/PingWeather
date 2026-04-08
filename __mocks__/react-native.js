@@ -13,6 +13,7 @@ module.exports = {
   ActivityIndicator: 'ActivityIndicator',
   Switch: 'Switch',
   Alert: { alert: jest.fn() },
+  Modal: 'Modal',
   KeyboardAvoidingView: 'KeyboardAvoidingView',
   Image: 'Image',
   FlatList: 'FlatList',

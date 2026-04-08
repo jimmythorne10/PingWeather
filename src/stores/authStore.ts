@@ -14,6 +14,8 @@ interface AuthState {
   initialize: () => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   fetchProfile: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
@@ -78,6 +80,27 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       const message = err instanceof Error ? err.message : 'Sign in failed';
       set({ loading: false, error: message });
     }
+  },
+
+  forgotPassword: async (email) => {
+    set({ error: null });
+    try {
+      const { data: _, error } = await supabase.auth.resetPasswordForEmail(email);
+      // Security: do not reveal whether email exists or not
+      if (error) {
+        // Only set error on actual network/server failures, not on "email not found"
+        const message = error.message || 'Password reset request failed';
+        set({ error: message });
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Password reset failed';
+      set({ error: message });
+    }
+  },
+
+  resetPassword: async (email) => {
+    // Alias for forgotPassword
+    await get().forgotPassword(email);
   },
 
   signOut: async () => {

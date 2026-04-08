@@ -1,5 +1,5 @@
 // ────────────────────────────────────────────────────────────
-// WeatherWatch Theme Tokens
+// PingWeather Theme Tokens
 // Adapted from SocialUplink theme system
 // ────────────────────────────────────────────────────────────
 

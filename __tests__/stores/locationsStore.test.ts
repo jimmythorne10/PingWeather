@@ -121,7 +121,8 @@ describe('locationsStore', () => {
 
     it('prepends new location to the list', async () => {
       // FR-LOC-002: New location prepended to list
-      setLoggedInUser('free');
+      // Use pro tier so we can have multiple locations (free is limited to 1 per FR-LOC-006)
+      setLoggedInUser('pro');
       useLocationsStore.setState({ locations: [{ ...sampleLocation, id: 'old' } as any] });
       mockSupabaseChain({ data: sampleLocation, error: null });
 
