@@ -83,12 +83,12 @@ describe('locationsStore', () => {
     });
 
     it('handles load error', async () => {
-      // FR-LOC-001: error state handled
+      // FR-LOC-001: error state handled — error message surfaces the real DB error
       mockSupabaseChain({ data: null, error: new Error('DB error') });
 
       await useLocationsStore.getState().loadLocations();
 
-      expect(useLocationsStore.getState().error).toBe('Failed to load locations');
+      expect(useLocationsStore.getState().error).toBe('DB error');
     });
   });
 
@@ -133,13 +133,13 @@ describe('locationsStore', () => {
     });
 
     it('fails if not authenticated', async () => {
-      // user_id is required
+      // user_id is required — error message is the thrown Error's message, not a generic fallback
       useAuthStore.setState({ user: null });
       mockSupabaseChain({ data: null, error: null });
 
       await useLocationsStore.getState().addLocation('Site', 1, 2);
 
-      expect(useLocationsStore.getState().error).toBe('Failed to add location');
+      expect(useLocationsStore.getState().error).toBe('Not authenticated');
     });
 
     // FR-LOC-007: Timezone Storage (TDD — not yet implemented)
@@ -194,7 +194,8 @@ describe('locationsStore', () => {
 
       await useLocationsStore.getState().removeLocation('loc-1');
 
-      expect(useLocationsStore.getState().error).toBe('Failed to remove location');
+      // After the fix, the real error message surfaces instead of a generic fallback
+      expect(useLocationsStore.getState().error).toBe('DB error');
     });
   });
 
@@ -297,6 +298,88 @@ describe('locationsStore', () => {
       useLocationsStore.setState({ error: 'oops' });
       useLocationsStore.getState().clearError();
       expect(useLocationsStore.getState().error).toBeNull();
+    });
+  });
+
+  // ── Error handling & Promise<boolean> return values ────────────
+
+  describe('addLocation return value and error propagation', () => {
+    it('returns true on successful add', async () => {
+      setLoggedInUser('free');
+      mockSupabaseChain({ data: sampleLocation, error: null });
+
+      const result = await useLocationsStore.getState().addLocation('North Pasture', 33.4484, -112.074);
+
+      expect(result).toBe(true);
+    });
+
+    it('returns false when Supabase returns an error', async () => {
+      setLoggedInUser('free');
+      mockSupabaseChain({ data: null, error: new Error('column "is_default" does not exist') });
+
+      const result = await useLocationsStore.getState().addLocation('North Pasture', 33.4484, -112.074);
+
+      expect(result).toBe(false);
+    });
+
+    it('sets the actual Supabase error message (not the generic fallback) when column missing', async () => {
+      setLoggedInUser('free');
+      mockSupabaseChain({ data: null, error: new Error('column "is_default" does not exist') });
+
+      await useLocationsStore.getState().addLocation('North Pasture', 33.4484, -112.074);
+
+      const { error } = useLocationsStore.getState();
+      expect(error).toBe('column "is_default" does not exist');
+    });
+
+    it('still returns false (not throws) when not authenticated', async () => {
+      useAuthStore.setState({ user: null });
+      mockSupabaseChain({ data: null, error: null });
+
+      const result = await useLocationsStore.getState().addLocation('Site', 1, 2);
+
+      expect(result).toBe(false);
+      expect(useLocationsStore.getState().error).toBe('Not authenticated');
+    });
+  });
+
+  describe('updateLocation return value and error propagation', () => {
+    it('returns true on successful update', async () => {
+      useLocationsStore.setState({ locations: [sampleLocation] });
+      mockSupabaseChain({ data: { ...sampleLocation, name: 'Updated Name' }, error: null });
+
+      const result = await useLocationsStore.getState().updateLocation('loc-1', { name: 'Updated Name' });
+
+      expect(result).toBe(true);
+    });
+
+    it('returns false when Supabase returns an error', async () => {
+      useLocationsStore.setState({ locations: [sampleLocation] });
+      mockSupabaseChain({ data: null, error: new Error('update failed') });
+
+      const result = await useLocationsStore.getState().updateLocation('loc-1', { name: 'Updated Name' });
+
+      expect(result).toBe(false);
+    });
+
+    it('sets the actual Supabase error message on update failure', async () => {
+      useLocationsStore.setState({ locations: [sampleLocation] });
+      mockSupabaseChain({ data: null, error: new Error('update failed') });
+
+      await useLocationsStore.getState().updateLocation('loc-1', { name: 'Updated Name' });
+
+      expect(useLocationsStore.getState().error).toBe('update failed');
+    });
+  });
+
+  describe('loadLocations error propagation', () => {
+    it('sets the actual DB error message (not a generic one) on load failure', async () => {
+      mockSupabaseChain({ data: null, error: new Error('relation "locations" does not exist') });
+
+      await useLocationsStore.getState().loadLocations();
+
+      const { error } = useLocationsStore.getState();
+      expect(error).toBe('relation "locations" does not exist');
     });
   });
 });

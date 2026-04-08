@@ -12,8 +12,8 @@ interface LocationsState {
   error: string | null;
 
   loadLocations: () => Promise<void>;
-  addLocation: (name: string, latitude: number, longitude: number) => Promise<void>;
-  updateLocation: (id: string, updates: Partial<Pick<WatchLocation, 'name' | 'latitude' | 'longitude'>>) => Promise<void>;
+  addLocation: (name: string, latitude: number, longitude: number) => Promise<boolean>;
+  updateLocation: (id: string, updates: Partial<Pick<WatchLocation, 'name' | 'latitude' | 'longitude'>>) => Promise<boolean>;
   removeLocation: (id: string) => Promise<void>;
   toggleLocation: (id: string, isActive: boolean) => Promise<void>;
   setDefaultLocation: (id: string) => Promise<void>;
@@ -37,8 +37,10 @@ export const useLocationsStore = create<LocationsState>()(
             .order('created_at', { ascending: false });
           if (error) throw error;
           set({ locations: data as WatchLocation[], loading: false });
-        } catch {
-          set({ loading: false, error: 'Failed to load locations' });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Failed to load locations';
+          console.error('[locationsStore] loadLocations error:', err);
+          set({ loading: false, error: message });
         }
       },
 
@@ -54,7 +56,7 @@ export const useLocationsStore = create<LocationsState>()(
           const current = get().locations.length;
           if (current >= limit) {
             set({ loading: false, error: `Location limit reached for your plan (${limit} max)` });
-            return;
+            return false;
           }
 
           // First location gets is_default: true
@@ -75,8 +77,12 @@ export const useLocationsStore = create<LocationsState>()(
             .single();
           if (error) throw error;
           set({ locations: [data as WatchLocation, ...get().locations], loading: false });
-        } catch {
-          set({ loading: false, error: 'Failed to add location' });
+          return true;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Failed to add location';
+          console.error('[locationsStore] addLocation error:', err);
+          set({ loading: false, error: message });
+          return false;
         }
       },
 
@@ -94,8 +100,12 @@ export const useLocationsStore = create<LocationsState>()(
               l.id === id ? { ...l, ...(data as WatchLocation) } : l
             ),
           });
-        } catch {
-          set({ error: 'Failed to update location' });
+          return true;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Failed to update location';
+          console.error('[locationsStore] updateLocation error:', err);
+          set({ error: message });
+          return false;
         }
       },
 
@@ -120,8 +130,10 @@ export const useLocationsStore = create<LocationsState>()(
           }
 
           set({ locations: remaining });
-        } catch {
-          set({ error: 'Failed to remove location' });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Failed to remove location';
+          console.error('[locationsStore] removeLocation error:', err);
+          set({ error: message });
         }
       },
 
@@ -137,8 +149,10 @@ export const useLocationsStore = create<LocationsState>()(
               l.id === id ? { ...l, is_active: isActive } : l
             ),
           });
-        } catch {
-          set({ error: 'Failed to update location' });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Failed to update location';
+          console.error('[locationsStore] toggleLocation error:', err);
+          set({ error: message });
         }
       },
 
@@ -151,8 +165,10 @@ export const useLocationsStore = create<LocationsState>()(
           set({
             locations: get().locations.map((l) => ({ ...l, is_default: l.id === id })),
           });
-        } catch {
-          set({ error: 'Failed to set default location' });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Failed to set default location';
+          console.error('[locationsStore] setDefaultLocation error:', err);
+          set({ error: message });
         }
       },
 

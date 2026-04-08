@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useStyles, useTokens } from '../../src/theme';
@@ -27,11 +27,22 @@ export default function ForecastsScreen() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [forecasts, setForecasts] = useState<Record<string, LocationForecast>>({});
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadLocations();
     loadRules();
   }, []);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([loadLocations(), loadRules()]);
+      setForecasts({});
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const activeLocations = locations.filter((l) => l.is_active);
 
@@ -128,7 +139,11 @@ export default function ForecastsScreen() {
 
   if (activeLocations.length === 0) {
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+      >
         <View style={styles.emptyCard}>
           <Text style={styles.emptyIcon}>🌤️</Text>
           <Text style={styles.emptyTitle}>No Locations Yet</Text>
@@ -144,7 +159,11 @@ export default function ForecastsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+    >
       {activeLocations.map((loc) => {
         const isExpanded = expandedId === loc.id;
         const forecast = forecasts[loc.id];

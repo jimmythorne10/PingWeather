@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Modal, RefreshControl } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useStyles, useTokens } from '../../src/theme';
@@ -27,6 +27,7 @@ export default function HomeScreen() {
   const [expanded, setExpanded] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadLocations();
@@ -41,24 +42,43 @@ export default function HomeScreen() {
     defaultLocation ??
     null;
 
+  const fetchWeatherForLocation = async (location: WatchLocation | undefined, isExpanded: boolean) => {
+    if (!location) return;
+    const days = isExpanded ? 14 : 3;
+    try {
+      const data = await fetchForecast({
+        latitude: location.latitude,
+        longitude: location.longitude,
+        forecastDays: days,
+        temperatureUnit,
+        windSpeedUnit,
+      });
+      if (isExpanded) setWeather14Day({ daily: data.daily });
+      else setWeather3Day({ daily: data.daily });
+    } catch {
+      // fail silently
+    }
+  };
+
   useEffect(() => {
     if (!selectedLocation) return;
     setWeatherLoading(true);
-    const days = expanded ? 14 : 3;
-    fetchForecast({
-      latitude: selectedLocation.latitude,
-      longitude: selectedLocation.longitude,
-      forecastDays: days,
-      temperatureUnit,
-      windSpeedUnit,
-    })
-      .then((data) => {
-        if (expanded) setWeather14Day({ daily: data.daily });
-        else setWeather3Day({ daily: data.daily });
-      })
-      .catch(() => {})
-      .finally(() => setWeatherLoading(false));
+    fetchWeatherForLocation(selectedLocation, expanded).finally(() => setWeatherLoading(false));
   }, [selectedLocation?.id, temperatureUnit, windSpeedUnit, expanded]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        loadLocations(),
+        loadRules(),
+        loadHistory(),
+        fetchWeatherForLocation(selectedLocation, expanded),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const activeRules = rules.filter((r) => r.is_active);
   const recentAlerts = entries.slice(0, 5);
@@ -74,7 +94,11 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+    >
       {/* Forecast card — no Pressable wrapper (blocks horizontal scroll) */}
       <View style={styles.card}>
         <View style={styles.cardHeaderRow}>

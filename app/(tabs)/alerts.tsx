@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, Switch, Alert, Modal } from 'react-native';
+import { View, Text, ScrollView, Pressable, Switch, Alert, Modal, RefreshControl } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useStyles, useTokens } from '../../src/theme';
@@ -36,11 +36,21 @@ export default function AlertsScreen() {
   const [filterTab, setFilterTab] = useState<FilterTab>('All');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadRules();
     loadLocations();
   }, []);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([loadRules(), loadLocations()]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const filteredRules = rules.filter((r) => {
     if (filterTab === 'Active') return r.is_active;
@@ -125,7 +135,11 @@ export default function AlertsScreen() {
   const selectedCategoryLabel = PRESET_CATEGORIES.find((c) => c.value === selectedCategory)?.label ?? 'All Categories';
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+    >
 
       {/* Filter toggle — FR-ALERT-001 */}
       <View style={styles.filterRow}>

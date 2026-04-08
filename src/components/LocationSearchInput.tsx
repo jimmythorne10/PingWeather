@@ -49,7 +49,7 @@ const MAX_RESULTS = 5;
 
 export function LocationSearchInput({
   onSelect,
-  placeholder = 'Search place or address',
+  placeholder = 'Search city, county, or ZIP code',
   testID,
 }: LocationSearchInputProps) {
   const styles = useStyles(createStyles);
@@ -105,8 +105,9 @@ export function LocationSearchInput({
       longitude: result.longitude,
       timezone: result.timezone,
     });
-    // Clear input and dropdown.
-    setQuery('');
+    // Keep the selected label visible in the input. Hide the dropdown but don't clear the query.
+    // When the user starts typing again, the debounce will trigger a fresh search.
+    setQuery(formatLocationLabel(result));
     setResults([]);
     setStatus('idle');
     activeQueryRef.current = '';

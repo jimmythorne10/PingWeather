@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert, Switch } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert, Switch, RefreshControl } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useStyles, useTokens } from '../../src/theme';
@@ -15,7 +15,7 @@ export default function LocationsScreen() {
   const tokens = useTokens();
   const router = useRouter();
   const profile = useAuthStore((s) => s.profile);
-  const { locations, loading, loadLocations, addLocation, updateLocation, removeLocation, toggleLocation } =
+  const { locations, loading, error: storeError, loadLocations, addLocation, updateLocation, removeLocation, toggleLocation, clearError } =
     useLocationsStore();
   const { getLocation, loading: geoLoading, error: geoError } = useDeviceLocation();
 
@@ -25,6 +25,7 @@ export default function LocationsScreen() {
   const [lat, setLat] = useState('');
   const [lon, setLon] = useState('');
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const isEditing = editingId !== null;
 
@@ -55,19 +56,29 @@ export default function LocationsScreen() {
     setLon('');
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadLocations();
+    setRefreshing(false);
+  };
+
   const handleSave = async () => {
     const latitude = parseFloat(lat);
     const longitude = parseFloat(lon);
     if (!name.trim() || isNaN(latitude) || isNaN(longitude)) return;
 
     setSaving(true);
+    let success = false;
     if (editingId) {
-      await updateLocation(editingId, { name: name.trim(), latitude, longitude });
+      success = await updateLocation(editingId, { name: name.trim(), latitude, longitude });
     } else {
-      await addLocation(name.trim(), latitude, longitude);
+      success = await addLocation(name.trim(), latitude, longitude);
     }
-    resetForm();
     setSaving(false);
+    if (success) {
+      resetForm();
+    }
+    // On failure, leave the form open so the user can see the error and retry
   };
 
   const handleEdit = (loc: WatchLocation) => {
@@ -90,7 +101,11 @@ export default function LocationsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+    >
       <View style={styles.headerRow}>
         <View>
           <Text style={styles.title}>Locations</Text>
@@ -123,6 +138,14 @@ export default function LocationsScreen() {
           <Text style={styles.formTitle}>
             {isEditing ? 'Edit Location' : 'Add Location'}
           </Text>
+          {storeError && (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorBannerText}>{storeError}</Text>
+              <Pressable onPress={clearError} hitSlop={8} accessibilityLabel="Dismiss error">
+                <Text style={styles.errorBannerDismiss}>✕</Text>
+              </Pressable>
+            </View>
+          )}
           <TextInput
             style={styles.input}
             placeholder="Location name (e.g., North Pasture)"
@@ -177,6 +200,16 @@ export default function LocationsScreen() {
             <Text style={styles.saveButtonText}>
               {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Save Location'}
             </Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* Store error banner — shown when form is closed */}
+      {!showAdd && storeError && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{storeError}</Text>
+          <Pressable onPress={clearError} hitSlop={8} accessibilityLabel="Dismiss error">
+            <Text style={styles.errorBannerDismiss}>✕</Text>
           </Pressable>
         </View>
       )}
@@ -281,6 +314,19 @@ const createStyles = (t: ThemeTokens) => ({
     marginBottom: 12,
   },
   inactiveBannerText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' as const },
+
+  // Error banner
+  errorBanner: {
+    backgroundColor: t.errorLight,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+  },
+  errorBannerText: { fontSize: 14, color: t.error, flex: 1, marginRight: 8 },
+  errorBannerDismiss: { fontSize: 16, color: t.error, fontWeight: '700' as const },
 
   // Add form
   addCard: {

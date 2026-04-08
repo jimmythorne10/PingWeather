@@ -1,5 +1,5 @@
-import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
-import { useEffect } from 'react';
+import { View, Text, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import { useEffect, useState } from 'react';
 import { useStyles, useTokens } from '../../src/theme';
 import { useAlertHistoryStore } from '../../src/stores/alertHistoryStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -13,13 +13,27 @@ export default function HistoryScreen() {
   const profile = useAuthStore((s) => s.profile);
   const tier = profile?.subscription_tier ?? 'free';
   const limits = TIER_LIMITS[tier];
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadHistory();
   }, []);
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadHistory();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+    >
       <Text style={styles.title}>Alert History</Text>
       <Text style={styles.subtitle}>
         {tier} tier: {limits.alertHistoryDays}-day history
