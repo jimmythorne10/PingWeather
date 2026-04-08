@@ -7,20 +7,18 @@ plus infrastructure tasks we've intentionally pinned.
 
 ## Open Bugs
 
-### BUG-001: Address/place search is cosmetic only
-**Discovered:** 2026-04-08 (device test)
-**Severity:** Medium — feature advertised in UI but non-functional
-**Where:** Locations tab → Add Location form → "Search place or address" input
-**Behavior:** TextInput renders and accepts typing, but nothing happens — no search fires, no results appear, nothing populates the coordinate fields.
-**Root cause:** Agent that built the UI stopped at "field exists so the test passes" (the test only checked for the placeholder text). No `onChangeText` handler, no geocoding call, no results list.
-**Fix plan:**
-1. Debounced handler (~300ms) on `onChangeText`
-2. Call Open-Meteo Geocoding API: `https://geocoding-api.open-meteo.com/v1/search?name={query}&count=5&language=en&format=json`
-3. Render a dropdown with `name`, `admin1` (state/region), `country`
-4. On tap, populate `name`, `latitude`, `longitude` fields
-5. Loading spinner while searching, "No results" empty state
-6. Unit test for the API client, Maestro flow for the UI once available
-**Also affects:** Same unwired TextInput is in `app/onboarding/location-setup.tsx` — fix both or extract a shared component.
+(none currently tracked — device verification pending for BUG-001 fix)
+
+---
+
+## Resolved
+
+### BUG-001: Address/place search is cosmetic only ✅ FIXED (pending device verification)
+**Discovered:** 2026-04-08
+**Resolved:** 2026-04-08 in commit ae569f2
+**Severity:** Medium
+**Fix:** Built `src/services/geocoding.ts` (Open-Meteo Geocoding API, 25 unit tests) and `src/components/LocationSearchInput.tsx` (debounced search, results dropdown, race-condition guard). Wired into Locations tab and onboarding location setup. Both screens' cosmetic TextInputs replaced.
+**Verified by:** Unit tests on the service layer (fetch mock, response parsing, error paths, query validation). UI behavior requires device test — Jimmy to confirm autocomplete actually renders and tap-to-select populates the form.
 
 ---
 
