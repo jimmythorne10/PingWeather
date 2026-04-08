@@ -7,11 +7,9 @@ import { useLocationsStore } from '../../src/stores/locationsStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { ALERT_PRESETS } from '../../src/data/alert-presets';
 import { TIER_LIMITS } from '../../src/types';
-import { pickDefaultLocation } from '../../src/utils/alertsHelpers';
+import { pickDefaultLocation, filterRules, findLocationName, type AlertsTabFilter } from '../../src/utils/alertsHelpers';
 import type { ThemeTokens } from '../../src/theme';
 import type { AlertPreset, AlertRule } from '../../src/types';
-
-type FilterTab = 'All' | 'Active' | 'Inactive';
 
 const PRESET_CATEGORIES = [
   { value: 'all', label: 'All Categories' },
@@ -34,9 +32,11 @@ export default function AlertsScreen() {
   const limits = TIER_LIMITS[tier];
   const atLimit = rules.length >= limits.maxAlertRules;
 
-  const [filterTab, setFilterTab] = useState<FilterTab>('All');
+  const [filterTab, setFilterTab] = useState<AlertsTabFilter>('All');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+  const [locationFilter, setLocationFilter] = useState<string | 'all'>('all');
+  const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [presetConfirmState, setPresetConfirmState] = useState<{
     preset: AlertPreset;
@@ -57,11 +57,7 @@ export default function AlertsScreen() {
     }
   };
 
-  const filteredRules = rules.filter((r) => {
-    if (filterTab === 'Active') return r.is_active;
-    if (filterTab === 'Inactive') return !r.is_active;
-    return true;
-  });
+  const filteredRules = filterRules(rules, filterTab, locationFilter);
 
   const filteredPresets = selectedCategory === 'all'
     ? ALERT_PRESETS
@@ -150,7 +146,7 @@ export default function AlertsScreen() {
 
       {/* Filter toggle — FR-ALERT-001 */}
       <View style={styles.filterRow}>
-        {(['All', 'Active', 'Inactive'] as FilterTab[]).map((tab) => (
+        {(['All', 'Active', 'Inactive'] as AlertsTabFilter[]).map((tab) => (
           <Pressable
             key={tab}
             style={[styles.filterTab, filterTab === tab && styles.filterTabActive]}
@@ -162,6 +158,62 @@ export default function AlertsScreen() {
           </Pressable>
         ))}
       </View>
+
+      {/* Location filter dropdown — show only when multiple locations exist */}
+      {locations.length > 1 && (
+        <>
+          <Pressable
+            accessibilityLabel="location filter"
+            style={styles.dropdownButton}
+            onPress={() => setLocationDropdownOpen(true)}
+          >
+            <Text style={styles.dropdownButtonText}>
+              {locationFilter === 'all'
+                ? 'All Locations'
+                : findLocationName(locations, locationFilter)}
+            </Text>
+            <Text style={styles.dropdownChevron}>▼</Text>
+          </Pressable>
+
+          <Modal
+            visible={locationDropdownOpen}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setLocationDropdownOpen(false)}
+          >
+            <Pressable style={styles.modalOverlay} onPress={() => setLocationDropdownOpen(false)}>
+              <View style={styles.modalContent}>
+                <Pressable
+                  key="all-locations"
+                  style={[styles.modalOption, locationFilter === 'all' && styles.modalOptionSelected]}
+                  onPress={() => {
+                    setLocationFilter('all');
+                    setLocationDropdownOpen(false);
+                  }}
+                >
+                  <Text style={[styles.modalOptionText, locationFilter === 'all' && styles.modalOptionTextSelected]}>
+                    All Locations
+                  </Text>
+                </Pressable>
+                {locations.map((loc) => (
+                  <Pressable
+                    key={loc.id}
+                    style={[styles.modalOption, locationFilter === loc.id && styles.modalOptionSelected]}
+                    onPress={() => {
+                      setLocationFilter(loc.id);
+                      setLocationDropdownOpen(false);
+                    }}
+                  >
+                    <Text style={[styles.modalOptionText, locationFilter === loc.id && styles.modalOptionTextSelected]}>
+                      {loc.name}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </Pressable>
+          </Modal>
+        </>
+      )}
 
       {/* Rule count */}
       <Text style={styles.sectionSubtitle}>
@@ -186,6 +238,9 @@ export default function AlertsScreen() {
                   thumbColor={rule.is_active ? tokens.primary : tokens.textTertiary}
                 />
               </View>
+              <Text style={styles.ruleLocation}>
+                {findLocationName(locations, rule.location_id)}
+              </Text>
               <View style={styles.ruleConditions}>
                 {rule.conditions.map((c, i) => (
                   <Text key={i} style={styles.conditionText}>
@@ -428,6 +483,7 @@ const createStyles = (t: ThemeTokens) => ({
     alignItems: 'center' as const, marginBottom: 8,
   },
   ruleName: { fontSize: 17, fontWeight: '600' as const, color: t.textPrimary },
+  ruleLocation: { fontSize: 12, color: t.textTertiary, marginBottom: 6 },
   ruleConditions: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, marginBottom: 6 },
   conditionText: { fontSize: 14, color: t.primary, fontWeight: '500' as const },
   ruleDetails: { fontSize: 12, color: t.textTertiary, marginBottom: 4 },
