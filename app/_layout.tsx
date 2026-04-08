@@ -19,7 +19,10 @@ export default function RootLayout() {
   useEffect(() => {
     if (!ready) return;
 
-    const inAuthGroup = segments[0] === 'login' || segments[0] === 'signup';
+    const inAuthGroup =
+      segments[0] === 'login' ||
+      segments[0] === 'signup' ||
+      segments[0] === 'forgot-password';
     const inOnboarding = segments[0] === 'onboarding';
 
     if (!session && !inAuthGroup) {
@@ -47,6 +50,7 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="login" />
         <Stack.Screen name="signup" />
+        <Stack.Screen name="forgot-password" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="create-rule" options={{ headerShown: true, title: 'Create Alert Rule' }} />

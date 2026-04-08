@@ -1,0 +1,56 @@
+# .easignore — controls what gets uploaded to EAS Build.
+# When this file exists, EAS uses it INSTEAD OF .gitignore.
+# Keep this in sync with .gitignore, but re-include files that EAS needs
+# but shouldn't be committed to git (e.g. Firebase config).
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+.env
+
+# Firebase — NOTE: google-services.json and GoogleService-Info.plist are NOT ignored here
+#   They're gitignored for security but EAS Build needs them to compile the native Android/iOS
+#   Firebase integration. Keep them gitignored and let EAS pick them up via the local working tree.
+
+# Supabase
+supabase/.temp/
+
+# Claude Code worktrees
+.claude/worktrees/
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/ios
+/android
+.claude/settings.local.json

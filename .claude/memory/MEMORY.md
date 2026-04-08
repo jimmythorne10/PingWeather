@@ -45,23 +45,30 @@ jsdom tests with `getByText` only verify text presence — they do NOT verify re
 **What:** Only `jimmy@truthcenteredtech.com` sees the Developer Options section in Settings. Check lives in `src/utils/devAccount.ts` → `isDevAccount(email)` (case-insensitive, whitespace-trimmed). Unit tested.
 
 ### app.json stripped for Expo Go
-**Status:** technical debt — must restore before EAS build
-**What:** During Expo Go crash troubleshooting, several things were removed from `app.json` that need to come back for a real dev build:
-- `expo-notifications` plugin config (icon + color)
-- `expo-location` plugin config (iOS + Android permission strings)
-- Android permissions array (`ACCESS_FINE_LOCATION`, `RECEIVE_BOOT_COMPLETED`, `ACCESS_BACKGROUND_LOCATION`, etc.)
-- `googleServicesFile: "./google-services.json"` reference
+**Status:** restored 2026-04-08 in prep for first EAS build
+**What:** During Expo Go crash troubleshooting, native config was stripped. All of it has been put back:
+- `expo-notifications` plugin (icon + color + defaultChannel)
+- `expo-location` plugin (iOS + Android permission strings, background location OFF)
+- Android `permissions` array (ACCESS_FINE/COARSE/BACKGROUND_LOCATION, RECEIVE_BOOT_COMPLETED, VIBRATE, POST_NOTIFICATIONS, WAKE_LOCK)
+- `googleServicesFile: "./google-services.json"` reference (file itself still needs to be dropped in by Jimmy from Firebase console)
 - `newArchEnabled: true`
-- `edgeToEdgeEnabled: true` on Android
-These must be re-added before `eas build` can produce a notification-capable APK.
+- `android.edgeToEdgeEnabled: true`
+- `android.package: com.truthcenteredtech.pingweather` + matching iOS `bundleIdentifier`
+- `extra.eas.projectId: ""` — empty string placeholder, `eas init` will populate
+**Not yet verified on device.** The restoration will be verified by: successful `eas build --platform android --profile development` + APK install + push notification round-trip.
 
-### assets/notification-icon.png missing
-**Status:** blocker for EAS build
-**What:** The `expo-notifications` plugin expects `./assets/notification-icon.png` to exist. Currently doesn't. Create a plain 96x96 white PNG (placeholder) before building.
+### assets/notification-icon.png placeholder
+**Status:** placeholder created 2026-04-08 (96x96 RGBA, white circle on transparent bg, 851 bytes, generated via PowerShell System.Drawing)
+**What:** Good enough to unblock `eas build`. Replace with a proper monochrome brand icon before production.
 
-### pg_cron scheduled polling not yet set up
-**Status:** open
-**What:** The `pg_cron` extension has been enabled in Supabase, but no cron job has been created yet to call the `poll-weather` Edge Function hourly. SQL to be written.
+### pg_cron scheduled polling
+**Status:** migration written 2026-04-08 (`supabase/migrations/00003_schedule_poll_weather.sql`), NOT YET APPLIED
+**What:** Hourly cron job that hits the `poll-weather` Edge Function. Uses `pg_net` + Supabase `vault` to avoid committing the service role key. Before applying:
+1. In Supabase Dashboard → Database → Extensions, enable `pg_cron`, `pg_net`, and `supabase_vault` if not already on
+2. In SQL editor, seed two vault secrets (see comments at top of the migration file): `poll_weather_service_role_key` and `poll_weather_function_url`
+3. `npx supabase db push` to apply the cron schedule
+4. Verify with `select * from cron.job_run_details where jobname = 'poll-weather-hourly' order by start_time desc limit 20;`
+Hourly is the finest granularity any tier uses (Premium min = 1hr); the Edge Function decides per-rule whether each rule is due.
 
 ### Address search on locations no longer cosmetic
 **Status:** fixed 2026-04-08
@@ -112,7 +119,7 @@ Turned OFF in the Supabase project dashboard (Sign In / Providers → Email → 
 
 ### EAS build — not yet attempted
 When picking this up: see docs/KNOWN_ISSUES.md INFRA-003 for the full checklist. Short version:
-1. Create Firebase project → add Android app with package `com.truthcenteredtech.weatherwatch` → download `google-services.json` to project root (gitignored)
+1. Create Firebase project "PingWeather" → add Android app with package `com.truthcenteredtech.pingweather` → download `google-services.json` to project root (gitignored). NOTE: package rebranded from `...weatherwatch` on 2026-04-08, before any build was ever cut, so there is no legacy install base to worry about.
 2. Restore stripped `app.json` native config (see "app.json stripped for Expo Go" above)
 3. Add placeholder `assets/notification-icon.png`
 4. `eas init` to populate `extra.eas.projectId` in app.json
