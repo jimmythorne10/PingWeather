@@ -15,7 +15,6 @@ export default function HomeScreen() {
   const styles = useStyles(createStyles);
   const tokens = useTokens();
   const router = useRouter();
-  const profile = useAuthStore((s) => s.profile);
   const { locations, loadLocations } = useLocationsStore();
   const { rules, loadRules } = useAlertRulesStore();
   const { entries, loadHistory } = useAlertHistoryStore();
@@ -35,7 +34,6 @@ export default function HomeScreen() {
     loadHistory();
   }, []);
 
-  // Determine which location to show
   const activeLocations = locations.filter((l) => l.is_active);
   const defaultLocation = activeLocations.find((l) => (l as WatchLocation).is_default) ?? activeLocations[0];
   const selectedLocation =
@@ -43,10 +41,8 @@ export default function HomeScreen() {
     defaultLocation ??
     null;
 
-  // Fetch weather — 14 days when expanded, 3 otherwise
   useEffect(() => {
     if (!selectedLocation) return;
-
     setWeatherLoading(true);
     const days = expanded ? 14 : 3;
     fetchForecast({
@@ -67,7 +63,6 @@ export default function HomeScreen() {
   const activeRules = rules.filter((r) => r.is_active);
   const recentAlerts = entries.slice(0, 5);
   const unitSymbol = temperatureUnit === 'fahrenheit' ? '°F' : '°C';
-  const windUnit = windSpeedUnit;
 
   const displayWeather = expanded ? weather14Day : weather3Day;
   const dayCount = expanded ? 14 : 3;
@@ -80,35 +75,30 @@ export default function HomeScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.title}>
-            {profile?.display_name ? `Hey, ${profile.display_name}` : 'Welcome'}
-          </Text>
-          <Text style={styles.subtitle}>Your weather, your rules.</Text>
-        </View>
-      </View>
-
-      {/* Forecast card — FR-HOME-001/002 */}
-      <Pressable
-        style={styles.card}
-        onPress={() => selectedLocation && setExpanded((prev) => !prev)}
-      >
+      {/* Forecast card — no Pressable wrapper (blocks horizontal scroll) */}
+      <View style={styles.card}>
         <View style={styles.cardHeaderRow}>
           <Text style={styles.cardTitle}>Forecast</Text>
-          {selectedLocation && activeLocations.length > 1 ? (
-            <Pressable
-              onPress={(e) => {
-                e.stopPropagation?.();
-                setPickerOpen(true);
-              }}
-              style={styles.locationPicker}
-            >
-              <Text style={styles.locationPickerText}>{selectedLocation.name} ▾</Text>
-            </Pressable>
-          ) : selectedLocation ? (
-            <Text style={styles.cardSubtitle}>{selectedLocation.name}</Text>
-          ) : null}
+          <View style={styles.cardHeaderRight}>
+            {selectedLocation && activeLocations.length > 1 ? (
+              <Pressable onPress={() => setPickerOpen(true)} style={styles.locationPicker}>
+                <Text style={styles.locationPickerText}>{selectedLocation.name} ▾</Text>
+              </Pressable>
+            ) : selectedLocation ? (
+              <Text style={styles.cardSubtitle}>{selectedLocation.name}</Text>
+            ) : null}
+            {selectedLocation && (
+              <Pressable
+                style={styles.expandButton}
+                onPress={() => setExpanded((prev) => !prev)}
+                accessibilityLabel={expanded ? 'Collapse forecast' : 'Expand forecast'}
+              >
+                <Text style={styles.expandButtonText}>
+                  {expanded ? 'Collapse' : '14-day'}
+                </Text>
+              </Pressable>
+            )}
+          </View>
         </View>
 
         {!selectedLocation ? (
@@ -136,12 +126,8 @@ export default function HomeScreen() {
                   <Text style={styles.forecastDayLabel}>{formatDayLabel(date, i)}</Text>
                   <Text style={styles.forecastHigh}>{high}{unitSymbol}</Text>
                   <Text style={styles.forecastLow}>{low}{unitSymbol}</Text>
-                  {rain > 0 && (
-                    <Text style={styles.forecastRain}>{rain}%</Text>
-                  )}
-                  {expanded && (
-                    <Text style={styles.forecastWind}>{wind} {windUnit}</Text>
-                  )}
+                  {rain > 0 && <Text style={styles.forecastRain}>{rain}%</Text>}
+                  {expanded && <Text style={styles.forecastWind}>{wind} {windSpeedUnit}</Text>}
                 </View>
               );
             })}
@@ -149,15 +135,8 @@ export default function HomeScreen() {
         ) : (
           <Text style={styles.cardBody}>Unable to load weather data.</Text>
         )}
+      </View>
 
-        {selectedLocation && (
-          <Text style={styles.forecastExpandHint}>
-            {expanded ? 'Tap to collapse' : 'Tap to expand · View 14-day forecast'}
-          </Text>
-        )}
-      </Pressable>
-
-      {/* Location picker modal */}
       <Modal
         visible={pickerOpen}
         transparent
@@ -188,11 +167,8 @@ export default function HomeScreen() {
         </Pressable>
       </Modal>
 
-      {/* Active alerts — FR-HOME-003 — tappable card, tappable rows */}
-      <Pressable
-        style={styles.card}
-        onPress={() => router.push('/(tabs)/alerts')}
-      >
+      {/* Active alerts — tappable card, tappable rows */}
+      <Pressable style={styles.card} onPress={() => router.push('/(tabs)/alerts')}>
         <View style={styles.cardHeaderRow}>
           <Text style={styles.cardTitle}>Active Alerts</Text>
           <Text style={styles.cardBadge}>{activeRules.length}</Text>
@@ -246,7 +222,7 @@ export default function HomeScreen() {
         ) : (
           recentAlerts.map((entry) => (
             <View key={entry.id} style={styles.historyRow}>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.historyRule}>{entry.rule_name}</Text>
                 <Text style={styles.historySummary}>{entry.conditions_met}</Text>
               </View>
@@ -270,23 +246,22 @@ export default function HomeScreen() {
 
 const createStyles = (t: ThemeTokens) => ({
   container: { flex: 1 as const, backgroundColor: t.background },
-  content: { padding: 20, paddingBottom: 40 },
-  headerRow: {
-    flexDirection: 'row' as const, justifyContent: 'space-between' as const,
-    alignItems: 'center' as const, marginBottom: 20,
-  },
-  title: { fontSize: 28, fontWeight: '700' as const, color: t.textPrimary },
-  subtitle: { fontSize: 15, color: t.textSecondary, marginTop: 2 },
+  content: { padding: 16, paddingBottom: 40, paddingTop: 20 },
 
   card: {
-    backgroundColor: t.card, borderRadius: 12, padding: 20, marginBottom: 16,
+    backgroundColor: t.card, borderRadius: 12, padding: 16, marginBottom: 12,
     borderWidth: 1, borderColor: t.borderLight,
   },
   cardHeaderRow: {
     flexDirection: 'row' as const, justifyContent: 'space-between' as const,
-    alignItems: 'center' as const, marginBottom: 8,
+    alignItems: 'center' as const, marginBottom: 12,
   },
-  cardTitle: { fontSize: 18, fontWeight: '600' as const, color: t.textPrimary, marginBottom: 8 },
+  cardHeaderRight: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+  },
+  cardTitle: { fontSize: 18, fontWeight: '600' as const, color: t.textPrimary },
   cardBadge: {
     backgroundColor: t.primary, color: t.textOnPrimary, fontSize: 13, fontWeight: '700' as const,
     paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12,
@@ -300,6 +275,7 @@ const createStyles = (t: ThemeTokens) => ({
   buttonText: { color: t.textOnPrimary, fontSize: 16, fontWeight: '600' as const },
 
   cardSubtitle: { fontSize: 13, color: t.textTertiary },
+
   locationPicker: {
     paddingVertical: 4,
     paddingHorizontal: 10,
@@ -308,26 +284,32 @@ const createStyles = (t: ThemeTokens) => ({
   },
   locationPickerText: { fontSize: 13, color: t.primary, fontWeight: '600' as const },
 
-  // Forecast
+  expandButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: t.primary,
+  },
+  expandButtonText: { fontSize: 12, color: t.primary, fontWeight: '600' as const },
+
   forecastRow: {
     flexDirection: 'row' as const,
     gap: 16,
-    marginTop: 8,
     paddingHorizontal: 4,
+    paddingVertical: 4,
   },
   forecastDay: {
     alignItems: 'center' as const,
     gap: 4,
-    minWidth: 64,
+    minWidth: 60,
   },
-  forecastDayLabel: { fontSize: 13, fontWeight: '600' as const, color: t.textSecondary, textAlign: 'center' as const },
+  forecastDayLabel: { fontSize: 12, fontWeight: '600' as const, color: t.textSecondary, textAlign: 'center' as const },
   forecastHigh: { fontSize: 20, fontWeight: '700' as const, color: t.textPrimary },
-  forecastLow: { fontSize: 15, color: t.textTertiary },
-  forecastRain: { fontSize: 12, color: t.rainBlue, fontWeight: '500' as const },
-  forecastWind: { fontSize: 11, color: t.textTertiary },
-  forecastExpandHint: { fontSize: 12, color: t.textTertiary, textAlign: 'center' as const, marginTop: 12 },
+  forecastLow: { fontSize: 14, color: t.textTertiary },
+  forecastRain: { fontSize: 11, color: t.rainBlue, fontWeight: '500' as const },
+  forecastWind: { fontSize: 10, color: t.textTertiary },
 
-  // Modal
   modalOverlay: {
     flex: 1 as const,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -346,7 +328,6 @@ const createStyles = (t: ThemeTokens) => ({
   modalOption: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: t.divider },
   modalOptionText: { fontSize: 16, color: t.textPrimary },
 
-  // Rules summary
   ruleRow: {
     flexDirection: 'row' as const, justifyContent: 'space-between' as const,
     alignItems: 'center' as const, paddingVertical: 10,
@@ -355,7 +336,6 @@ const createStyles = (t: ThemeTokens) => ({
   ruleName: { fontSize: 15, color: t.textPrimary, fontWeight: '500' as const },
   ruleInterval: { fontSize: 13, color: t.textTertiary },
 
-  // History
   historyRow: {
     flexDirection: 'row' as const, justifyContent: 'space-between' as const,
     alignItems: 'flex-start' as const, paddingVertical: 8,
@@ -363,5 +343,5 @@ const createStyles = (t: ThemeTokens) => ({
   },
   historyRule: { fontSize: 15, fontWeight: '500' as const, color: t.textPrimary },
   historySummary: { fontSize: 13, color: t.textSecondary, marginTop: 2 },
-  historyTime: { fontSize: 12, color: t.textTertiary },
+  historyTime: { fontSize: 12, color: t.textTertiary, marginLeft: 8 },
 });

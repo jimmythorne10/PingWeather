@@ -13,6 +13,7 @@ interface LocationsState {
 
   loadLocations: () => Promise<void>;
   addLocation: (name: string, latitude: number, longitude: number) => Promise<void>;
+  updateLocation: (id: string, updates: Partial<Pick<WatchLocation, 'name' | 'latitude' | 'longitude'>>) => Promise<void>;
   removeLocation: (id: string) => Promise<void>;
   toggleLocation: (id: string, isActive: boolean) => Promise<void>;
   setDefaultLocation: (id: string) => Promise<void>;
@@ -76,6 +77,25 @@ export const useLocationsStore = create<LocationsState>()(
           set({ locations: [data as WatchLocation, ...get().locations], loading: false });
         } catch {
           set({ loading: false, error: 'Failed to add location' });
+        }
+      },
+
+      updateLocation: async (id, updates) => {
+        try {
+          const { data, error } = await supabase
+            .from('locations')
+            .update(updates)
+            .eq('id', id)
+            .select()
+            .single();
+          if (error) throw error;
+          set({
+            locations: get().locations.map((l) =>
+              l.id === id ? { ...l, ...(data as WatchLocation) } : l
+            ),
+          });
+        } catch {
+          set({ error: 'Failed to update location' });
         }
       },
 

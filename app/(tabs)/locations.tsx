@@ -12,16 +12,19 @@ export default function LocationsScreen() {
   const styles = useStyles(createStyles);
   const tokens = useTokens();
   const profile = useAuthStore((s) => s.profile);
-  const { locations, loading, loadLocations, addLocation, removeLocation, toggleLocation } =
+  const { locations, loading, loadLocations, addLocation, updateLocation, removeLocation, toggleLocation } =
     useLocationsStore();
   const { getLocation, loading: geoLoading, error: geoError } = useDeviceLocation();
 
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [lat, setLat] = useState('');
   const [lon, setLon] = useState('');
   const [addressSearch, setAddressSearch] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const isEditing = editingId !== null;
 
   const tier = profile?.subscription_tier ?? 'free';
   const limits = TIER_LIMITS[tier];
@@ -42,19 +45,37 @@ export default function LocationsScreen() {
     }
   };
 
-  const handleAdd = async () => {
+  const resetForm = () => {
+    setShowAdd(false);
+    setEditingId(null);
+    setName('');
+    setLat('');
+    setLon('');
+    setAddressSearch('');
+  };
+
+  const handleSave = async () => {
     const latitude = parseFloat(lat);
     const longitude = parseFloat(lon);
     if (!name.trim() || isNaN(latitude) || isNaN(longitude)) return;
 
     setSaving(true);
-    await addLocation(name.trim(), latitude, longitude);
-    setShowAdd(false);
-    setName('');
-    setLat('');
-    setLon('');
-    setAddressSearch('');
+    if (editingId) {
+      await updateLocation(editingId, { name: name.trim(), latitude, longitude });
+    } else {
+      await addLocation(name.trim(), latitude, longitude);
+    }
+    resetForm();
     setSaving(false);
+  };
+
+  const handleEdit = (loc: WatchLocation) => {
+    setEditingId(loc.id);
+    setName(loc.name);
+    setLat(loc.latitude.toString());
+    setLon(loc.longitude.toString());
+    setAddressSearch('');
+    setShowAdd(true);
   };
 
   const handleDelete = (loc: WatchLocation) => {
@@ -77,10 +98,10 @@ export default function LocationsScreen() {
             {locations.length}/{limits.maxLocations} locations ({tier} tier)
           </Text>
         </View>
-        {!atLimit && (
+        {(!atLimit || isEditing) && (
           <Pressable
             style={styles.addHeaderButton}
-            onPress={() => setShowAdd(!showAdd)}
+            onPress={() => (showAdd ? resetForm() : setShowAdd(true))}
           >
             <Text style={styles.addHeaderButtonText}>{showAdd ? 'Cancel' : '+ Add'}</Text>
           </Pressable>
@@ -96,9 +117,12 @@ export default function LocationsScreen() {
         </View>
       )}
 
-      {/* Add location form */}
+      {/* Add/Edit location form */}
       {showAdd && (
         <View style={styles.addCard}>
+          <Text style={styles.formTitle}>
+            {isEditing ? 'Edit Location' : 'Add Location'}
+          </Text>
           <TextInput
             style={styles.input}
             placeholder="Location name (e.g., North Pasture)"
@@ -107,7 +131,6 @@ export default function LocationsScreen() {
             onChangeText={setName}
           />
 
-          {/* Address/place search — FR-LOC-002 */}
           <TextInput
             style={styles.input}
             placeholder="Search place or address"
@@ -147,10 +170,12 @@ export default function LocationsScreen() {
               styles.saveButton,
               (!name.trim() || !lat || !lon) && styles.saveButtonDisabled,
             ]}
-            onPress={handleAdd}
+            onPress={handleSave}
             disabled={!name.trim() || !lat || !lon || saving}
           >
-            <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Location'}</Text>
+            <Text style={styles.saveButtonText}>
+              {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Save Location'}
+            </Text>
           </Pressable>
         </View>
       )}
@@ -171,15 +196,19 @@ export default function LocationsScreen() {
         </View>
       ) : (
         locations.map((loc, index) => (
-          <View key={loc.id} style={styles.locationCard}>
+          <Pressable
+            key={loc.id}
+            style={styles.locationCard}
+            onPress={() => handleEdit(loc)}
+          >
             <View style={styles.locationHeader}>
               <View style={styles.locationTitleRow}>
-                {/* Default location star — FR-LOC-008 (first location = default) */}
                 <Pressable
                   accessibilityLabel="Default location"
                   style={styles.starButton}
+                  onPress={(e) => e.stopPropagation?.()}
                 >
-                  <Text style={styles.starIcon}>{index === 0 ? '⭐' : '☆'}</Text>
+                  <Text style={styles.starIcon}>{(loc as WatchLocation).is_default || (index === 0 && !locations.some((l) => (l as WatchLocation).is_default)) ? '⭐' : '☆'}</Text>
                 </Pressable>
                 <Text style={styles.locationName}>{loc.name}</Text>
               </View>
@@ -193,14 +222,21 @@ export default function LocationsScreen() {
             <Text style={styles.locationCoords}>
               {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}
             </Text>
-            <Pressable
-              accessibilityLabel="Delete location"
-              onPress={() => handleDelete(loc)}
-              style={styles.trashButton}
-            >
-              <Text style={styles.trashIcon}>🗑️</Text>
-            </Pressable>
-          </View>
+            <View style={styles.cardActions}>
+              <Text style={styles.editHint}>Tap to edit</Text>
+              <Pressable
+                accessibilityLabel="Delete location"
+                onPress={(e) => {
+                  e.stopPropagation?.();
+                  handleDelete(loc);
+                }}
+                style={styles.trashButton}
+                hitSlop={8}
+              >
+                <Text style={styles.trashIcon}>🗑️</Text>
+              </Pressable>
+            </View>
+          </Pressable>
         ))
       )}
 
@@ -324,8 +360,16 @@ const createStyles = (t: ThemeTokens) => ({
   starIcon: { fontSize: 18 },
   locationName: { fontSize: 17, fontWeight: '600' as const, color: t.textPrimary },
   locationCoords: { fontSize: 13, color: t.textTertiary, marginTop: 4, marginBottom: 8 },
-  trashButton: { alignSelf: 'flex-start' as const },
+  cardActions: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginTop: 4,
+  },
+  editHint: { fontSize: 12, color: t.textTertiary, fontStyle: 'italic' as const },
+  trashButton: { padding: 4 },
   trashIcon: { fontSize: 18 },
+  formTitle: { fontSize: 16, fontWeight: '600' as const, color: t.textPrimary, marginBottom: 10 },
 
   // Limit warning
   limitCard: {

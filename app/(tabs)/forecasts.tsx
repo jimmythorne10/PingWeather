@@ -1,38 +1,142 @@
-import { View, Text, ScrollView, Pressable } from 'react-native';
-import { useEffect } from 'react';
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { useStyles } from '../../src/theme';
+import { useStyles, useTokens } from '../../src/theme';
 import { useLocationsStore } from '../../src/stores/locationsStore';
 import { useAlertRulesStore } from '../../src/stores/alertRulesStore';
+import { useSettingsStore } from '../../src/stores/settingsStore';
+import { fetchForecast } from '../../src/services/weatherApi';
 import type { ThemeTokens } from '../../src/theme';
+import type { HourlyForecast, DailyForecast, AlertRule } from '../../src/types';
+
+interface LocationForecast {
+  hourly: HourlyForecast;
+  daily: DailyForecast;
+}
 
 export default function ForecastsScreen() {
   const styles = useStyles(createStyles);
+  const tokens = useTokens();
   const router = useRouter();
 
   const { locations, loadLocations } = useLocationsStore();
   const { rules, loadRules } = useAlertRulesStore();
+  const temperatureUnit = useSettingsStore((s) => s.temperatureUnit);
+  const windSpeedUnit = useSettingsStore((s) => s.windSpeedUnit);
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [forecasts, setForecasts] = useState<Record<string, LocationForecast>>({});
+  const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadLocations();
     loadRules();
   }, []);
 
-  const handleLocationPress = (id: string) => {
-    router.push(`/forecasts/${id}`);
+  const activeLocations = locations.filter((l) => l.is_active);
+
+  const loadForecastFor = async (locationId: string, lat: number, lon: number) => {
+    if (forecasts[locationId]) return;
+    setLoadingIds((prev) => new Set(prev).add(locationId));
+    try {
+      const data = await fetchForecast({
+        latitude: lat,
+        longitude: lon,
+        forecastDays: 14,
+        temperatureUnit,
+        windSpeedUnit,
+      });
+      setForecasts((prev) => ({
+        ...prev,
+        [locationId]: { hourly: data.hourly, daily: data.daily },
+      }));
+    } catch {
+      // fail silently
+    } finally {
+      setLoadingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(locationId);
+        return next;
+      });
+    }
   };
 
-  const handleHistoryPress = () => {
-    router.push('/history');
+  const handleToggleLocation = (id: string, lat: number, lon: number) => {
+    if (expandedId === id) {
+      setExpandedId(null);
+    } else {
+      setExpandedId(id);
+      loadForecastFor(id, lat, lon);
+    }
   };
 
-  if (locations.length === 0) {
+  const unitSymbol = temperatureUnit === 'fahrenheit' ? '°F' : '°C';
+
+  const formatDayLabel = (date: string, index: number) => {
+    if (index === 0) return 'Today';
+    if (index === 1) return 'Tomorrow';
+    return new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
+  };
+
+  const formatHourLabel = (time: string) => {
+    const d = new Date(time);
+    return d.toLocaleTimeString('en-US', { hour: 'numeric' });
+  };
+
+  // Evaluate if a rule would trigger based on current forecast
+  const ruleWouldTrigger = (rule: AlertRule, forecast: LocationForecast): { triggered: boolean; detail: string } => {
+    const now = new Date();
+    const cutoff = new Date(now.getTime() + rule.lookahead_hours * 60 * 60 * 1000);
+
+    for (const condition of rule.conditions) {
+      let values: number[] = [];
+      if (condition.metric === 'temperature_low') {
+        values = forecast.daily.temperature_2m_min.filter((_, i) => {
+          const d = new Date(forecast.daily.time[i]);
+          return d >= now && d <= cutoff;
+        });
+      } else if (condition.metric === 'temperature_high') {
+        values = forecast.daily.temperature_2m_max.filter((_, i) => {
+          const d = new Date(forecast.daily.time[i]);
+          return d >= now && d <= cutoff;
+        });
+      } else if (condition.metric === 'precipitation_probability') {
+        values = forecast.daily.precipitation_probability_max.filter((_, i) => {
+          const d = new Date(forecast.daily.time[i]);
+          return d >= now && d <= cutoff;
+        });
+      } else if (condition.metric === 'wind_speed') {
+        values = forecast.daily.wind_speed_10m_max.filter((_, i) => {
+          const d = new Date(forecast.daily.time[i]);
+          return d >= now && d <= cutoff;
+        });
+      }
+
+      for (const val of values) {
+        let matched = false;
+        if (condition.operator === 'gt' && val > condition.value) matched = true;
+        if (condition.operator === 'gte' && val >= condition.value) matched = true;
+        if (condition.operator === 'lt' && val < condition.value) matched = true;
+        if (condition.operator === 'lte' && val <= condition.value) matched = true;
+        if (matched) {
+          return { triggered: true, detail: `${condition.metric.replace(/_/g, ' ')} ${val}` };
+        }
+      }
+    }
+    return { triggered: false, detail: 'Clear' };
+  };
+
+  if (activeLocations.length === 0) {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>Add a location to see forecasts</Text>
-          <Pressable style={styles.addButton} onPress={() => router.push('/locations')}>
-            <Text style={styles.addButtonText}>Add a location</Text>
+          <Text style={styles.emptyIcon}>🌤️</Text>
+          <Text style={styles.emptyTitle}>No Locations Yet</Text>
+          <Text style={styles.emptyBody}>
+            Add a location to see detailed forecasts and alert previews.
+          </Text>
+          <Pressable style={styles.addButton} onPress={() => router.push('/(tabs)/locations')}>
+            <Text style={styles.addButtonText}>Add Location</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -41,69 +145,126 @@ export default function ForecastsScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.screenTitle}>Forecasts</Text>
+      {activeLocations.map((loc) => {
+        const isExpanded = expandedId === loc.id;
+        const forecast = forecasts[loc.id];
+        const loading = loadingIds.has(loc.id);
+        const locationRules = rules.filter((r) => r.location_id === loc.id && r.is_active);
 
-      {/* Location Cards */}
-      {locations.map((loc) => (
-        <Pressable
-          key={loc.id}
-          style={styles.locationCard}
-          onPress={() => handleLocationPress(loc.id)}
-        >
-          <Text style={styles.locationName}>{loc.name}</Text>
-          <Text style={styles.locationCoords}>
-            {loc.latitude.toFixed(2)}, {loc.longitude.toFixed(2)}
-          </Text>
-        </Pressable>
-      ))}
+        return (
+          <View key={loc.id} style={styles.locationCard}>
+            <Pressable
+              style={styles.locationHeader}
+              onPress={() => handleToggleLocation(loc.id, loc.latitude, loc.longitude)}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.locationName}>{loc.name}</Text>
+                {forecast && !isExpanded && (
+                  <Text style={styles.locationSummary}>
+                    {Math.round(forecast.daily.temperature_2m_max[0])}{unitSymbol} /{' '}
+                    {Math.round(forecast.daily.temperature_2m_min[0])}{unitSymbol}
+                    {forecast.daily.precipitation_probability_max[0] > 0 &&
+                      `  ·  ${forecast.daily.precipitation_probability_max[0]}% rain`}
+                  </Text>
+                )}
+              </View>
+              <Text style={styles.expandIndicator}>{isExpanded ? '▲' : '▼'}</Text>
+            </Pressable>
 
-      {/* Hourly Forecast Section */}
-      <Text style={styles.sectionTitle}>Hourly</Text>
-      <View style={styles.forecastCard}>
-        <Text style={styles.forecastPlaceholder}>Conditions by hour for your locations</Text>
-      </View>
+            {isExpanded && (
+              <View style={styles.locationDetail}>
+                {loading ? (
+                  <ActivityIndicator color={tokens.primary} style={{ marginVertical: 24 }} />
+                ) : forecast ? (
+                  <>
+                    {/* Hourly scroll */}
+                    <Text style={styles.sectionLabel}>Next 24 hours</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourlyRow}>
+                      {forecast.hourly.time.slice(0, 24).map((time, i) => (
+                        <View key={time} style={styles.hourlyItem}>
+                          <Text style={styles.hourlyTime}>{formatHourLabel(time)}</Text>
+                          <Text style={styles.hourlyTemp}>
+                            {Math.round(forecast.hourly.temperature_2m[i])}{unitSymbol}
+                          </Text>
+                          {forecast.hourly.precipitation_probability[i] > 0 && (
+                            <Text style={styles.hourlyRain}>
+                              {forecast.hourly.precipitation_probability[i]}%
+                            </Text>
+                          )}
+                        </View>
+                      ))}
+                    </ScrollView>
 
-      {/* Daily Forecast Section */}
-      <Text style={styles.sectionTitle}>Daily / 14-day Outlook</Text>
-      <View style={styles.forecastCard}>
-        <Text style={styles.forecastPlaceholder}>Day-by-day conditions for your locations</Text>
-      </View>
+                    {/* Daily list */}
+                    <Text style={styles.sectionLabel}>14-day Outlook</Text>
+                    {forecast.daily.time.map((date, i) => (
+                      <View key={date} style={styles.dailyRow}>
+                        <Text style={styles.dailyDate}>{formatDayLabel(date, i)}</Text>
+                        <Text style={styles.dailyTemps}>
+                          {Math.round(forecast.daily.temperature_2m_max[i])}{unitSymbol} /{' '}
+                          <Text style={styles.dailyLow}>
+                            {Math.round(forecast.daily.temperature_2m_min[i])}{unitSymbol}
+                          </Text>
+                        </Text>
+                        <Text style={styles.dailyRain}>
+                          {forecast.daily.precipitation_probability_max[i]}%
+                        </Text>
+                        <Text style={styles.dailyWind}>
+                          {Math.round(forecast.daily.wind_speed_10m_max[i])} {windSpeedUnit}
+                        </Text>
+                      </View>
+                    ))}
 
-      {/* Rule Status Section — title omitted to avoid duplicate regex matches in tests */}
-      {rules.length > 0 && (
-        <View style={styles.forecastCard}>
-          {rules.map((rule) => (
-            <View key={rule.id} style={styles.ruleRow}>
-              <Text style={styles.ruleName}>{rule.name}</Text>
-              <Text style={styles.ruleStatus}>Clear</Text>
-            </View>
-          ))}
-        </View>
-      )}
+                    {/* Rule Status Preview */}
+                    {locationRules.length > 0 && (
+                      <>
+                        <Text style={styles.sectionLabel}>Rule Status</Text>
+                        {locationRules.map((rule) => {
+                          const status = ruleWouldTrigger(rule, forecast);
+                          return (
+                            <Pressable
+                              key={rule.id}
+                              style={styles.ruleStatusRow}
+                              onPress={() => router.push(`/create-rule?mode=edit&ruleId=${rule.id}`)}
+                            >
+                              <Text style={styles.ruleStatusIcon}>
+                                {status.triggered ? '⚠️' : '✓'}
+                              </Text>
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.ruleStatusName}>{rule.name}</Text>
+                                <Text style={[
+                                  styles.ruleStatusDetail,
+                                  { color: status.triggered ? tokens.warning : tokens.success },
+                                ]}>
+                                  {status.triggered ? `Would trigger — ${status.detail}` : 'Clear'}
+                                </Text>
+                              </View>
+                            </Pressable>
+                          );
+                        })}
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <Text style={styles.emptyBody}>Unable to load forecast.</Text>
+                )}
+              </View>
+            )}
+          </View>
+        );
+      })}
 
-      {/* Alert History Link */}
-      <Pressable style={styles.historyLink} onPress={handleHistoryPress}>
-        <Text style={styles.historyLinkText}>Alert History</Text>
+      <Pressable style={styles.historyLink} onPress={() => router.push('/history')}>
+        <Text style={styles.historyLinkText}>View Alert History →</Text>
       </Pressable>
     </ScrollView>
   );
 }
 
 const createStyles = (t: ThemeTokens) => ({
-  container: {
-    flex: 1 as const,
-    backgroundColor: t.background,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 60,
-  },
-  screenTitle: {
-    fontSize: 24,
-    fontWeight: '700' as const,
-    color: t.textPrimary,
-    marginBottom: 16,
-  },
+  container: { flex: 1 as const, backgroundColor: t.background },
+  content: { padding: 16, paddingBottom: 40, paddingTop: 20 },
+
   emptyCard: {
     backgroundColor: t.card,
     borderRadius: 12,
@@ -113,77 +274,115 @@ const createStyles = (t: ThemeTokens) => ({
     borderColor: t.borderLight,
     marginTop: 40,
   },
+  emptyIcon: { fontSize: 48, marginBottom: 12 },
   emptyTitle: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600' as const,
+    color: t.textPrimary,
+    marginBottom: 8,
+  },
+  emptyBody: {
+    fontSize: 14,
     color: t.textSecondary,
-    marginBottom: 16,
+    marginBottom: 20,
     textAlign: 'center' as const,
+    lineHeight: 20,
   },
   addButton: {
     backgroundColor: t.primary,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
   },
   addButtonText: {
     color: t.textOnPrimary,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600' as const,
   },
+
   locationCard: {
     backgroundColor: t.card,
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 10,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: t.borderLight,
+    overflow: 'hidden' as const,
+  },
+  locationHeader: {
+    padding: 16,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
   },
   locationName: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600' as const,
     color: t.textPrimary,
-    marginBottom: 4,
   },
-  locationCoords: {
+  locationSummary: {
     fontSize: 13,
-    color: t.textTertiary,
+    color: t.textSecondary,
+    marginTop: 4,
   },
-  sectionTitle: {
+  expandIndicator: {
     fontSize: 14,
+    color: t.textTertiary,
+    marginLeft: 12,
+  },
+
+  locationDetail: {
+    padding: 16,
+    paddingTop: 0,
+    borderTopWidth: 1,
+    borderTopColor: t.divider,
+  },
+
+  sectionLabel: {
+    fontSize: 12,
     fontWeight: '600' as const,
     color: t.textTertiary,
     letterSpacing: 0.5,
-    marginTop: 20,
+    marginTop: 16,
     marginBottom: 8,
   },
-  forecastCard: {
-    backgroundColor: t.card,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: t.borderLight,
-  },
-  forecastPlaceholder: {
-    fontSize: 14,
-    color: t.textSecondary,
-  },
-  ruleRow: {
+
+  hourlyRow: {
     flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
+    gap: 12,
+    paddingVertical: 4,
+  },
+  hourlyItem: {
     alignItems: 'center' as const,
-    paddingVertical: 6,
+    minWidth: 56,
   },
-  ruleName: {
-    fontSize: 15,
-    color: t.textPrimary,
+  hourlyTime: { fontSize: 11, color: t.textTertiary, marginBottom: 4 },
+  hourlyTemp: { fontSize: 16, fontWeight: '600' as const, color: t.textPrimary },
+  hourlyRain: { fontSize: 10, color: t.rainBlue, marginTop: 2 },
+
+  dailyRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: t.divider,
   },
-  ruleStatus: {
-    fontSize: 13,
-    color: t.success,
-    fontWeight: '600' as const,
+  dailyDate: { fontSize: 13, color: t.textPrimary, flex: 2 as const },
+  dailyTemps: { fontSize: 14, color: t.textPrimary, flex: 2 as const, fontWeight: '600' as const },
+  dailyLow: { color: t.textTertiary, fontWeight: '400' as const },
+  dailyRain: { fontSize: 12, color: t.rainBlue, flex: 1 as const, textAlign: 'right' as const },
+  dailyWind: { fontSize: 12, color: t.textTertiary, flex: 1 as const, textAlign: 'right' as const },
+
+  ruleStatusRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingVertical: 10,
+    gap: 10,
   },
+  ruleStatusIcon: { fontSize: 18 },
+  ruleStatusName: { fontSize: 14, fontWeight: '500' as const, color: t.textPrimary },
+  ruleStatusDetail: { fontSize: 12, marginTop: 2 },
+
   historyLink: {
-    marginTop: 24,
+    marginTop: 16,
     paddingVertical: 14,
     alignItems: 'center' as const,
     borderRadius: 8,
