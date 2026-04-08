@@ -62,9 +62,17 @@ export function LocationSearchInput({
   // Tracks the query string that was actually sent so we can guard stale responses.
   const activeQueryRef = useRef<string>('');
 
+  // Tracks the formatted label from the last selection to suppress duplicate searches.
+  const lastSelectedLabelRef = useRef<string | null>(null);
+
   // ── Debounced search ───────────────────────────────────────────────────────
   useEffect(() => {
     const trimmed = query.trim();
+
+    // This query was set by a selection — don't search it again.
+    if (trimmed === lastSelectedLabelRef.current) {
+      return;
+    }
 
     if (trimmed.length < MIN_QUERY_LENGTH) {
       setResults([]);
@@ -106,8 +114,10 @@ export function LocationSearchInput({
       timezone: result.timezone,
     });
     // Keep the selected label visible in the input. Hide the dropdown but don't clear the query.
-    // When the user starts typing again, the debounce will trigger a fresh search.
-    setQuery(formatLocationLabel(result));
+    // Record the formatted label to suppress the debounce effect from searching this exact string.
+    const label = formatLocationLabel(result);
+    lastSelectedLabelRef.current = label;
+    setQuery(label);
     setResults([]);
     setStatus('idle');
     activeQueryRef.current = '';

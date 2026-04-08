@@ -15,7 +15,7 @@ export default function LocationsScreen() {
   const tokens = useTokens();
   const router = useRouter();
   const profile = useAuthStore((s) => s.profile);
-  const { locations, loading, error: storeError, loadLocations, addLocation, updateLocation, removeLocation, toggleLocation, clearError } =
+  const { locations, loading, error: storeError, loadLocations, addLocation, updateLocation, removeLocation, toggleLocation, setDefaultLocation, clearError } =
     useLocationsStore();
   const { getLocation, loading: geoLoading, error: geoError } = useDeviceLocation();
 
@@ -240,7 +240,10 @@ export default function LocationsScreen() {
                 <Pressable
                   accessibilityLabel="Default location"
                   style={styles.starButton}
-                  onPress={(e) => e.stopPropagation?.()}
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    setDefaultLocation(loc.id);
+                  }}
                 >
                   <Text style={styles.starIcon}>{(loc as WatchLocation).is_default || (index === 0 && !locations.some((l) => (l as WatchLocation).is_default)) ? '⭐' : '☆'}</Text>
                 </Pressable>

@@ -7,6 +7,7 @@ import { useLocationsStore } from '../../src/stores/locationsStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { ALERT_PRESETS } from '../../src/data/alert-presets';
 import { TIER_LIMITS } from '../../src/types';
+import { pickDefaultLocation } from '../../src/utils/alertsHelpers';
 import type { ThemeTokens } from '../../src/theme';
 import type { AlertPreset, AlertRule } from '../../src/types';
 
@@ -37,6 +38,10 @@ export default function AlertsScreen() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [presetConfirmState, setPresetConfirmState] = useState<{
+    preset: AlertPreset;
+    locationId: string;
+  } | null>(null);
 
   useEffect(() => {
     loadRules();
@@ -75,30 +80,32 @@ export default function AlertsScreen() {
       return;
     }
 
-    const location = locations[0];
+    const defaultLoc = pickDefaultLocation(locations);
+    if (!defaultLoc) {
+      Alert.alert('No Active Locations', 'All locations are inactive. Activate one first.');
+      return;
+    }
+
+    setPresetConfirmState({ preset, locationId: defaultLoc.id });
+  };
+
+  const handlePresetCreate = async () => {
+    if (!presetConfirmState) return;
+
+    const { preset, locationId } = presetConfirmState;
     const pollingHours = Math.max(preset.polling_interval_hours, limits.minPollingIntervalHours);
 
-    Alert.alert(
-      preset.name,
-      `Create "${preset.name}" alert for ${location.name}?\n\n${preset.description}\n\nPolling: every ${pollingHours}h | Lookahead: ${preset.lookahead_hours}h`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Create',
-          onPress: async () => {
-            await addRule({
-              location_id: location.id,
-              name: preset.name,
-              conditions: preset.conditions,
-              logical_operator: preset.logical_operator,
-              lookahead_hours: preset.lookahead_hours,
-              polling_interval_hours: pollingHours,
-              cooldown_hours: preset.cooldown_hours,
-            });
-          },
-        },
-      ]
-    );
+    await addRule({
+      location_id: locationId,
+      name: preset.name,
+      conditions: preset.conditions,
+      logical_operator: preset.logical_operator,
+      lookahead_hours: preset.lookahead_hours,
+      polling_interval_hours: pollingHours,
+      cooldown_hours: preset.cooldown_hours,
+    });
+
+    setPresetConfirmState(null);
   };
 
   const handleDeleteRule = (rule: AlertRule) => {
@@ -260,6 +267,92 @@ export default function AlertsScreen() {
         </Pressable>
       </Modal>
 
+      {/* Preset confirmation modal with location picker */}
+      <Modal
+        visible={presetConfirmState !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPresetConfirmState(null)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setPresetConfirmState(null)}
+        >
+          <Pressable
+            style={styles.presetConfirmModalContent}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {presetConfirmState && (
+              <>
+                <Text style={styles.presetConfirmTitle}>
+                  {presetConfirmState.preset.name}
+                </Text>
+                <Text style={styles.presetConfirmDescription}>
+                  {presetConfirmState.preset.description}
+                </Text>
+
+                {locations.filter((l) => l.is_active).length > 1 && (
+                  <>
+                    <Text style={styles.presetConfirmLocationLabel}>
+                      Location
+                    </Text>
+                    <View style={styles.presetConfirmLocationButtons}>
+                      {locations
+                        .filter((l) => l.is_active)
+                        .map((loc) => (
+                          <Pressable
+                            key={loc.id}
+                            style={[
+                              styles.presetConfirmLocationButton,
+                              presetConfirmState.locationId === loc.id &&
+                                styles.presetConfirmLocationButtonSelected,
+                            ]}
+                            onPress={() =>
+                              setPresetConfirmState({
+                                ...presetConfirmState,
+                                locationId: loc.id,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.presetConfirmLocationButtonText,
+                                presetConfirmState.locationId === loc.id &&
+                                  styles.presetConfirmLocationButtonTextSelected,
+                              ]}
+                            >
+                              {loc.name}
+                            </Text>
+                          </Pressable>
+                        ))}
+                    </View>
+                  </>
+                )}
+
+                <View style={styles.presetConfirmActions}>
+                  <Pressable
+                    style={styles.presetConfirmCancelButton}
+                    onPress={() => setPresetConfirmState(null)}
+                  >
+                    <Text style={styles.presetConfirmCancelButtonText}>
+                      Cancel
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.presetConfirmCreateButton}
+                    onPress={handlePresetCreate}
+                  >
+                    <Text style={styles.presetConfirmCreateButtonText}>
+                      Create
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {filteredPresets.map((preset) => (
         <Pressable
           key={preset.id}
@@ -409,4 +502,87 @@ const createStyles = (t: ThemeTokens) => ({
   limitCard: { backgroundColor: t.warningLight, borderRadius: 8, padding: 14, marginTop: 12 },
   limitText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' as const },
   limitLink: { fontSize: 14, color: t.primary, fontWeight: '600' as const, textAlign: 'center' as const, marginTop: 4 },
+
+  // Preset confirmation modal
+  presetConfirmModalContent: {
+    backgroundColor: t.card,
+    borderRadius: 16,
+    padding: 20,
+    width: 320,
+  } as any,
+  presetConfirmTitle: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: t.textPrimary,
+    marginBottom: 8,
+  },
+  presetConfirmDescription: {
+    fontSize: 14,
+    color: t.textSecondary,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  presetConfirmLocationLabel: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: t.textPrimary,
+    marginBottom: 10,
+  },
+  presetConfirmLocationButtons: {
+    flexDirection: 'column' as const,
+    gap: 8,
+    marginBottom: 16,
+  },
+  presetConfirmLocationButton: {
+    borderWidth: 1,
+    borderColor: t.border,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center' as const,
+  },
+  presetConfirmLocationButtonSelected: {
+    borderColor: t.primary,
+    backgroundColor: t.primaryLight,
+  },
+  presetConfirmLocationButtonText: {
+    fontSize: 14,
+    color: t.textPrimary,
+    fontWeight: '500' as const,
+  },
+  presetConfirmLocationButtonTextSelected: {
+    color: t.primary,
+    fontWeight: '600' as const,
+  },
+  presetConfirmActions: {
+    flexDirection: 'row' as const,
+    gap: 10,
+  },
+  presetConfirmCancelButton: {
+    flex: 1 as const,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: t.border,
+    alignItems: 'center' as const,
+  },
+  presetConfirmCancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: t.textPrimary,
+  },
+  presetConfirmCreateButton: {
+    flex: 1 as const,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: t.primary,
+    alignItems: 'center' as const,
+  },
+  presetConfirmCreateButtonText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: t.textOnPrimary,
+  },
 });
