@@ -1,5 +1,6 @@
 import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert, Switch } from 'react-native';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'expo-router';
 import { useStyles, useTokens } from '../../src/theme';
 import { useLocationsStore } from '../../src/stores/locationsStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -11,6 +12,7 @@ import type { WatchLocation } from '../../src/types';
 export default function LocationsScreen() {
   const styles = useStyles(createStyles);
   const tokens = useTokens();
+  const router = useRouter();
   const profile = useAuthStore((s) => s.profile);
   const { locations, loading, loadLocations, addLocation, updateLocation, removeLocation, toggleLocation } =
     useLocationsStore();
@@ -240,13 +242,14 @@ export default function LocationsScreen() {
         ))
       )}
 
-      {atLimit && !showAdd && (
-        <View style={styles.limitCard}>
+      {atLimit && !showAdd && tier !== 'premium' && (
+        <Pressable style={styles.limitCard} onPress={() => router.push('/upgrade')}>
           <Text style={styles.limitText}>
             You've reached the {tier} tier limit of {limits.maxLocations} location
-            {limits.maxLocations > 1 ? 's' : ''}. Upgrade to add more.
+            {limits.maxLocations > 1 ? 's' : ''}.
           </Text>
-        </View>
+          <Text style={styles.limitLink}>Upgrade to add more →</Text>
+        </Pressable>
       )}
     </ScrollView>
   );
@@ -379,4 +382,5 @@ const createStyles = (t: ThemeTokens) => ({
     marginTop: 12,
   },
   limitText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' as const },
+  limitLink: { fontSize: 14, color: t.primary, fontWeight: '600' as const, textAlign: 'center' as const, marginTop: 4 },
 });

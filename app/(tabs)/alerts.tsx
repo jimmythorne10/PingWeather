@@ -270,12 +270,13 @@ export default function AlertsScreen() {
         </Pressable>
       )}
 
-      {atLimit && (
-        <View style={styles.limitCard}>
+      {atLimit && tier !== 'premium' && (
+        <Pressable style={styles.limitCard} onPress={() => router.push('/upgrade')}>
           <Text style={styles.limitText}>
-            You've reached the {tier} tier limit of {limits.maxAlertRules} rules. Upgrade for more.
+            You've reached the {tier} tier limit of {limits.maxAlertRules} rules.
           </Text>
-        </View>
+          <Text style={styles.limitLink}>Upgrade for more →</Text>
+        </Pressable>
       )}
     </ScrollView>
   );
@@ -393,4 +394,5 @@ const createStyles = (t: ThemeTokens) => ({
   // Limit
   limitCard: { backgroundColor: t.warningLight, borderRadius: 8, padding: 14, marginTop: 12 },
   limitText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' as const },
+  limitLink: { fontSize: 14, color: t.primary, fontWeight: '600' as const, textAlign: 'center' as const, marginTop: 4 },
 });

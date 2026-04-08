@@ -5,8 +5,11 @@ import { useStyles, useTokens } from '../../src/theme';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useThemeStore } from '../../src/stores/themeStore';
+import { isDevAccount } from '../../src/utils/devAccount';
+import { TIER_LIMITS } from '../../src/types';
 import type { ThemeTokens } from '../../src/theme';
 import type { ThemeName } from '../../src/theme/tokens';
+import type { SubscriptionTier } from '../../src/types';
 
 const APP_VERSION = '1.0.0';
 
@@ -16,11 +19,15 @@ export default function SettingsScreen() {
   const router = useRouter();
   const profile = useAuthStore((s) => s.profile);
   const signOut = useAuthStore((s) => s.signOut);
+  const updateProfile = useAuthStore((s) => s.updateProfile);
   const settings = useSettingsStore();
   const { themeName, setTheme } = useThemeStore();
 
-  const [versionTapCount, setVersionTapCount] = useState(0);
-  const developerMode = versionTapCount >= 7;
+  const [tierSwitching, setTierSwitching] = useState<SubscriptionTier | null>(null);
+
+  const currentTier = (profile?.subscription_tier ?? 'free') as SubscriptionTier;
+  const canOverrideTier = isDevAccount(profile?.email);
+  const currentLimits = TIER_LIMITS[currentTier];
 
   const themeOptions: { name: ThemeName; label: string }[] = [
     { name: 'classic', label: 'Classic' },
@@ -28,40 +35,42 @@ export default function SettingsScreen() {
     { name: 'storm', label: 'Storm' },
   ];
 
+  const tierOptions: { value: SubscriptionTier; label: string }[] = [
+    { value: 'free', label: 'Free' },
+    { value: 'pro', label: 'Pro' },
+    { value: 'premium', label: 'Premium' },
+  ];
+
+  const handleTierOverride = async (tier: SubscriptionTier) => {
+    if (tier === currentTier || tierSwitching) return;
+    setTierSwitching(tier);
+    await updateProfile({ subscription_tier: tier });
+    setTierSwitching(null);
+  };
+
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          style: 'destructive',
-          onPress: () => signOut(),
-        },
-      ]
-    );
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign Out', style: 'destructive', onPress: () => signOut() },
+    ]);
   };
 
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete Account',
-      'This action is permanent and cannot be undone. Type "DELETE" to confirm.',
+      'This will permanently delete your account, locations, alert rules, and history. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            // Client-side placeholder — actual deletion requires server-side call
+            // TODO: wire to Supabase Edge Function that deletes the user server-side
+            Alert.alert('Coming Soon', 'Account deletion will be fully wired in the next release.');
           },
         },
       ]
     );
-  };
-
-  const handleVersionTap = () => {
-    setVersionTapCount((prev) => prev + 1);
   };
 
   return (
@@ -71,12 +80,67 @@ export default function SettingsScreen() {
       <View style={styles.card}>
         <Text style={styles.label}>Email</Text>
         <Text style={styles.value}>{profile?.email ?? '—'}</Text>
-        <Text style={styles.label}>Tier</Text>
-        <Text style={styles.value}>
-          {(profile?.subscription_tier ?? 'free').charAt(0).toUpperCase() +
-            (profile?.subscription_tier ?? 'free').slice(1)}
+        <Text style={styles.label}>Current plan</Text>
+        <Text style={styles.valueBold}>
+          {currentTier.charAt(0).toUpperCase() + currentTier.slice(1)}
+        </Text>
+        <Text style={styles.limitsLine}>
+          {currentLimits.maxLocations} location{currentLimits.maxLocations !== 1 ? 's' : ''} ·{' '}
+          {currentLimits.maxAlertRules === 999 ? 'unlimited' : currentLimits.maxAlertRules} rule
+          {currentLimits.maxAlertRules !== 1 ? 's' : ''} ·{' '}
+          {currentLimits.minPollingIntervalHours}h min polling
         </Text>
       </View>
+
+      {/* Upgrade CTA — everyone who isn't Premium sees this */}
+      {currentTier !== 'premium' && (
+        <Pressable style={styles.upgradeButton} onPress={() => router.push('/upgrade')}>
+          <Text style={styles.upgradeButtonText}>
+            {currentTier === 'free' ? 'Upgrade to Pro or Premium →' : 'Upgrade to Premium →'}
+          </Text>
+          <Text style={styles.upgradeButtonSubtext}>
+            More locations, faster polling, compound alerts
+          </Text>
+        </Pressable>
+      )}
+
+      {/* Developer Tier Override — only for the developer account */}
+      {canOverrideTier && (
+        <>
+          <Text style={styles.sectionTitle}>{'DEVELOPER OPTIONS'}</Text>
+          <View style={[styles.card, styles.devCard]}>
+            <Text style={styles.devBadge}>DEV</Text>
+            <Text style={styles.label}>Tier Override</Text>
+            <Text style={styles.devHint}>
+              Switch tiers instantly for testing. This writes directly to your profile in Supabase.
+              Only visible to the developer account.
+            </Text>
+            <View style={styles.tierRow}>
+              {tierOptions.map((opt) => (
+                <Pressable
+                  key={opt.value}
+                  style={[
+                    styles.tierButton,
+                    currentTier === opt.value && styles.tierButtonActive,
+                    tierSwitching === opt.value && { opacity: 0.5 },
+                  ]}
+                  onPress={() => handleTierOverride(opt.value)}
+                  disabled={tierSwitching !== null}
+                >
+                  <Text
+                    style={[
+                      styles.tierButtonText,
+                      currentTier === opt.value && styles.tierButtonTextActive,
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        </>
+      )}
 
       {/* Units */}
       <Text style={styles.sectionTitle}>{'UNITS'}</Text>
@@ -85,36 +149,16 @@ export default function SettingsScreen() {
           <Text style={styles.label}>Temperature</Text>
           <View style={styles.toggleRow}>
             <Pressable
-              style={[
-                styles.toggleButton,
-                settings.temperatureUnit === 'fahrenheit' && styles.toggleActive,
-              ]}
+              style={[styles.toggleButton, settings.temperatureUnit === 'fahrenheit' && styles.toggleActive]}
               onPress={() => settings.setTemperatureUnit('fahrenheit')}
             >
-              <Text
-                style={[
-                  styles.toggleText,
-                  settings.temperatureUnit === 'fahrenheit' && styles.toggleTextActive,
-                ]}
-              >
-                °F
-              </Text>
+              <Text style={[styles.toggleText, settings.temperatureUnit === 'fahrenheit' && styles.toggleTextActive]}>°F</Text>
             </Pressable>
             <Pressable
-              style={[
-                styles.toggleButton,
-                settings.temperatureUnit === 'celsius' && styles.toggleActive,
-              ]}
+              style={[styles.toggleButton, settings.temperatureUnit === 'celsius' && styles.toggleActive]}
               onPress={() => settings.setTemperatureUnit('celsius')}
             >
-              <Text
-                style={[
-                  styles.toggleText,
-                  settings.temperatureUnit === 'celsius' && styles.toggleTextActive,
-                ]}
-              >
-                °C
-              </Text>
+              <Text style={[styles.toggleText, settings.temperatureUnit === 'celsius' && styles.toggleTextActive]}>°C</Text>
             </Pressable>
           </View>
         </View>
@@ -124,20 +168,10 @@ export default function SettingsScreen() {
             {(['mph', 'kmh', 'knots'] as const).map((unit) => (
               <Pressable
                 key={unit}
-                style={[
-                  styles.toggleButton,
-                  settings.windSpeedUnit === unit && styles.toggleActive,
-                ]}
+                style={[styles.toggleButton, settings.windSpeedUnit === unit && styles.toggleActive]}
                 onPress={() => settings.setWindSpeedUnit(unit)}
               >
-                <Text
-                  style={[
-                    styles.toggleText,
-                    settings.windSpeedUnit === unit && styles.toggleTextActive,
-                  ]}
-                >
-                  {unit}
-                </Text>
+                <Text style={[styles.toggleText, settings.windSpeedUnit === unit && styles.toggleTextActive]}>{unit}</Text>
               </Pressable>
             ))}
           </View>
@@ -148,11 +182,7 @@ export default function SettingsScreen() {
       <Text style={styles.sectionTitle}>{'THEME'}</Text>
       <View style={styles.card}>
         {themeOptions.map((opt) => (
-          <Pressable
-            key={opt.name}
-            style={[styles.row, { paddingVertical: 12 }]}
-            onPress={() => setTheme(opt.name)}
-          >
+          <Pressable key={opt.name} style={[styles.row, { paddingVertical: 12 }]} onPress={() => setTheme(opt.name)}>
             <Text style={styles.label}>{opt.label}</Text>
             <Text style={{ fontSize: 18, color: tokens.primary }}>
               {themeName === opt.name ? '●' : '○'}
@@ -200,39 +230,26 @@ export default function SettingsScreen() {
         <Text style={styles.deleteButtonText}>Delete Account</Text>
       </Pressable>
 
-      {/* Sign out */}
+      {/* Sign Out */}
       <Pressable style={styles.signOutButton} onPress={handleSignOut}>
         <Text style={styles.signOutText}>Sign Out</Text>
       </Pressable>
 
-      {/* Developer Options (easter egg) */}
-      {developerMode && (
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Developer Options</Text>
-          <Text style={styles.value}>Internal diagnostics enabled</Text>
-        </View>
-      )}
-
-      {/* Version — tappable easter egg */}
-      <Pressable onPress={handleVersionTap} style={styles.versionContainer}>
+      {/* Version */}
+      <View style={styles.versionContainer}>
         <Text style={styles.versionText}>{`PingWeather v${APP_VERSION}`}</Text>
-      </Pressable>
+        <Text style={styles.versionSubtext}>by Truth Centered Tech</Text>
+      </View>
     </ScrollView>
   );
 }
 
 const createStyles = (t: ThemeTokens) => ({
-  container: {
-    flex: 1 as const,
-    backgroundColor: t.background,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 60,
-  },
+  container: { flex: 1 as const, backgroundColor: t.background },
+  content: { padding: 20, paddingBottom: 60 },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600' as const,
+    fontSize: 12,
+    fontWeight: '700' as const,
     color: t.textTertiary,
     letterSpacing: 0.5,
     marginTop: 20,
@@ -249,21 +266,60 @@ const createStyles = (t: ThemeTokens) => ({
     flexDirection: 'row' as const,
     justifyContent: 'space-between' as const,
     alignItems: 'center' as const,
-    paddingVertical: 4,
+    paddingVertical: 8,
   },
-  label: {
-    fontSize: 16,
-    color: t.textPrimary,
+  label: { fontSize: 15, color: t.textPrimary },
+  value: { fontSize: 14, color: t.textSecondary, marginBottom: 12 },
+  valueBold: { fontSize: 15, fontWeight: '600' as const, color: t.textPrimary, marginBottom: 4 },
+  limitsLine: { fontSize: 12, color: t.textTertiary },
+
+  // Upgrade CTA
+  upgradeButton: {
+    backgroundColor: t.primary,
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+    alignItems: 'center' as const,
   },
-  value: {
-    fontSize: 14,
-    color: t.textSecondary,
-    marginBottom: 12,
+  upgradeButtonText: { color: t.textOnPrimary, fontSize: 16, fontWeight: '700' as const },
+  upgradeButtonSubtext: { color: t.textOnPrimary, fontSize: 12, marginTop: 4, opacity: 0.85 },
+
+  // Dev override
+  devCard: {
+    borderColor: t.warning,
+    borderWidth: 2,
   },
-  toggleRow: {
-    flexDirection: 'row' as const,
-    gap: 4,
+  devBadge: {
+    alignSelf: 'flex-start' as const,
+    backgroundColor: t.warning,
+    color: '#000000',
+    fontSize: 10,
+    fontWeight: '700' as const,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginBottom: 8,
   },
+  devHint: { fontSize: 12, color: t.textSecondary, marginTop: 4, marginBottom: 12, lineHeight: 18 },
+  tierRow: { flexDirection: 'row' as const, gap: 8 },
+  tierButton: {
+    flex: 1 as const,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: t.border,
+    alignItems: 'center' as const,
+    backgroundColor: t.inputBackground,
+  },
+  tierButtonActive: {
+    backgroundColor: t.primary,
+    borderColor: t.primary,
+  },
+  tierButtonText: { fontSize: 14, fontWeight: '600' as const, color: t.textSecondary },
+  tierButtonTextActive: { color: t.textOnPrimary },
+
+  // Toggles
+  toggleRow: { flexDirection: 'row' as const, gap: 4 },
   toggleButton: {
     paddingVertical: 6,
     paddingHorizontal: 14,
@@ -276,26 +332,18 @@ const createStyles = (t: ThemeTokens) => ({
     backgroundColor: t.primary,
     borderColor: t.primary,
   },
-  toggleText: {
-    fontSize: 14,
-    color: t.textSecondary,
-    fontWeight: '500' as const,
-  },
-  toggleTextActive: {
-    color: t.textOnPrimary,
-  },
+  toggleText: { fontSize: 14, color: t.textSecondary, fontWeight: '500' as const },
+  toggleTextActive: { color: t.textOnPrimary },
+
+  // Destructive
   deleteButton: {
-    marginTop: 32,
+    marginTop: 24,
     paddingVertical: 14,
     alignItems: 'center' as const,
     borderRadius: 8,
     backgroundColor: t.error,
   },
-  deleteButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600' as const,
-  },
+  deleteButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' as const },
   signOutButton: {
     marginTop: 12,
     paddingVertical: 14,
@@ -304,18 +352,10 @@ const createStyles = (t: ThemeTokens) => ({
     borderWidth: 1,
     borderColor: t.error,
   },
-  signOutText: {
-    color: t.error,
-    fontSize: 16,
-    fontWeight: '600' as const,
-  },
-  versionContainer: {
-    marginTop: 24,
-    alignItems: 'center' as const,
-    paddingVertical: 8,
-  },
-  versionText: {
-    fontSize: 13,
-    color: t.textTertiary,
-  },
+  signOutText: { color: t.error, fontSize: 16, fontWeight: '600' as const },
+
+  // Version
+  versionContainer: { marginTop: 24, alignItems: 'center' as const, paddingVertical: 8 },
+  versionText: { fontSize: 13, color: t.textTertiary, fontWeight: '600' as const },
+  versionSubtext: { fontSize: 11, color: t.textTertiary, marginTop: 2 },
 });

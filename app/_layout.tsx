@@ -50,6 +50,7 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="create-rule" options={{ headerShown: true, title: 'Create Alert Rule' }} />
+        <Stack.Screen name="upgrade" options={{ headerShown: true, title: 'Upgrade', presentation: 'modal' }} />
         <Stack.Screen name="legal/eula" options={{ headerShown: true, title: 'Terms of Use' }} />
         <Stack.Screen name="legal/privacy-policy" options={{ headerShown: true, title: 'Privacy Policy' }} />
       </Stack>
