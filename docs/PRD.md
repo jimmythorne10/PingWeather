@@ -673,6 +673,65 @@ Truth Centered Tech, Delaware, US
     - Back button returns to previous context (Home, History sub-screen, or Forecasts)
     - If opened from a push notification cold-start: auth gate runs first, then deep links to this screen with the `alert_history_id` from the notification payload
 
+### 2.9 Subscriptions & In-App Purchases
+
+#### FR-IAP-001: Paywall Screen
+- **Given** a free-tier user encounters a tier-gated feature (compound conditions, polling < 12h, 2+ locations, etc.)
+- **When** they tap the upgrade prompt or navigate to upgrade from Settings
+- **Then** a paywall screen displays available tiers with pricing and feature comparison
+- **Acceptance Criteria:**
+  - Shows current tier highlighted
+  - Side-by-side comparison of Free / Pro ($3.99/mo) / Premium ($7.99/mo) features
+  - Each tier lists: locations, rules, polling interval, compound conditions, history retention, SMS alerts
+  - "Subscribe" button per tier triggers the native store purchase flow
+  - "Restore Purchases" link for users who reinstall or switch devices
+  - Accessible from: Settings (explicit), tier limit warnings (contextual), upgrade prompts throughout app
+
+#### FR-IAP-002: Purchase Flow
+- **Given** a user taps "Subscribe" on a tier
+- **When** the native store purchase dialog appears
+- **Then** the purchase is handled entirely by Google Play / Apple App Store
+- **Acceptance Criteria:**
+  - Uses RevenueCat SDK (`react-native-purchases`) to wrap Google Play Billing and Apple StoreKit
+  - App never handles credit cards, payment details, or PCI-sensitive data
+  - On successful purchase: update `profiles.subscription_tier` in Supabase
+  - On failed/cancelled purchase: return to paywall, no state change
+  - Loading state while purchase is processing
+
+#### FR-IAP-003: Subscription Lifecycle Management
+- **Given** a user has an active subscription
+- **When** their subscription renews, cancels, expires, or is refunded
+- **Then** their tier is updated accordingly in real-time
+- **Acceptance Criteria:**
+  - RevenueCat webhook calls a Supabase Edge Function to update `profiles.subscription_tier`
+  - On renewal: no action needed (tier stays the same)
+  - On cancellation: tier remains active until end of billing period, then downgrades to Free (FR-LOC-005 downgrade handling applies)
+  - On refund: immediate downgrade to Free
+  - On expiration (failed payment): grace period per store policy, then downgrade
+  - Subscription status synced on app launch via RevenueCat SDK (handles offline/webhook failures)
+
+#### FR-IAP-004: Restore Purchases
+- **Given** a user who previously subscribed but reinstalled the app or switched devices
+- **When** they tap "Restore Purchases" on the paywall
+- **Then** their subscription is verified with the store and tier is restored
+- **Acceptance Criteria:**
+  - Calls RevenueCat `restorePurchases()`
+  - If active subscription found: update `profiles.subscription_tier` and dismiss paywall
+  - If no subscription found: show "No active subscription found" message
+  - Also triggered automatically on app launch (silent restore)
+
+#### FR-IAP-005: Subscription Info in Settings
+- **Given** a subscribed user on the Settings tab
+- **When** they view their account info
+- **Then** subscription details are shown with management options
+- **Acceptance Criteria:**
+  - Shows: current tier, renewal date, price
+  - "Manage Subscription" link opens the native store subscription management (Google Play Subscriptions or Apple Settings → Subscriptions)
+  - App does not build its own cancellation flow — stores handle this
+  - If on Free tier: shows "Upgrade" button linking to paywall
+
+> **Future Consideration (Stub):** Free tier may become ad-supported using Google AdMob. This would require Privacy Policy updates (ad SDK data disclosure), GDPR ad consent flow, and a "Pro removes ads" upsell. Not in MVP scope.
+
 ---
 
 ## 3. Non-Functional Requirements

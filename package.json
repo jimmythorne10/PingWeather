@@ -11,9 +11,68 @@
     "test": "jest"
   },
   "jest": {
-    "preset": "jest-expo",
-    "transformIgnorePatterns": [
-      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|react-navigation|@react-navigation/.*|zustand)"
+    "projects": [
+      {
+        "displayName": "logic",
+        "testEnvironment": "node",
+        "testMatch": [
+          "<rootDir>/__tests__/stores/**/*.test.ts",
+          "<rootDir>/__tests__/engine/**/*.test.ts",
+          "<rootDir>/__tests__/data/**/*.test.ts",
+          "<rootDir>/__tests__/flows/**/*.test.ts"
+        ],
+        "setupFiles": [
+          "<rootDir>/jest.setup.ts"
+        ],
+        "moduleNameMapper": {
+          "^@react-native-async-storage/async-storage$": "<rootDir>/__mocks__/async-storage.js",
+          "^expo-secure-store$": "<rootDir>/__mocks__/expo-secure-store.js",
+          "^expo-constants$": "<rootDir>/__mocks__/expo-constants.js",
+          "^expo-location$": "<rootDir>/__mocks__/expo-location.js",
+          "^expo-notifications$": "<rootDir>/__mocks__/expo-notifications.js",
+          "^expo-router$": "<rootDir>/__mocks__/expo-router.js",
+          "^expo-status-bar$": "<rootDir>/__mocks__/expo-status-bar.js",
+          "^react-native$": "<rootDir>/__mocks__/react-native.js",
+          "^react-native-url-polyfill/auto$": "<rootDir>/__mocks__/empty.js"
+        },
+        "transform": {
+          "^.+\\.(ts|tsx|js|jsx)$": [
+            "babel-jest",
+            {
+              "presets": [
+                [
+                  "@babel/preset-env",
+                  {
+                    "targets": {
+                      "node": "current"
+                    }
+                  }
+                ],
+                "@babel/preset-typescript"
+              ]
+            }
+          ]
+        },
+        "modulePathIgnorePatterns": [
+          "<rootDir>/_disabled_screens/"
+        ]
+      },
+      {
+        "displayName": "components",
+        "preset": "jest-expo",
+        "testMatch": [
+          "<rootDir>/__tests__/screens/**/*.test.tsx"
+        ],
+        "setupFiles": [
+          "<rootDir>/jest.setup.ts"
+        ],
+        "transformIgnorePatterns": [
+          "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|react-navigation|@react-navigation/.*|zustand|@supabase)"
+        ],
+        "modulePathIgnorePatterns": [
+          "<rootDir>/_disabled_screens/"
+        ]
+      }
     ]
   },
   "dependencies": {
@@ -34,13 +93,17 @@
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
     "react-native-url-polyfill": "^3.0.0",
+    "react-native-worklets": "^0.8.1",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.29.2",
+    "@babel/preset-typescript": "^7.28.5",
+    "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^30.0.0",
     "@types/react": "~19.1.0",
     "jest": "^30.3.0",
-    "jest-expo": "^55.0.11",
+    "jest-expo": "~54.0.0",
     "typescript": "~5.9.2"
   },
   "private": true
