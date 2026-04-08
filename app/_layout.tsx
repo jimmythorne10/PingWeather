@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '../src/stores/authStore';
 
 export default function RootLayout() {
@@ -32,14 +33,16 @@ export default function RootLayout() {
 
   if (!ready) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#1E3A5F" />
-      </View>
+      <SafeAreaProvider>
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color="#1E3A5F" />
+        </View>
+      </SafeAreaProvider>
     );
   }
 
   return (
-    <>
+    <SafeAreaProvider>
       <StatusBar style="light" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="login" />
@@ -50,7 +53,7 @@ export default function RootLayout() {
         <Stack.Screen name="legal/eula" options={{ headerShown: true, title: 'Terms of Use' }} />
         <Stack.Screen name="legal/privacy-policy" options={{ headerShown: true, title: 'Privacy Policy' }} />
       </Stack>
-    </>
+    </SafeAreaProvider>
   );
 }
 

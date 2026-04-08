@@ -1,22 +1,28 @@
 import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeStore } from '../../src/stores/themeStore';
 
 export default function TabLayout() {
   const tokens = useThemeStore((s) => s.tokens);
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        sceneStyle: {
+          backgroundColor: tokens.background,
+          paddingTop: insets.top,
+        },
         tabBarActiveTintColor: tokens.tabBarActiveTint,
         tabBarInactiveTintColor: tokens.tabBarInactiveTint,
         tabBarStyle: {
           backgroundColor: tokens.tabBarBackground,
           borderTopColor: tokens.tabBarBorder,
           borderTopWidth: 1,
-          height: 64,
-          paddingBottom: 8,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom + 6,
           paddingTop: 6,
         },
         tabBarLabelStyle: {
@@ -24,7 +30,7 @@ export default function TabLayout() {
           fontWeight: '600',
         },
         tabBarItemStyle: {
-          paddingVertical: 4,
+          flex: 1,
         },
       }}
     >
@@ -66,9 +72,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="history"
         options={{
+          href: null,
           title: 'History',
-          tabBarButton: () => null,
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>{'📜'}</Text>,
         }}
       />
     </Tabs>
