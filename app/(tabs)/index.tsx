@@ -191,7 +191,7 @@ const createStyles = (t: ThemeTokens) => ({
   cardTitle: { fontSize: 18, fontWeight: '600' as const, color: t.textPrimary, marginBottom: 8 },
   cardBadge: {
     backgroundColor: t.primary, color: t.textOnPrimary, fontSize: 13, fontWeight: '700' as const,
-    paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12, overflow: 'hidden' as const,
+    paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12,
   },
   cardBody: { fontSize: 14, color: t.textSecondary, lineHeight: 20, marginBottom: 12 },
 

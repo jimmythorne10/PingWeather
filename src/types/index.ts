@@ -127,7 +127,7 @@ export interface AlertPreset {
   name: string;
   description: string;
   icon: string;
-  category: 'livestock' | 'outdoor_work' | 'hunting' | 'general';
+  category: 'temperature' | 'precipitation' | 'wind' | 'work';
   conditions: AlertCondition[];
   logical_operator: LogicalOperator;
   lookahead_hours: number;

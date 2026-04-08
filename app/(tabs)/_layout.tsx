@@ -8,13 +8,10 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: tokens.headerBackground },
-        headerTintColor: tokens.headerTint,
         tabBarActiveTintColor: tokens.tabBarActiveTint,
         tabBarInactiveTintColor: tokens.tabBarInactiveTint,
         tabBarStyle: {
           backgroundColor: tokens.tabBarBackground,
-          borderTopColor: tokens.tabBarBorder,
         },
       }}
     >
@@ -50,7 +47,7 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: 'Settings',
-          href: null, // hidden from tab bar, accessed via gear icon
+          tabBarButton: () => null,
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>{'⚙️'}</Text>,
         }}
       />

@@ -149,12 +149,12 @@ export default function AlertsScreen() {
         Tap a preset to create an alert rule instantly.
       </Text>
 
-      {(['livestock', 'hunting', 'outdoor_work', 'general'] as const).map((category) => (
+      {(['temperature', 'precipitation', 'wind', 'work'] as const).map((category) => (
         <View key={category}>
           <Text style={styles.categoryTitle}>
-            {category === 'livestock' ? 'Livestock & Agriculture' :
-             category === 'hunting' ? 'Hunting' :
-             category === 'outdoor_work' ? 'Outdoor Work' : 'General'}
+            {(category === 'temperature' ? 'Temperature' :
+             category === 'precipitation' ? 'Precipitation' :
+             category === 'wind' ? 'Wind' : 'Work & Safety').toUpperCase()}
           </Text>
           {ALERT_PRESETS.filter((p) => p.category === category).map((preset) => (
             <Pressable
@@ -171,6 +171,16 @@ export default function AlertsScreen() {
           ))}
         </View>
       ))}
+
+      {/* Custom builder */}
+      {!atLimit && (
+        <Pressable
+          style={[styles.customButton, { borderColor: tokens.primary }]}
+          onPress={() => router.push('/create-rule')}
+        >
+          <Text style={{ color: tokens.primary, fontSize: 16, fontWeight: '600' }}>+ Build Custom Alert Rule</Text>
+        </Pressable>
+      )}
 
       {atLimit && (
         <View style={styles.limitCard}>
@@ -190,7 +200,7 @@ const createStyles = (t: ThemeTokens) => ({
   sectionSubtitle: { fontSize: 13, color: t.textTertiary, marginBottom: 16 },
   categoryTitle: {
     fontSize: 14, fontWeight: '600' as const, color: t.textTertiary,
-    marginTop: 16, marginBottom: 8, textTransform: 'uppercase' as const, letterSpacing: 0.5,
+    marginTop: 16, marginBottom: 8, letterSpacing: 0.5,
   },
 
   // Rule card
@@ -222,6 +232,11 @@ const createStyles = (t: ThemeTokens) => ({
   presetInfo: { flex: 1 as const },
   presetName: { fontSize: 16, fontWeight: '600' as const, color: t.textPrimary, marginBottom: 2 },
   presetDesc: { fontSize: 13, color: t.textSecondary, lineHeight: 18 },
+
+  // Custom builder
+  customButton: {
+    borderWidth: 1, borderRadius: 12, paddingVertical: 18, alignItems: 'center' as const, marginTop: 20,
+  },
 
   // Limit
   limitCard: { backgroundColor: t.warningLight, borderRadius: 8, padding: 14, marginTop: 12 },

@@ -1,44 +1,66 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { supabase } from '../utils/supabase';
-import type { EventSubscription } from 'expo-modules-core';
 
-// Configure how notifications appear when app is in foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// expo-notifications crashes Expo Go on SDK 53+.
+// Lazy-load it so the module only initializes in native builds.
+let Notifications: typeof import('expo-notifications') | null = null;
+let handlerConfigured = false;
+
+function getNotifications() {
+  if (!Notifications) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      Notifications = require('expo-notifications');
+      if (!handlerConfigured && Notifications) {
+        Notifications.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowAlert: true,
+            shouldPlaySound: true,
+            shouldSetBadge: true,
+            shouldShowBanner: true,
+            shouldShowList: true,
+          }),
+        });
+        handlerConfigured = true;
+      }
+    } catch {
+      // Not available (Expo Go) — that's fine
+      Notifications = null;
+    }
+  }
+  return Notifications;
+}
 
 export function usePushNotifications() {
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const notificationListener = useRef<EventSubscription>(null);
-  const responseListener = useRef<EventSubscription>(null);
+  const subscriptions = useRef<Array<{ remove: () => void }>>([]);
 
-  const registerForPushNotifications = async (): Promise<string | null> => {
+  const registerForPushNotifications = useCallback(async (): Promise<string | null> => {
+    const N = getNotifications();
+    if (!N) {
+      setError('Push notifications are not available in Expo Go. Use a development build.');
+      return null;
+    }
+
     try {
       if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('weather-alerts', {
+        await N.setNotificationChannelAsync('weather-alerts', {
           name: 'Weather Alerts',
-          importance: Notifications.AndroidImportance.MAX,
+          importance: N.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
           lightColor: '#1E3A5F',
           sound: 'default',
         });
       }
 
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      const { status: existingStatus } = await N.getPermissionsAsync();
       let finalStatus = existingStatus;
 
       if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync({});
+        const { status } = await N.requestPermissionsAsync({});
         finalStatus = status;
       }
 
@@ -48,9 +70,7 @@ export function usePushNotifications() {
       }
 
       const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-      const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId,
-      });
+      const tokenData = await N.getExpoPushTokenAsync({ projectId });
       const token = tokenData.data;
       setExpoPushToken(token);
 
@@ -61,7 +81,6 @@ export function usePushNotifications() {
 
       if (fnError) {
         console.error('Failed to register push token:', fnError);
-        // Non-fatal: token is set locally, server registration can retry
       }
 
       return token;
@@ -70,25 +89,25 @@ export function usePushNotifications() {
       setError(message);
       return null;
     }
-  };
+  }, []);
 
   useEffect(() => {
-    // Listen for incoming notifications while app is open
-    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-      // Notification received in foreground — already handled by setNotificationHandler
+    const N = getNotifications();
+    if (!N) return;
+
+    const notifSub = N.addNotificationReceivedListener((notification) => {
       console.log('Notification received:', notification.request.content.title);
     });
 
-    // Listen for user tapping on a notification
-    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+    const responseSub = N.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data;
-      // Could navigate to specific alert rule or history
       console.log('Notification tapped:', data);
     });
 
+    subscriptions.current = [notifSub, responseSub];
+
     return () => {
-      notificationListener.current?.remove();
-      responseListener.current?.remove();
+      subscriptions.current.forEach((s) => s.remove());
     };
   }, []);
 

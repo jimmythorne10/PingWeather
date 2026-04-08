@@ -5,65 +5,25 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "scheme": "weatherwatch",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#1E3A5F"
     },
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.truthcenteredtech.weatherwatch",
-      "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "WeatherWatch needs your location to provide weather alerts for your area.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "WeatherWatch needs background location access to monitor weather conditions at your saved locations.",
-        "UIBackgroundModes": ["remote-notification"]
-      }
-    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1E3A5F"
-      },
-      "edgeToEdgeEnabled": true,
-      "package": "com.truthcenteredtech.weatherwatch",
-      "permissions": [
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_BACKGROUND_LOCATION",
-        "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.VIBRATE"
-      ],
-      "googleServicesFile": "./google-services.json"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router",
-      "expo-secure-store",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/notification-icon.png",
-          "color": "#1E3A5F"
-        }
-      ],
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "WeatherWatch needs your location to provide weather alerts for your area.",
-          "locationWhenInUsePermission": "WeatherWatch needs your location to provide weather alerts for your area."
-        }
-      ]
+      "expo-router"
     ],
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": ""
-      }
+      "router": {}
     }
   }
 }

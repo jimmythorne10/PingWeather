@@ -10,7 +10,9 @@ export default function CompleteScreen() {
 
   const handleComplete = async () => {
     await updateProfile({ onboarding_completed: true });
-    router.replace('/(tabs)');
+    // Refetch profile to ensure auth guard sees the update, then navigate
+    await useAuthStore.getState().fetchProfile();
+    router.replace('/');
   };
 
   return (

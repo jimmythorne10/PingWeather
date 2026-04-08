@@ -4,13 +4,11 @@ import { useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuthStore } from '../src/stores/authStore';
-import { useThemeStore } from '../src/stores/themeStore';
 
 export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
-  const { session, profile, initialized, initialize } = useAuthStore();
-  const tokens = useThemeStore((s) => s.tokens);
+  const { session, profile, initialize } = useAuthStore();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -25,38 +23,32 @@ export default function RootLayout() {
 
     if (!session && !inAuthGroup) {
       router.replace('/login');
-    } else if (session && profile && !profile.onboarding_completed && !inOnboarding) {
+    } else if (session && profile && profile.onboarding_completed === false && !inOnboarding) {
       router.replace('/onboarding/welcome');
-    } else if (session && profile?.onboarding_completed && (inAuthGroup || inOnboarding)) {
-      router.replace('/(tabs)');
+    } else if (session && profile?.onboarding_completed === true && (inAuthGroup || inOnboarding)) {
+      router.replace('/');
     }
   }, [ready, session, profile, segments]);
 
   if (!ready) {
     return (
-      <View style={[styles.loading, { backgroundColor: tokens.background }]}>
-        <ActivityIndicator size="large" color={tokens.primary} />
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#1E3A5F" />
       </View>
     );
   }
 
   return (
     <>
-      <StatusBar style={tokens.statusBarStyle} />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: tokens.headerBackground },
-          headerTintColor: tokens.headerTint,
-          headerTitleStyle: { fontWeight: '600' },
-          contentStyle: { backgroundColor: tokens.background },
-        }}
-      >
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="signup" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="legal/eula" options={{ title: 'Terms of Use' }} />
-        <Stack.Screen name="legal/privacy-policy" options={{ title: 'Privacy Policy' }} />
+      <StatusBar style="light" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="login" />
+        <Stack.Screen name="signup" />
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="create-rule" options={{ headerShown: true, title: 'Create Alert Rule' }} />
+        <Stack.Screen name="legal/eula" options={{ headerShown: true, title: 'Terms of Use' }} />
+        <Stack.Screen name="legal/privacy-policy" options={{ headerShown: true, title: 'Privacy Policy' }} />
       </Stack>
     </>
   );
@@ -67,5 +59,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F0F4F8',
   },
 });

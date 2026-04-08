@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../utils/supabase';
+import { useAuthStore } from './authStore';
 import type { WatchLocation } from '../types';
 
 interface LocationsState {
@@ -40,9 +41,11 @@ export const useLocationsStore = create<LocationsState>()(
       addLocation: async (name, latitude, longitude) => {
         set({ loading: true, error: null });
         try {
+          const userId = useAuthStore.getState().user?.id;
+          if (!userId) throw new Error('Not authenticated');
           const { data, error } = await supabase
             .from('locations')
-            .insert({ name, latitude, longitude, is_active: true })
+            .insert({ user_id: userId, name, latitude, longitude, is_active: true })
             .select()
             .single();
           if (error) throw error;

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../utils/supabase';
+import { useAuthStore } from './authStore';
 import type { AlertRule, AlertCondition, LogicalOperator } from '../types';
 
 interface AlertRulesState {
@@ -49,9 +50,11 @@ export const useAlertRulesStore = create<AlertRulesState>()(
       createRule: async (rule) => {
         set({ loading: true, error: null });
         try {
+          const userId = useAuthStore.getState().user?.id;
+          if (!userId) throw new Error('Not authenticated');
           const { data, error } = await supabase
             .from('alert_rules')
-            .insert({ ...rule, is_active: true })
+            .insert({ ...rule, user_id: userId, is_active: true })
             .select()
             .single();
           if (error) throw error;

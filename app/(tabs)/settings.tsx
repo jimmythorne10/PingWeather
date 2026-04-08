@@ -25,7 +25,7 @@ export default function SettingsScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Account */}
-      <Text style={styles.sectionTitle}>Account</Text>
+      <Text style={styles.sectionTitle}>{'ACCOUNT'}</Text>
       <View style={styles.card}>
         <Text style={styles.label}>Email</Text>
         <Text style={styles.value}>{profile?.email ?? '—'}</Text>
@@ -37,7 +37,7 @@ export default function SettingsScreen() {
       </View>
 
       {/* Units */}
-      <Text style={styles.sectionTitle}>Units</Text>
+      <Text style={styles.sectionTitle}>{'UNITS'}</Text>
       <View style={styles.card}>
         <View style={styles.row}>
           <Text style={styles.label}>Temperature</Text>
@@ -103,7 +103,7 @@ export default function SettingsScreen() {
       </View>
 
       {/* Theme */}
-      <Text style={styles.sectionTitle}>Theme</Text>
+      <Text style={styles.sectionTitle}>{'THEME'}</Text>
       <View style={styles.card}>
         {themeOptions.map((opt) => (
           <Pressable
@@ -120,7 +120,7 @@ export default function SettingsScreen() {
       </View>
 
       {/* Notifications */}
-      <Text style={styles.sectionTitle}>Notifications</Text>
+      <Text style={styles.sectionTitle}>{'NOTIFICATIONS'}</Text>
       <View style={styles.card}>
         <View style={styles.row}>
           <Text style={styles.label}>Push Notifications</Text>
@@ -134,7 +134,7 @@ export default function SettingsScreen() {
       </View>
 
       {/* Legal */}
-      <Text style={styles.sectionTitle}>Legal</Text>
+      <Text style={styles.sectionTitle}>{'LEGAL'}</Text>
       <View style={styles.card}>
         <Pressable style={styles.row} onPress={() => router.push('/legal/eula')}>
           <Text style={styles.label}>Terms of Use</Text>
@@ -165,7 +165,6 @@ const createStyles = (t: ThemeTokens) => ({
     fontSize: 14,
     fontWeight: '600' as const,
     color: t.textTertiary,
-    textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
     marginTop: 20,
     marginBottom: 8,
