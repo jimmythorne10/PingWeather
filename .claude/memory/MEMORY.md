@@ -127,7 +127,7 @@ Hourly is the finest granularity any tier uses (Premium min = 1hr); the Edge Fun
 **What:** expo-notifications was removed from Expo Go in SDK 53+. Any push notification work requires an EAS development build. Lazy-load the notifications module via `usePushNotifications.ts` (already done) so the app doesn't crash in Expo Go when the feature is unused.
 
 ### Dead fraudulent component tests
-**Status:** 7 failing shallow tests purged 2026-04-08 per the "delete, don't massage" rule. Remaining 85 passing component tests are still jsdom text-presence and still MUST NOT be treated as behavior verification. Device or Maestro tests are the real verification. When any future test breaks, delete it rather than fixing the assertion.
+**Status:** 8 failing shallow tests purged 2026-04-08 per the "delete, don't massage" rule (4 in forecasts.test.tsx, 1 each in settings/home/alerts/locations). Initial jest run showed 7 failures, stable count was 8 — the first run hit a stale cache. Remaining 85 passing component tests are still jsdom text-presence and still MUST NOT be treated as behavior verification. `forecasts.test.tsx` has 2 more shallow probes ("shows a card for each location", "provides a way to view alert history") flagged by the subagent as genre-matching candidates for a future wider sweep but currently passing so left alone. Device or Maestro tests are the real verification. When any future test breaks, delete it rather than fixing the assertion.
 
 ## Environment & Tooling Notes
 
