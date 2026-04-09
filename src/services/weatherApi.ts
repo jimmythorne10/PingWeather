@@ -38,6 +38,7 @@ export async function fetchForecast(options: FetchForecastOptions): Promise<Fore
       'wind_speed_10m',
       'apparent_temperature',
       'uv_index',
+      'weather_code',
     ].join(','),
     daily: [
       'temperature_2m_max',
@@ -45,6 +46,7 @@ export async function fetchForecast(options: FetchForecastOptions): Promise<Fore
       'precipitation_probability_max',
       'wind_speed_10m_max',
       'uv_index_max',
+      'weather_code',
     ].join(','),
     timezone: 'auto',
   });

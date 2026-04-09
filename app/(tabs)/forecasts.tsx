@@ -217,7 +217,16 @@ export default function ForecastsScreen() {
                     {/* Daily list */}
                     <Text style={styles.sectionLabel}>14-day Outlook</Text>
                     {forecast.daily.time.map((date, i) => (
-                      <View key={date} style={styles.dailyRow}>
+                      <Pressable
+                        key={date}
+                        style={styles.dailyRow}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/day-detail',
+                            params: { locationId: loc.id, date, locationName: loc.name },
+                          })
+                        }
+                      >
                         <Text style={styles.dailyDate}>{formatDayLabel(date, i)}</Text>
                         <Text style={styles.dailyTemps}>
                           {Math.round(forecast.daily.temperature_2m_max[i])}{unitSymbol} /{' '}
@@ -231,7 +240,7 @@ export default function ForecastsScreen() {
                         <Text style={styles.dailyWind}>
                           {Math.round(forecast.daily.wind_speed_10m_max[i])} {windSpeedUnit}
                         </Text>
-                      </View>
+                      </Pressable>
                     ))}
 
                     {/* Rule Status Preview */}

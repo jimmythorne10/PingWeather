@@ -20,6 +20,7 @@ interface AlertRulesState {
     lookahead_hours: number;
     polling_interval_hours: number;
     cooldown_hours: number;
+    max_notifications?: number;
   }) => Promise<void>;
   updateRule: (id: string, updates: Partial<AlertRule>) => Promise<void>;
   deleteRule: (id: string) => Promise<void>;

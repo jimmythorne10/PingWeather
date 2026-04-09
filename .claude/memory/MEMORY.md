@@ -74,6 +74,21 @@ jsdom tests with `getByText` only verify text presence — they do NOT verify re
 - Delete the local JSON from Downloads immediately after upload — EAS stores it encrypted server-side, local copy is a credential leak risk.
 - NO APK rebuild required. The FCM V1 credentials are a server-side Expo config, the APK on the phone didn't change.
 
+### Rate-limit cycle semantic (max_notifications) — new 2026-04-08
+**Status:** code + migration + function deployed 2026-04-08. Schema ready, UI in create-rule, display in alerts tab. Runtime NOT yet verified on device (Jimmy tests next).
+
+**Semantic:** per-cooldown-cycle fire cap. `max_notifications` on `alert_rules`:
+- `= 0` → unlimited (legacy: one fire per `cooldown_hours` window, `last_triggered_at` advances on each fire)
+- `> 0` → cap N fires per cycle. `last_triggered_at` is the CYCLE ANCHOR (first-fire timestamp of the current cycle), does NOT advance until the cycle fully elapses. `notifications_sent_count` counts fires in the current cycle. When cycle elapses (`now >= last_triggered_at + cooldown_hours`), the next matching evaluation starts a new cycle: count=1, anchor=now.
+
+Source of truth: `src/engine/notificationCycle.ts` (pure TS, 13 Jest tests). Mirror: `supabase/functions/evaluate-alerts/index.ts` (Deno, inline copy — must stay in lockstep with every src/ change). Both use the same `decideNotificationCycle(rule, now)` → `{ fire, next: { notifications_sent_count, last_triggered_at } }` contract.
+
+Migration: `supabase/migrations/00005_add_max_notifications_to_alert_rules.sql` adds `max_notifications int not null default 0` and `notifications_sent_count int not null default 0`, both with non-negative CHECK constraints (max_notifications also capped at 100).
+
+UI: `app/create-rule.tsx` has a stepper (0–10) below the cooldown row with labels "Unlimited" for 0 and "N×" for > 0. Summary card text adapts: the "we'll wait" phrasing stays for unlimited, switches to "during that cooldown window you'll get at most N notifications" for capped. `app/(tabs)/alerts.tsx` shows "Sent X / N this cycle" below the polling/cooldown details when `max_notifications > 0`.
+
+Reset-on-edit: editing rate-limit fields via create-rule edit mode resets `notifications_sent_count` to 0 in the update payload — otherwise a mid-cycle count from the old settings would persist and confuse the new cap.
+
 ### poll-weather + evaluate-alerts bugs fixed 2026-04-08
 **Status:** code deployed to Supabase 2026-04-08 (evaluate-alerts + poll-weather via `npx supabase functions deploy`, migration 00004 applied via `db push`). Runtime NOT yet verified by Jimmy on device; next test is clear cooldown + manual poll-weather trigger + confirm phone buzzes AND new alert_history row has notification_sent=true AND alert_rules.last_polled_at is populated.
 

@@ -89,6 +89,9 @@ export default function CreateRuleScreen() {
   const [cooldownHours, setCooldownHours] = useState(
     sourceRule ? sourceRule.cooldown_hours : 12
   );
+  const [maxNotifications, setMaxNotifications] = useState(
+    sourceRule ? sourceRule.max_notifications : 0
+  );
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -146,6 +149,11 @@ export default function CreateRuleScreen() {
         lookahead_hours: lookaheadHours,
         polling_interval_hours: Math.max(pollingHours, limits.minPollingIntervalHours),
         cooldown_hours: cooldownHours,
+        max_notifications: maxNotifications,
+        // Editing the rate-limit settings should reset the counter so the
+        // new cap starts from zero rather than leaving a mid-cycle count
+        // around from the old settings.
+        notifications_sent_count: 0,
       });
     } else {
       await createRule({
@@ -156,6 +164,7 @@ export default function CreateRuleScreen() {
         lookahead_hours: lookaheadHours,
         polling_interval_hours: Math.max(pollingHours, limits.minPollingIntervalHours),
         cooldown_hours: cooldownHours,
+        max_notifications: maxNotifications,
       });
     }
     setSaving(false);
@@ -377,6 +386,41 @@ export default function CreateRuleScreen() {
         ))}
       </View>
 
+      {/* Max notifications per cooldown period */}
+      <Text style={[styles.label, { color: t.textSecondary }]}>MAXIMUM NOTIFICATIONS PER COOLDOWN PERIOD</Text>
+      <Text style={[styles.helperText, { color: t.textTertiary }]}>
+        How many times to alert you within the cooldown window before going quiet. Set to 0 to never cap — one alert per cooldown.
+      </Text>
+      <View style={styles.stepperRow}>
+        <Pressable
+          style={[
+            styles.stepperButton,
+            { borderColor: t.border, backgroundColor: t.inputBackground },
+            maxNotifications <= 0 && { opacity: 0.4 },
+          ]}
+          onPress={() => setMaxNotifications(Math.max(0, maxNotifications - 1))}
+          disabled={maxNotifications <= 0}
+        >
+          <Text style={[styles.stepperButtonText, { color: t.textPrimary }]}>−</Text>
+        </Pressable>
+        <View style={[styles.stepperValue, { borderColor: t.border, backgroundColor: t.inputBackground }]}>
+          <Text style={[styles.stepperValueText, { color: t.textPrimary }]}>
+            {maxNotifications === 0 ? 'Unlimited' : `${maxNotifications}×`}
+          </Text>
+        </View>
+        <Pressable
+          style={[
+            styles.stepperButton,
+            { borderColor: t.border, backgroundColor: t.inputBackground },
+            maxNotifications >= 10 && { opacity: 0.4 },
+          ]}
+          onPress={() => setMaxNotifications(Math.min(10, maxNotifications + 1))}
+          disabled={maxNotifications >= 10}
+        >
+          <Text style={[styles.stepperButtonText, { color: t.textPrimary }]}>+</Text>
+        </Pressable>
+      </View>
+
       {/* Summary — plain English */}
       <View style={[styles.summaryCard, { backgroundColor: t.primaryLight, borderColor: t.primary }]}>
         <Text style={[styles.summaryTitle, { color: t.primary }]}>Here's what will happen:</Text>
@@ -411,7 +455,11 @@ export default function CreateRuleScreen() {
               cooldownHours === 24 ? 'a full day' :
               `${cooldownHours} hours`;
 
-            return `We'll check the forecast for ${locName} ${polling}. If ${condSentence} anytime in the next ${lookahead}, you'll get a notification.\n\nAfter alerting you, we'll wait at least ${cooldown} before notifying you again for this rule.`;
+            const capSentence = maxNotifications === 0
+              ? `After alerting you, we'll wait at least ${cooldown} before notifying you again for this rule.`
+              : `During that ${cooldown} cooldown window, you'll get at most ${maxNotifications} notification${maxNotifications === 1 ? '' : 's'} for this rule — after that we'll stay quiet until the window ends.`;
+
+            return `We'll check the forecast for ${locName} ${polling}. If ${condSentence} anytime in the next ${lookahead}, you'll get a notification.\n\n${capSentence}`;
           })()}
         </Text>
       </View>
@@ -447,6 +495,29 @@ const styles = StyleSheet.create({
   chip: {
     borderWidth: 1, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14,
   },
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  stepperButton: {
+    borderWidth: 1,
+    borderRadius: 8,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperButtonText: { fontSize: 24, fontWeight: '700', lineHeight: 28 },
+  stepperValue: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  stepperValueText: { fontSize: 16, fontWeight: '600' },
   conditionCard: {
     borderWidth: 1, borderRadius: 12, padding: 16, marginBottom: 8,
   },

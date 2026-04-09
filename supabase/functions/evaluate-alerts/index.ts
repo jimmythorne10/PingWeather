@@ -33,6 +33,8 @@ interface AlertRule {
   cooldown_hours: number;
   is_active: boolean;
   last_triggered_at: string | null;
+  max_notifications: number; // 0 = unlimited
+  notifications_sent_count: number;
 }
 
 interface HourlyForecast {
@@ -245,15 +247,75 @@ function formatConditionSummary(
   return `${label} ${op} ${threshold}${actual}`;
 }
 
-// ── Cooldown check ─────────────────────────────────────────
+// ── Notification cycle decision ────────────────────────────
+// MIRROR of `src/engine/notificationCycle.ts`. Must stay in lockstep —
+// unit tests for the TS side live in __tests__/engine/notificationCycle.test.ts.
+// See that file's docstring for the semantic.
 
-function isInCooldown(rule: AlertRule): boolean {
-  if (!rule.last_triggered_at) return false;
-  const lastTriggered = new Date(rule.last_triggered_at);
-  const cooldownEnd = new Date(
-    lastTriggered.getTime() + rule.cooldown_hours * 60 * 60 * 1000
-  );
-  return new Date() < cooldownEnd;
+interface CycleDecision {
+  fire: boolean;
+  next: {
+    notifications_sent_count: number;
+    last_triggered_at: string | null;
+  };
+}
+
+function isCycleElapsed(
+  now: Date,
+  lastTriggeredAt: string | null,
+  cooldownHours: number
+): boolean {
+  if (!lastTriggeredAt) return true;
+  const anchor = new Date(lastTriggeredAt).getTime();
+  const windowMs = cooldownHours * 60 * 60 * 1000;
+  return now.getTime() - anchor >= windowMs;
+}
+
+function decideNotificationCycle(rule: AlertRule, now: Date): CycleDecision {
+  const unchanged: CycleDecision = {
+    fire: false,
+    next: {
+      notifications_sent_count: rule.notifications_sent_count,
+      last_triggered_at: rule.last_triggered_at,
+    },
+  };
+
+  const isUnlimited = !rule.max_notifications || rule.max_notifications <= 0;
+
+  if (isUnlimited) {
+    if (isCycleElapsed(now, rule.last_triggered_at, rule.cooldown_hours)) {
+      return {
+        fire: true,
+        next: {
+          notifications_sent_count: 0,
+          last_triggered_at: now.toISOString(),
+        },
+      };
+    }
+    return unchanged;
+  }
+
+  if (isCycleElapsed(now, rule.last_triggered_at, rule.cooldown_hours)) {
+    return {
+      fire: true,
+      next: {
+        notifications_sent_count: 1,
+        last_triggered_at: now.toISOString(),
+      },
+    };
+  }
+
+  if (rule.notifications_sent_count < rule.max_notifications) {
+    return {
+      fire: true,
+      next: {
+        notifications_sent_count: rule.notifications_sent_count + 1,
+        last_triggered_at: rule.last_triggered_at,
+      },
+    };
+  }
+
+  return unchanged;
 }
 
 // ── Main handler ───────────────────────────────────────────
@@ -273,53 +335,77 @@ Deno.serve(async (req) => {
     const historyIdByRule = new Map<string, string>();
     const results: EvaluationResult[] = [];
 
+    // Evaluate the rule's conditions FIRST, then apply the notification
+    // cycle decision. This keeps "did the condition match" separate from
+    // "should we notify about it right now" — the first is about weather,
+    // the second is about user rate-limit preferences.
+    const evalNow = new Date();
     for (const rule of rules) {
       if (!rule.is_active) continue;
-      if (isInCooldown(rule)) continue;
 
       const result = evaluateRule(rule, forecast);
       results.push(result);
 
-      if (result.triggered) {
-        // Insert alert_history and capture the id for later UPDATE by PK.
-        const { data: historyRow, error: historyErr } = await supabase
-          .from("alert_history")
-          .insert({
-            user_id: rule.user_id,
-            rule_id: rule.id,
-            rule_name: rule.name,
-            location_name,
-            conditions_met: result.summary,
-            forecast_data: {
-              matchDetails: result.matchDetails,
-              evaluatedAt: new Date().toISOString(),
-            },
-            notification_sent: false, // poll-weather will flip after sending push
-          })
-          .select("id")
-          .single();
+      if (!result.triggered) continue;
 
-        if (historyErr) {
-          console.error("alert_history insert error:", historyErr);
-        } else if (historyRow?.id) {
-          historyIdByRule.set(rule.id, historyRow.id);
-        }
-
-        // Update last_triggered_at
-        await supabase
-          .from("alert_rules")
-          .update({ last_triggered_at: new Date().toISOString() })
-          .eq("id", rule.id);
+      const decision = decideNotificationCycle(rule, evalNow);
+      if (!decision.fire) {
+        // Condition matched but we're rate-limited (inside a capped cycle
+        // at the cap, or inside a cooldown window with max_notifications=0).
+        // Don't create a history row — this is the rate-limit path, not a
+        // user-visible event.
+        continue;
       }
+
+      // Insert alert_history and capture the id for later UPDATE by PK.
+      const { data: historyRow, error: historyErr } = await supabase
+        .from("alert_history")
+        .insert({
+          user_id: rule.user_id,
+          rule_id: rule.id,
+          rule_name: rule.name,
+          location_name,
+          conditions_met: result.summary,
+          forecast_data: {
+            matchDetails: result.matchDetails,
+            evaluatedAt: evalNow.toISOString(),
+          },
+          notification_sent: false, // poll-weather will flip after sending push
+        })
+        .select("id")
+        .single();
+
+      if (historyErr) {
+        console.error("alert_history insert error:", historyErr);
+      } else if (historyRow?.id) {
+        historyIdByRule.set(rule.id, historyRow.id);
+      }
+
+      // Persist the cycle state: new count + new/unchanged anchor.
+      await supabase
+        .from("alert_rules")
+        .update({
+          notifications_sent_count: decision.next.notifications_sent_count,
+          last_triggered_at: decision.next.last_triggered_at,
+        })
+        .eq("id", rule.id);
     }
 
-    const triggered = results.filter((r) => r.triggered);
+    // Only rules that both (a) had their condition match AND (b) passed the
+    // notification cycle gate are emitted as alerts — those are the ones we
+    // actually want poll-weather to dispatch pushes for.
+    const notified = results.filter(
+      (r) => r.triggered && historyIdByRule.has(r.rule.id)
+    );
 
     return new Response(
       JSON.stringify({
         evaluated: results.length,
-        triggered: triggered.length,
-        alerts: triggered.map((r) => ({
+        // "triggered" here retains its historical meaning: the number of
+        // alerts we're actually pushing. Rate-limited matches are not
+        // counted, which matches poll-weather's summary semantics.
+        triggered: notified.length,
+        alerts: notified.map((r) => ({
           rule_id: r.rule.id,
           rule_name: r.rule.name,
           user_id: r.rule.user_id,
