@@ -11,13 +11,19 @@ Full chain `pg_cron → poll-weather → evaluate-alerts → Expo push → FCM V
 works end-to-end. All bugs from this marathon session are fixed. The app
 is shippable once the non-backend items below are handled.
 
-**Outstanding before store submission:**
-1. RevenueCat wiring (INFRA-004) — monetization
-2. Real SMTP (INFRA-005) — forgot-password email reliability
-3. Open-Meteo commercial license (INFRA-006) — legal gate for paid users
-4. Store listings + production build (INFRA-007)
-5. Annual pricing tier (part of #1)
-6. Maestro E2E regression suite (INFRA-001) — needed before scaling beyond first testers
+**Outstanding before store submission (updated 2026-04-09 overnight push):**
+1. ~~RevenueCat wiring (INFRA-004)~~ — **CODE DONE** (commit `66f2b15`). SDK installed, purchase service written, upgrade.tsx wired to real purchases, subscription webhook Edge Function deployed. **Jimmy still needs to:** create RevenueCat account, get API key (paste into app.json extra.revenueCatApiKey), create Play Console products, link RevenueCat to Play Console, set REVENUECAT_WEBHOOK_SECRET env var in Supabase dashboard.
+2. Real SMTP (INFRA-005) — forgot-password email reliability. Deferred.
+3. Open-Meteo commercial license (INFRA-006) — legal gate for paid users. **Research done:** Open-Meteo confirmed as best choice at $29/mo (100 users) to $99/mo (1K users). See weather API research below.
+4. ~~Store listings + production build (INFRA-007)~~ — **PREP DONE**: `eas.json` production profile ready, `docs/store-listing/google-play-listing.md` has listing copy, `docs/legal/privacy-policy.html` + `terms-of-use.html` are hostable. **Jimmy still needs to:** create Play Console account ($25), take screenshots, host legal pages, run `eas build --platform android --profile production`, submit.
+5. Annual pricing tier — part of RevenueCat product setup (Jimmy creates pro_annual + premium_annual in Play Console alongside monthly products).
+6. Maestro E2E regression suite (INFRA-001) — needed before scaling beyond first testers. Deferred.
+
+### Weather API research (2026-04-09)
+**Recommendation: Stay with Open-Meteo.** Migration cost = zero (already integrated). ECMWF IFS is the most accurate global model. 16-day hourly + daily. All 8 required metrics. $29/mo covers 100 users, $99/mo covers 1K+. Grid-square caching friendly.
+**Backup option:** WeatherAPI.com — generous free tier (1M calls/mo), 14-day hourly on paid plans, sub-$35/mo through 10K users. Less accuracy transparency than Open-Meteo.
+**Definitively ruled out:** OpenWeather (fails 14-day daily + cost-prohibitive), Visual Crossing (deceptive records billing), Tomorrow.io (no self-serve), NWS (missing metrics + unstable), Pirate Weather (20K/mo cap).
+Full research in the conversation history (2026-04-09 overnight session).
 
 **Killed this session:** Feature 1 (max_notifications per-cycle cap) — semantic was backwards from intent, UX couldn't be cleanly explained to a non-technical user. Full revert in commit `15f0a66`. See "Rate-limit cycle feature — REVERTED" below.
 
