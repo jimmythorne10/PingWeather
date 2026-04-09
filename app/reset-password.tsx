@@ -9,71 +9,63 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import * as Linking from 'expo-linking';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../src/utils/supabase';
 import { useTokens } from '../src/theme';
-import { parseRecoveryUrl } from '../src/services/parseRecoveryUrl';
 
 type Status = 'parsing' | 'ready' | 'invalid' | 'submitting' | 'done';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
   const t = useTokens();
-  const incomingUrl = Linking.useURL();
+
+  // Supabase PKCE flow delivers the recovery token as ?code=... in the query
+  // string, not as a #access_token=... hash fragment. Expo Router parses query
+  // params automatically and hands them to us via useLocalSearchParams, which
+  // works across cold boot, warm navigation, and hot reload.
+  const params = useLocalSearchParams<{ code?: string; error?: string; error_description?: string }>();
 
   const [status, setStatus] = useState<Status>('parsing');
   const [error, setError] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
 
-  // Activate the recovery session from whichever URL delivered us here.
-  // Two sources: useURL (warm/live events) and getInitialURL (cold boot).
   useEffect(() => {
     let cancelled = false;
 
-    const activate = async (rawUrl: string | null) => {
-      if (cancelled) return;
-      const tokens = parseRecoveryUrl(rawUrl);
-      if (!tokens) {
+    const activate = async () => {
+      // Supabase returns ?error=...&error_description=... when the token is
+      // invalid, expired, or already used. Surface the real message.
+      if (params.error) {
         setStatus('invalid');
-        setError('This reset link is invalid or has expired. Request a new one.');
+        setError(params.error_description || params.error || 'Reset link is invalid or expired.');
         return;
       }
-      const { error: setErr } = await supabase.auth.setSession({
-        access_token: tokens.accessToken,
-        refresh_token: tokens.refreshToken,
-      });
-      if (cancelled) return;
-      if (setErr) {
+      if (!params.code) {
         setStatus('invalid');
-        setError(setErr.message || 'Could not validate reset link.');
+        setError(
+          'No reset code detected. Open the password reset email on this device and tap the link.'
+        );
+        return;
+      }
+      const { error: exchangeErr } = await supabase.auth.exchangeCodeForSession(
+        String(params.code)
+      );
+      if (cancelled) return;
+      if (exchangeErr) {
+        setStatus('invalid');
+        setError(exchangeErr.message || 'Could not validate reset link.');
         return;
       }
       setStatus('ready');
     };
 
-    if (incomingUrl) {
-      activate(incomingUrl);
-    } else {
-      // Cold boot path — app was launched by tapping the link.
-      Linking.getInitialURL().then((initial) => {
-        if (initial) {
-          activate(initial);
-        } else {
-          // No URL at all — user navigated here manually (dev scenario).
-          setStatus('invalid');
-          setError(
-            'No reset link detected. Open the password reset email on this device and tap the link.'
-          );
-        }
-      });
-    }
+    activate();
 
     return () => {
       cancelled = true;
     };
-  }, [incomingUrl]);
+  }, [params.code, params.error, params.error_description]);
 
   const handleSubmit = async () => {
     setError(null);

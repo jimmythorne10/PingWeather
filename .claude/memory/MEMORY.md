@@ -74,14 +74,27 @@ Hourly is the finest granularity any tier uses (Premium min = 1hr); the Edge Fun
 **Status:** fixed 2026-04-08
 **What:** BUG-001. Was previously a dead TextInput. Now uses real `<LocationSearchInput>` component backed by `searchPlaces` from the geocoding service. Debounced 300ms, race-guard via `lastSelectedLabelRef`, keeps selected label visible after tap-to-select, suppresses follow-up search via ref check in debounce effect.
 
+### Premium → Free downgrade path in Settings
+**Status:** verified on device 2026-04-08 (Jimmy, EAS build 76d143c2)
+**What:** BUG-002 — Settings "Upgrade" CTA was hidden when `currentTier === 'premium'`, leaving Premium users with no way to reach `/upgrade` and downgrade. Fixed by always rendering the CTA and relabeling as "Manage Plan →" when on Premium. Confirmed working on device.
+
 ### Password reset deep link flow
-**Status:** code written 2026-04-08, requires rebuild + Supabase URL config before it works
-**What:** Full flow: `/forgot-password` → Supabase email → tap link → `pingweather://reset-password#access_token=...` → `app/reset-password.tsx` parses hash via `src/services/parseRecoveryUrl.ts` (pure, 11 unit tests) → `supabase.auth.setSession` → `supabase.auth.updateUser({ password })` → sign out → `/login`.
-- Critical gotcha: React Native Supabase client does NOT auto-detect recovery tokens (no `window.location`). Must parse URL manually. PASSWORD_RECOVERY event never fires on RN; you get a plain SIGNED_IN instead.
-- `app.json` now has `"scheme": "pingweather"` — NATIVE CHANGE, requires `eas build` before the OS will route links to the app.
-- Auth gate in `app/_layout.tsx` exempts `/reset-password` from both the unauthenticated-redirect and the authenticated-user-out-of-auth-group branches, otherwise `setSession` flips session to truthy and the gate would kick the user off mid-flow.
-- Supabase Site URL must be changed from `http://localhost:3000` to `pingweather://reset-password` and redirect URLs added. See `docs/JIMMY_HANDOFF.md` section 1.
-- `forgotPassword` in `authStore.ts` now passes `redirectTo: Linking.createURL('/reset-password')` which resolves to `pingweather://reset-password` in standalone/dev builds and `exp://HOST:8081/--/reset-password` in Expo Go.
+**Status:** verified end-to-end on device 2026-04-08 (Jimmy)
+**What:** Full flow works: `/forgot-password` → Supabase PKCE email → tap link → Android intent → `pingweather://reset-password?code=<pkce_code>` → `app/reset-password.tsx` reads `code` via `useLocalSearchParams()` → `supabase.auth.exchangeCodeForSession(code)` → new-password form → `supabase.auth.updateUser({ password })` → sign out → `/login` → sign in with new password.
+
+**CRITICAL ARCHITECTURE NOTE — why PKCE, not implicit flow:**
+- Supabase's default implicit flow delivers recovery tokens as a URL **hash fragment** (`#access_token=...&refresh_token=...&type=recovery`).
+- Hash fragments are a **browser** concept. On mobile, Expo Router's deep-link routing **consumes and strips the fragment** before any screen can read it. Both `Linking.useURL()` and `Linking.getInitialURL()` return null on the screen even though the link successfully opened the app.
+- Diagnosed on-device 2026-04-08 via a debug display that showed both URL sources as `<null>`.
+- Fix: enable `flowType: 'pkce'` in `src/utils/supabase.ts` → Supabase switches to delivering the recovery token as `?code=<pkce_code>` query string → Expo Router parses it → `useLocalSearchParams()` returns it → `supabase.auth.exchangeCodeForSession(code)` activates the recovery session.
+- PKCE does NOT affect `signInWithPassword` (no redirect involved).
+- `src/services/parseRecoveryUrl.ts` and its 11 unit tests are dead code on this path but kept as utility for potential future implicit-flow fallback. Safe to delete later if never needed.
+
+**Required native/config setup (done):**
+- `app.json` has `"scheme": "pingweather"` — native, required rebuild (done 2026-04-08).
+- Supabase dashboard Site URL = `pingweather://reset-password`, allow list includes `pingweather://reset-password`, `pingweather://*`, and `exp://` variants for Expo Go. See `docs/JIMMY_HANDOFF.md` §1.
+- Auth gate in `app/_layout.tsx` exempts `/reset-password` from both unauthenticated-redirect and authenticated-out-of-auth-group branches; `exchangeCodeForSession` flips session to truthy mid-flow and the gate would otherwise kick the user off the screen.
+- `forgotPassword` in `authStore.ts` passes `redirectTo: Linking.createURL('/reset-password')` which resolves to `pingweather://reset-password` in builds and `exp://HOST:8081/--/reset-password` in Expo Go.
 
 ### Expo Go cannot test push notifications
 **Status:** by-design

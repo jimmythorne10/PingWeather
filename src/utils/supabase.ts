@@ -35,5 +35,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    // PKCE flow delivers password-recovery and magic-link tokens as a ?code=
+    // query string parameter instead of a #access_token=... hash fragment.
+    // Hash fragments are a browser concept that Expo Router strips during
+    // deep-link routing — query strings survive and are readable via
+    // useLocalSearchParams() on the recovery screen. Does not affect
+    // signInWithPassword which returns tokens directly, not via redirect.
+    flowType: 'pkce',
   },
 });
