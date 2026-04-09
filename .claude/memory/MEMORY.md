@@ -74,6 +74,13 @@ jsdom tests with `getByText` only verify text presence — they do NOT verify re
 - Delete the local JSON from Downloads immediately after upload — EAS stores it encrypted server-side, local copy is a credential leak risk.
 - NO APK rebuild required. The FCM V1 credentials are a server-side Expo config, the APK on the phone didn't change.
 
+### poll-weather + evaluate-alerts bugs fixed 2026-04-08
+**Status:** code deployed to Supabase 2026-04-08 (evaluate-alerts + poll-weather via `npx supabase functions deploy`, migration 00004 applied via `db push`). Runtime NOT yet verified by Jimmy on device; next test is clear cooldown + manual poll-weather trigger + confirm phone buzzes AND new alert_history row has notification_sent=true AND alert_rules.last_polled_at is populated.
+
+**Bug A — wrong "last poll" timestamp:** poll-weather used to filter dueRules by `rule.updated_at`, which changes on both user edits and last_triggered_at updates. Added `last_polled_at timestamptz` column to `alert_rules` via `00004_add_last_polled_at_to_alert_rules.sql`, plus a partial index on active rules. poll-weather now stamps it unconditionally via `.update({ last_polled_at }).in("id", ...)` after each grid's rules are evaluated. The dueRules filter reads `last_polled_at` directly.
+
+**Bug B — alert_history update chain:** poll-weather used `.from("alert_history").update(...).eq(user_id).eq(rule_id).order("triggered_at", desc).limit(1)`. `.order()` and `.limit()` are silently ignored on UPDATE in supabase-js, so the update would have stamped `notification_sent=true` on every alert_history row for the user+rule, not just the most recent. Fix: evaluate-alerts now inserts with `.select("id").single()`, captures the inserted id in a `historyIdByRule` Map, and includes it in the `alerts` array as `alert_history_id`. poll-weather updates by that PK: `.update({ notification_sent: true }).eq("id", alert.alert_history_id)`.
+
 ### pg_cron scheduled polling
 **Status:** applied and verified end-to-end 2026-04-08 (manual trigger via `net.http_post` returned status 200 against the live `poll-weather` Edge Function)
 **What:** Hourly cron job `poll-weather-hourly` with schedule `0 * * * *`, active=true, registered via `supabase/migrations/00003_schedule_poll_weather.sql`. Uses `pg_net` + Supabase vault. Vault secrets live as:
@@ -120,8 +127,7 @@ Hourly is the finest granularity any tier uses (Premium min = 1hr); the Edge Fun
 **What:** expo-notifications was removed from Expo Go in SDK 53+. Any push notification work requires an EAS development build. Lazy-load the notifications module via `usePushNotifications.ts` (already done) so the app doesn't crash in Expo Go when the feature is unused.
 
 ### Dead fraudulent component tests
-**Status:** open risk
-**What:** The `__tests__/screens/*.test.tsx` files pass via shallow jsdom renders that only check for text presence. They're kept in the suite but must NOT be treated as verification of real behavior. Device or Maestro tests are the real verification. When behavior breaks, delete the offending shallow test rather than massaging it back to green.
+**Status:** 7 failing shallow tests purged 2026-04-08 per the "delete, don't massage" rule. Remaining 85 passing component tests are still jsdom text-presence and still MUST NOT be treated as behavior verification. Device or Maestro tests are the real verification. When any future test breaks, delete it rather than fixing the assertion.
 
 ## Environment & Tooling Notes
 

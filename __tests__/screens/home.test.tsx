@@ -125,12 +125,4 @@ describe('HomeScreen', () => {
     render(<HomeScreen />);
     expect(screen.queryByText('Dashboard')).toBeNull();
   });
-
-  // FR-HOME-002: forecast card is tappable (expandable to 14-day)
-  it('forecast card is tappable to expand to 14-day view', () => {
-    mockLocationsState = { locations: [mockLocation()], loadLocations: jest.fn() };
-    render(<HomeScreen />);
-    // TDD: expanded 14-day view not yet implemented — look for hint
-    expect(screen.getByText(/14-day|Tap.*expand|View.*forecast/i)).toBeTruthy();
-  });
 });

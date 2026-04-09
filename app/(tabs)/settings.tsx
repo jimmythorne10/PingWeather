@@ -159,6 +159,35 @@ export default function SettingsScreen() {
               ))}
             </View>
           </View>
+
+          <View style={[styles.card, styles.devCard, { marginTop: 12 }]}>
+            <Text style={styles.devBadge}>DEV</Text>
+            <Text style={styles.label}>Push Token</Text>
+            <Text style={styles.devHint}>
+              Re-request notification permission and push the latest Expo token to your Supabase
+              profile. Useful after a fresh install or if notifications aren't arriving.
+            </Text>
+            <Pressable
+              style={[styles.pushRegisterButton, { borderColor: tokens.primary }]}
+              onPress={handleRegisterPush}
+              disabled={pushRegistering}
+            >
+              <Text style={[styles.pushRegisterText, { color: tokens.primary }]}>
+                {pushRegistering ? 'Registering…' : 'Register / Refresh Push Token'}
+              </Text>
+            </Pressable>
+            {pushResult && (
+              <Text
+                selectable
+                style={[
+                  styles.pushResult,
+                  { color: pushResult.startsWith('✓') ? tokens.success : tokens.error },
+                ]}
+              >
+                {pushResult}
+              </Text>
+            )}
+          </View>
         </>
       )}
 
@@ -223,26 +252,6 @@ export default function SettingsScreen() {
             thumbColor={settings.notificationsEnabled ? tokens.primary : tokens.textTertiary}
           />
         </View>
-        <Pressable
-          style={[styles.pushRegisterButton, { borderColor: tokens.primary }]}
-          onPress={handleRegisterPush}
-          disabled={pushRegistering}
-        >
-          <Text style={[styles.pushRegisterText, { color: tokens.primary }]}>
-            {pushRegistering ? 'Registering…' : 'Register / Refresh Push Token'}
-          </Text>
-        </Pressable>
-        {pushResult && (
-          <Text
-            selectable
-            style={[
-              styles.pushResult,
-              { color: pushResult.startsWith('✓') ? tokens.success : tokens.error },
-            ]}
-          >
-            {pushResult}
-          </Text>
-        )}
       </View>
 
       {/* History */}

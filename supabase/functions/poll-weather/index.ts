@@ -124,13 +124,23 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Filter to rules that are due for polling
+    // Filter to rules that are due for polling.
+    //
+    // A rule is due when:
+    //   - it has never been polled (last_polled_at is null), OR
+    //   - enough time (polling_interval_hours) has passed since the
+    //     previous poll.
+    //
+    // Historical note: this used to read rule.updated_at, which changes on
+    // every edit AND every trigger (because last_triggered_at is an update),
+    // so the filter misfired in both directions. `last_polled_at` is now a
+    // dedicated column written unconditionally after each processed rule.
     const now = new Date();
     const dueRules = rules.filter((rule: any) => {
-      if (!rule.last_triggered_at) return true; // never checked
-      const lastCheck = new Date(rule.updated_at); // use updated_at as proxy for last poll
+      if (!rule.last_polled_at) return true; // never polled
+      const lastPoll = new Date(rule.last_polled_at);
       const intervalMs = rule.polling_interval_hours * 60 * 60 * 1000;
-      return now.getTime() - lastCheck.getTime() >= intervalMs;
+      return now.getTime() - lastPoll.getTime() >= intervalMs;
     });
 
     if (dueRules.length === 0) {
@@ -204,19 +214,31 @@ Deno.serve(async (req) => {
               { rule_id: alert.rule_id }
             );
 
-            // Update alert_history with notification status
-            if (sent) {
+            // Update the exact alert_history row evaluate-alerts just
+            // created for this trigger. evaluate-alerts returns the inserted
+            // row id as alert_history_id; updating by primary key is the
+            // only way to target exactly one row (the prior .order().limit()
+            // chain was silently ignored by supabase-js on UPDATE and
+            // would have stamped notification_sent=true on every history
+            // row for the same user+rule).
+            if (sent && alert.alert_history_id) {
               await supabase
                 .from("alert_history")
                 .update({ notification_sent: true })
-                .eq("rule_id", alert.rule_id)
-                .eq("user_id", alert.user_id)
-                .order("triggered_at", { ascending: false })
-                .limit(1);
+                .eq("id", alert.alert_history_id);
             }
           }
         }
       }
+
+      // 5. Stamp last_polled_at on every rule we just evaluated,
+      //    regardless of whether it triggered. This is what the dueRules
+      //    filter reads on the next invocation.
+      const polledAt = new Date().toISOString();
+      await supabase
+        .from("alert_rules")
+        .update({ last_polled_at: polledAt })
+        .in("id", group.rules.map((r: any) => r.id));
     }
 
     return new Response(

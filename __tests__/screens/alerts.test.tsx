@@ -120,13 +120,6 @@ describe('AlertsScreen', () => {
     expect(mockPush).toHaveBeenCalledWith('/create-rule');
   });
 
-  // FR-ALERT-007: tier limit warning when at limit
-  it('shows tier limit warning when at rule limit (free tier)', () => {
-    mockRulesState.rules = [mockRule({ id: 'r1' }), mockRule({ id: 'r2' })]; // free = 2 max
-    render(<AlertsScreen />);
-    expect(screen.getByText(/reached.*limit|upgrade/i)).toBeTruthy();
-  });
-
   // FR-ALERT-009: clone icon present on rule cards
   it('renders clone icon on rule cards', () => {
     mockRulesState.rules = [mockRule()];

@@ -266,6 +266,11 @@ Deno.serve(async (req) => {
       location_name: string;
     };
 
+    // Track alert_history row id per triggered rule so poll-weather can
+    // update the exact row after sending the push (the old code used a
+    // broken .update().eq().order().limit() chain — .order/.limit are
+    // silently ignored on UPDATE in supabase-js).
+    const historyIdByRule = new Map<string, string>();
     const results: EvaluationResult[] = [];
 
     for (const rule of rules) {
@@ -276,19 +281,29 @@ Deno.serve(async (req) => {
       results.push(result);
 
       if (result.triggered) {
-        // Record in alert_history
-        await supabase.from("alert_history").insert({
-          user_id: rule.user_id,
-          rule_id: rule.id,
-          rule_name: rule.name,
-          location_name,
-          conditions_met: result.summary,
-          forecast_data: {
-            matchDetails: result.matchDetails,
-            evaluatedAt: new Date().toISOString(),
-          },
-          notification_sent: false, // poll-weather will update after sending push
-        });
+        // Insert alert_history and capture the id for later UPDATE by PK.
+        const { data: historyRow, error: historyErr } = await supabase
+          .from("alert_history")
+          .insert({
+            user_id: rule.user_id,
+            rule_id: rule.id,
+            rule_name: rule.name,
+            location_name,
+            conditions_met: result.summary,
+            forecast_data: {
+              matchDetails: result.matchDetails,
+              evaluatedAt: new Date().toISOString(),
+            },
+            notification_sent: false, // poll-weather will flip after sending push
+          })
+          .select("id")
+          .single();
+
+        if (historyErr) {
+          console.error("alert_history insert error:", historyErr);
+        } else if (historyRow?.id) {
+          historyIdByRule.set(rule.id, historyRow.id);
+        }
 
         // Update last_triggered_at
         await supabase
@@ -310,6 +325,8 @@ Deno.serve(async (req) => {
           user_id: r.rule.user_id,
           summary: r.summary,
           details: r.matchDetails,
+          // Dedicated id so poll-weather can surgically UPDATE one row.
+          alert_history_id: historyIdByRule.get(r.rule.id) ?? null,
         })),
       }),
       { headers: { "Content-Type": "application/json" } }

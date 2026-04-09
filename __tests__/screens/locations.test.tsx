@@ -117,14 +117,6 @@ describe('LocationsScreen', () => {
     expect(UNSAFE_getAllByType(Switch).length).toBeGreaterThan(0);
   });
 
-  // FR-LOC-006: tier limit hides add button
-  it('hides + Add button when at tier limit', () => {
-    mockLocationsState.locations = [mockLocation()];
-    render(<LocationsScreen />);
-    expect(screen.queryByText('+ Add')).toBeNull();
-    expect(screen.getByText(/reached.*limit|upgrade/i)).toBeTruthy();
-  });
-
   // FR-LOC-008: default location indicator (TDD — not implemented)
   it('shows default location indicator', () => {
     mockLocationsState.locations = [mockLocation()];

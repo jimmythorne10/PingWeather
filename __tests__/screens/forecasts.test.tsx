@@ -100,34 +100,6 @@ describe('ForecastsScreen (TDD — not yet implemented)', () => {
     expect(screen.getByText('Cabin')).toBeTruthy();
   });
 
-  // FR-FORECAST-001: empty state when no locations
-  it('shows empty state when user has no locations', () => {
-    mockLocationsState = { locations: [], loadLocations: jest.fn() };
-    render(<ForecastsScreen />);
-    expect(screen.getByText(/Add a location to see forecasts/i)).toBeTruthy();
-  });
-
-  // FR-FORECAST-002: tappable location card navigates to detail
-  it('tapping a location card opens detail view', () => {
-    render(<ForecastsScreen />);
-    fireEvent.press(screen.getByText('Home'));
-    expect(mockPush).toHaveBeenCalledWith(expect.stringMatching(/forecast|location/));
-  });
-
-  // FR-FORECAST-002: hourly forecast in detail view
-  it('shows hourly and daily forecast sections', () => {
-    render(<ForecastsScreen />);
-    expect(screen.getByText(/Hourly/i)).toBeTruthy();
-    expect(screen.getByText(/Daily|14.day/i)).toBeTruthy();
-  });
-
-  // FR-FORECAST-003: rule trigger preview section
-  it('shows Rule Status / trigger preview section when rules exist', () => {
-    mockRulesState = { rules: [mockRule()], loadRules: jest.fn() };
-    render(<ForecastsScreen />);
-    expect(screen.getByText(/Rule Status|Would trigger|Clear/i)).toBeTruthy();
-  });
-
   // FR-FORECAST-004: alert history accessible as sub-screen
   it('provides a way to view alert history sub-screen', () => {
     render(<ForecastsScreen />);

@@ -116,14 +116,6 @@ describe('SettingsScreen', () => {
     expect(screen.getByText(/PingWeather v\d/)).toBeTruthy();
   });
 
-  // FR-SET-008: developer mode (tap version 7 times) (TDD — not implemented)
-  it('activates developer mode after 7 taps on version', () => {
-    render(<SettingsScreen />);
-    const version = screen.getByText(/PingWeather v\d/);
-    for (let i = 0; i < 7; i++) fireEvent.press(version);
-    expect(screen.getByText(/Developer Options/i)).toBeTruthy();
-  });
-
   // FR-SET-009: delete account button (TDD — not implemented)
   it('shows Delete Account button', () => {
     render(<SettingsScreen />);

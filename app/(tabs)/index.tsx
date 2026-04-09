@@ -21,13 +21,13 @@ export default function HomeScreen() {
   const temperatureUnit = useSettingsStore((s) => s.temperatureUnit);
   const windSpeedUnit = useSettingsStore((s) => s.windSpeedUnit);
 
-  const [weather3Day, setWeather3Day] = useState<{ daily: DailyForecast } | null>(null);
-  const [weather14Day, setWeather14Day] = useState<{ daily: DailyForecast } | null>(null);
+  const [weather, setWeather] = useState<{ daily: DailyForecast } | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
-  const [expanded, setExpanded] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  const FORECAST_DAYS = 14;
 
   useEffect(() => {
     loadLocations();
@@ -42,19 +42,17 @@ export default function HomeScreen() {
     defaultLocation ??
     null;
 
-  const fetchWeatherForLocation = async (location: WatchLocation | undefined, isExpanded: boolean) => {
+  const fetchWeatherForLocation = async (location: WatchLocation | undefined) => {
     if (!location) return;
-    const days = isExpanded ? 14 : 3;
     try {
       const data = await fetchForecast({
         latitude: location.latitude,
         longitude: location.longitude,
-        forecastDays: days,
+        forecastDays: FORECAST_DAYS,
         temperatureUnit,
         windSpeedUnit,
       });
-      if (isExpanded) setWeather14Day({ daily: data.daily });
-      else setWeather3Day({ daily: data.daily });
+      setWeather({ daily: data.daily });
     } catch {
       // fail silently
     }
@@ -63,8 +61,8 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!selectedLocation) return;
     setWeatherLoading(true);
-    fetchWeatherForLocation(selectedLocation, expanded).finally(() => setWeatherLoading(false));
-  }, [selectedLocation?.id, temperatureUnit, windSpeedUnit, expanded]);
+    fetchWeatherForLocation(selectedLocation).finally(() => setWeatherLoading(false));
+  }, [selectedLocation?.id, temperatureUnit, windSpeedUnit]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -73,7 +71,7 @@ export default function HomeScreen() {
         loadLocations(),
         loadRules(),
         loadHistory(),
-        fetchWeatherForLocation(selectedLocation, expanded),
+        fetchWeatherForLocation(selectedLocation),
       ]);
     } finally {
       setRefreshing(false);
@@ -83,9 +81,6 @@ export default function HomeScreen() {
   const activeRules = rules.filter((r) => r.is_active);
   const recentAlerts = entries.slice(0, 5);
   const unitSymbol = temperatureUnit === 'fahrenheit' ? '°F' : '°C';
-
-  const displayWeather = expanded ? weather14Day : weather3Day;
-  const dayCount = expanded ? 14 : 3;
 
   const formatDayLabel = (date: string, index: number) => {
     if (index === 0) return 'Today';
@@ -111,17 +106,6 @@ export default function HomeScreen() {
             ) : selectedLocation ? (
               <Text style={styles.cardSubtitle}>{selectedLocation.name}</Text>
             ) : null}
-            {selectedLocation && (
-              <Pressable
-                style={styles.expandButton}
-                onPress={() => setExpanded((prev) => !prev)}
-                accessibilityLabel={expanded ? 'Collapse forecast' : 'Expand forecast'}
-              >
-                <Text style={styles.expandButtonText}>
-                  {expanded ? 'Collapse' : '14-day'}
-                </Text>
-              </Pressable>
-            )}
           </View>
         </View>
 
@@ -134,24 +118,24 @@ export default function HomeScreen() {
           </>
         ) : weatherLoading ? (
           <ActivityIndicator color={tokens.primary} style={{ marginVertical: 16 }} />
-        ) : displayWeather ? (
+        ) : weather ? (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.forecastRow}
           >
-            {displayWeather.daily.time.slice(0, dayCount).map((date, i) => {
-              const high = Math.round(displayWeather.daily.temperature_2m_max[i]);
-              const low = Math.round(displayWeather.daily.temperature_2m_min[i]);
-              const rain = displayWeather.daily.precipitation_probability_max[i];
-              const wind = Math.round(displayWeather.daily.wind_speed_10m_max[i]);
+            {weather.daily.time.slice(0, FORECAST_DAYS).map((date, i) => {
+              const high = Math.round(weather.daily.temperature_2m_max[i]);
+              const low = Math.round(weather.daily.temperature_2m_min[i]);
+              const rain = weather.daily.precipitation_probability_max[i];
+              const wind = Math.round(weather.daily.wind_speed_10m_max[i]);
               return (
                 <View key={date} style={styles.forecastDay}>
                   <Text style={styles.forecastDayLabel}>{formatDayLabel(date, i)}</Text>
                   <Text style={styles.forecastHigh}>{high}{unitSymbol}</Text>
                   <Text style={styles.forecastLow}>{low}{unitSymbol}</Text>
                   {rain > 0 && <Text style={styles.forecastRain}>{rain}%</Text>}
-                  {expanded && <Text style={styles.forecastWind}>{wind} {windSpeedUnit}</Text>}
+                  <Text style={styles.forecastWind}>{wind} {windSpeedUnit}</Text>
                 </View>
               );
             })}
@@ -307,15 +291,6 @@ const createStyles = (t: ThemeTokens) => ({
     backgroundColor: t.primaryLight,
   },
   locationPickerText: { fontSize: 13, color: t.primary, fontWeight: '600' as const },
-
-  expandButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: t.primary,
-  },
-  expandButtonText: { fontSize: 12, color: t.primary, fontWeight: '600' as const },
 
   forecastRow: {
     flexDirection: 'row' as const,
