@@ -114,13 +114,16 @@ export function usePushNotifications() {
     const N = getNotifications();
     if (!N) return;
 
-    const notifSub = N.addNotificationReceivedListener((notification) => {
-      console.log('Notification received:', notification.request.content.title);
+    const notifSub = N.addNotificationReceivedListener(() => {
+      // Listener intentionally no-ops — expo-notifications shows the
+      // banner automatically via the handler configured in
+      // getNotifications(). Hook kept for future "track notification
+      // open" analytics.
     });
 
-    const responseSub = N.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data;
-      console.log('Notification tapped:', data);
+    const responseSub = N.addNotificationResponseReceivedListener(() => {
+      // User tapped the notification. Future: navigate to the alert's
+      // rule detail via response.notification.request.content.data.rule_id.
     });
 
     subscriptions.current = [notifSub, responseSub];

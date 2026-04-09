@@ -6,6 +6,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '../src/stores/authStore';
 import { initializePurchases, loginPurchaseUser, logoutPurchaseUser } from '../src/services/purchases';
+import { ErrorBoundary } from '../src/components/ErrorBoundary';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -80,22 +81,24 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="login" />
-        <Stack.Screen name="signup" />
-        <Stack.Screen name="forgot-password" />
-        <Stack.Screen name="reset-password" />
-        <Stack.Screen name="onboarding" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="create-rule" options={{ headerShown: true, title: 'Create Alert Rule' }} />
-        <Stack.Screen name="day-detail" options={{ headerShown: true, title: 'Day Forecast' }} />
-        <Stack.Screen name="upgrade" options={{ headerShown: true, title: 'Upgrade', presentation: 'modal' }} />
-        <Stack.Screen name="legal/eula" options={{ headerShown: true, title: 'Terms of Use' }} />
-        <Stack.Screen name="legal/privacy-policy" options={{ headerShown: true, title: 'Privacy Policy' }} />
-      </Stack>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <StatusBar style="light" />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="login" />
+          <Stack.Screen name="signup" />
+          <Stack.Screen name="forgot-password" />
+          <Stack.Screen name="reset-password" />
+          <Stack.Screen name="onboarding" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="create-rule" options={{ headerShown: true, title: 'Create Alert Rule' }} />
+          <Stack.Screen name="day-detail" options={{ headerShown: true, title: 'Day Forecast' }} />
+          <Stack.Screen name="upgrade" options={{ headerShown: true, title: 'Upgrade', presentation: 'modal' }} />
+          <Stack.Screen name="legal/eula" options={{ headerShown: true, title: 'Terms of Use' }} />
+          <Stack.Screen name="legal/privacy-policy" options={{ headerShown: true, title: 'Privacy Policy' }} />
+        </Stack>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
 
