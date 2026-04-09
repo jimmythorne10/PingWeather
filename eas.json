@@ -6,7 +6,13 @@
       "distribution": "internal"
     },
     "preview": { "distribution": "internal" },
-    "production": {}
+    "production": {
+      "distribution": "store",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "autoIncrement": true
+    }
   },
   "submit": { "production": {} }
 }

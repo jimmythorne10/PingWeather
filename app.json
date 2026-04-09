@@ -18,6 +18,7 @@
     },
     "android": {
       "package": "com.truthcenteredtech.pingweather",
+      "versionCode": 1,
       "googleServicesFile": "./google-services.json",
       "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
@@ -54,13 +55,15 @@
           "locationWhenInUsePermission": "PingWeather uses your location to show weather for places near you.",
           "isAndroidBackgroundLocationEnabled": false
         }
-      ]
+      ],
+      "expo-build-properties"
     ],
     "extra": {
       "router": {},
       "eas": {
         "projectId": "6456b66e-6e5a-4881-984f-20e2f3b477f4"
-      }
+      },
+      "revenueCatApiKey": ""
     },
     "owner": "jimmy.thorne.10"
   }

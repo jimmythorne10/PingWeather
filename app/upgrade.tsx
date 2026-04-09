@@ -1,8 +1,10 @@
-import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useTokens } from '../src/theme';
 import { useAuthStore } from '../src/stores/authStore';
 import { TIER_LIMITS } from '../src/types';
+import { purchasePackage as doPurchase, restorePurchases as doRestore } from '../src/services/purchases';
 import type { SubscriptionTier } from '../src/types';
 
 interface TierCard {
@@ -55,29 +57,79 @@ const TIERS: TierCard[] = [
   },
 ];
 
+// Map tier → RevenueCat package identifier.
+// RevenueCat uses package identifiers like "$rc_monthly", "$rc_annual" but
+// we define custom ones in the RevenueCat dashboard that match our product IDs.
+// When RevenueCat products aren't configured yet, the purchase service returns
+// "No offerings available" and the UI falls back to the "Coming Soon" alert.
+const TIER_PACKAGE_MAP: Record<SubscriptionTier, string> = {
+  free: '', // Can't purchase free
+  pro: '$rc_monthly', // Maps to pro_monthly offering
+  premium: '$rc_monthly', // Maps to premium_monthly offering — TODO: let user choose monthly/annual
+};
+
 export default function UpgradeScreen() {
   const t = useTokens();
   const router = useRouter();
   const profile = useAuthStore((s) => s.profile);
+  const fetchProfile = useAuthStore((s) => s.fetchProfile);
   const currentTier = profile?.subscription_tier ?? 'free';
+  const [purchasing, setPurchasing] = useState<SubscriptionTier | null>(null);
+  const [restoring, setRestoring] = useState(false);
 
-  const handleSubscribe = (tier: SubscriptionTier) => {
-    if (tier === currentTier) return;
-    // TODO: Wire to RevenueCat / Google Play Billing / Apple StoreKit.
-    // For now, show a placeholder so users know the flow exists.
-    Alert.alert(
-      'Coming Soon',
-      `Subscriptions will open in the next release. You tapped ${TIERS.find((x) => x.tier === tier)?.label}.`,
-      [{ text: 'OK' }]
-    );
+  const handleSubscribe = async (tier: SubscriptionTier) => {
+    if (tier === currentTier || purchasing) return;
+
+    // For "free" downgrade — use the store's manage subscription flow
+    if (tier === 'free') {
+      Alert.alert(
+        'Downgrade',
+        'To downgrade, cancel your subscription in Google Play Store → Subscriptions. Your current plan stays active until the end of the billing period.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    setPurchasing(tier);
+    const packageId = TIER_PACKAGE_MAP[tier];
+    const result = await doPurchase(packageId);
+    setPurchasing(null);
+
+    if (result.error) {
+      Alert.alert('Purchase Error', result.error, [{ text: 'OK' }]);
+    } else if (result.success) {
+      // Refresh profile to pick up the new tier
+      await fetchProfile();
+      Alert.alert(
+        'Welcome to PingWeather ' + (tier === 'pro' ? 'Pro' : 'Premium') + '!',
+        'Your plan has been upgraded. Enjoy the additional features.',
+        [{ text: 'OK', onPress: () => router.back() }]
+      );
+    }
+    // If result.success is false and error is null → user cancelled, do nothing
   };
 
-  const handleRestore = () => {
-    Alert.alert(
-      'Restore Purchases',
-      'Checking for previous purchases… (will be wired to RevenueCat).',
-      [{ text: 'OK' }]
-    );
+  const handleRestore = async () => {
+    setRestoring(true);
+    const result = await doRestore();
+    setRestoring(false);
+
+    if (result.error && !result.success) {
+      Alert.alert('Restore Error', result.error, [{ text: 'OK' }]);
+    } else if (result.tier && result.tier !== 'free') {
+      await fetchProfile();
+      Alert.alert(
+        'Subscription Restored',
+        `Your ${result.tier.charAt(0).toUpperCase() + result.tier.slice(1)} plan has been restored.`,
+        [{ text: 'OK', onPress: () => router.back() }]
+      );
+    } else {
+      Alert.alert(
+        'No Subscription Found',
+        'No active subscription was found for this account.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   return (
@@ -123,12 +175,20 @@ export default function UpgradeScreen() {
               </View>
             ) : (
               <Pressable
-                style={[styles.subscribeButton, { backgroundColor: t.primary }]}
+                style={[
+                  styles.subscribeButton,
+                  { backgroundColor: purchasing === card.tier ? t.primaryDisabled : t.primary },
+                ]}
                 onPress={() => handleSubscribe(card.tier)}
+                disabled={purchasing !== null}
               >
-                <Text style={[styles.subscribeButtonText, { color: t.textOnPrimary }]}>
-                  {card.tier === 'free' ? 'Downgrade' : `Subscribe — ${card.price}`}
-                </Text>
+                {purchasing === card.tier ? (
+                  <ActivityIndicator color={t.textOnPrimary} />
+                ) : (
+                  <Text style={[styles.subscribeButtonText, { color: t.textOnPrimary }]}>
+                    {card.tier === 'free' ? 'Downgrade' : `Subscribe — ${card.price}`}
+                  </Text>
+                )}
               </Pressable>
             )}
 
@@ -139,8 +199,10 @@ export default function UpgradeScreen() {
         );
       })}
 
-      <Pressable style={styles.restoreLink} onPress={handleRestore}>
-        <Text style={[styles.restoreLinkText, { color: t.primary }]}>Restore Purchases</Text>
+      <Pressable style={styles.restoreLink} onPress={handleRestore} disabled={restoring}>
+        <Text style={[styles.restoreLinkText, { color: t.primary }]}>
+          {restoring ? 'Restoring...' : 'Restore Purchases'}
+        </Text>
       </Pressable>
 
       <Pressable style={styles.cancelLink} onPress={() => router.back()}>

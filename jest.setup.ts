@@ -102,6 +102,19 @@ jest.mock('expo-status-bar', () => ({
   StatusBar: () => null,
 }));
 
+// ── React Native Purchases (RevenueCat) ────────────────────────
+jest.mock('react-native-purchases', () => ({
+  default: {
+    configure: jest.fn(),
+    logIn: jest.fn(() => Promise.resolve({ customerInfo: { activeSubscriptions: [] } })),
+    logOut: jest.fn(() => Promise.resolve()),
+    getOfferings: jest.fn(() => Promise.resolve({ current: null })),
+    purchasePackage: jest.fn(() => Promise.resolve({ customerInfo: { activeSubscriptions: [] } })),
+    restorePurchases: jest.fn(() => Promise.resolve({ activeSubscriptions: [] })),
+    getCustomerInfo: jest.fn(() => Promise.resolve({ activeSubscriptions: [], originalAppUserId: '$RCAnonymousID:test' })),
+  },
+}));
+
 // ── Expo Linking ────────────────────────────────────────────────
 // createURL returns a deterministic value so tests can assert exact args.
 jest.mock('expo-linking', () => ({

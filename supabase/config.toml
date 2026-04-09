@@ -33,3 +33,8 @@ verify_jwt = false
 # keep JWT verification ON for this one so only authenticated users can
 # register a push token against their own profile.
 verify_jwt = true
+
+[functions.subscription-webhook]
+# Called by RevenueCat servers, not the mobile app.
+# Handles its own auth via REVENUECAT_WEBHOOK_SECRET bearer token.
+verify_jwt = false

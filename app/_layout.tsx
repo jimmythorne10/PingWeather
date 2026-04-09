@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '../src/stores/authStore';
+import { initializePurchases, loginPurchaseUser, logoutPurchaseUser } from '../src/services/purchases';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -12,9 +13,26 @@ export default function RootLayout() {
   const { session, profile, initialize } = useAuthStore();
   const [ready, setReady] = useState(false);
 
+  // Initialize auth first, then RevenueCat.
   useEffect(() => {
-    initialize().then(() => setReady(true));
+    initialize().then(() => {
+      setReady(true);
+      // Initialize RevenueCat after auth is ready. Non-blocking — if the
+      // API key isn't configured or the SDK fails, purchases simply stay
+      // disabled and the app functions normally on the free tier.
+      initializePurchases().catch(() => {});
+    });
   }, []);
+
+  // Sync RevenueCat identity with Supabase auth state.
+  useEffect(() => {
+    if (!ready) return;
+    if (session?.user?.id) {
+      loginPurchaseUser(session.user.id).catch(() => {});
+    } else {
+      logoutPurchaseUser().catch(() => {});
+    }
+  }, [ready, session?.user?.id]);
 
   useEffect(() => {
     if (!ready) return;
