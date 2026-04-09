@@ -2,7 +2,44 @@
 
 > Persistent learnings maintained across Claude sessions.
 > Updated when non-obvious behaviors, gotchas, or platform quirks are discovered.
-> Last updated: 2026-04-08
+> Last updated: 2026-04-09
+
+## Session End State (2026-04-09)
+
+**MVP backend pipeline is COMPLETE and fully verified on device (Jimmy).**
+Full chain `pg_cron → poll-weather → evaluate-alerts → Expo push → FCM V1 → Android`
+works end-to-end. All bugs from this marathon session are fixed. The app
+is shippable once the non-backend items below are handled.
+
+**Outstanding before store submission:**
+1. RevenueCat wiring (INFRA-004) — monetization
+2. Real SMTP (INFRA-005) — forgot-password email reliability
+3. Open-Meteo commercial license (INFRA-006) — legal gate for paid users
+4. Store listings + production build (INFRA-007)
+5. Annual pricing tier (part of #1)
+6. Maestro E2E regression suite (INFRA-001) — needed before scaling beyond first testers
+
+**Killed this session:** Feature 1 (max_notifications per-cycle cap) — semantic was backwards from intent, UX couldn't be cleanly explained to a non-technical user. Full revert in commit `15f0a66`. See "Rate-limit cycle feature — REVERTED" below.
+
+**Session commit log (newest first):**
+- `9d679db` Raise pg_net timeout on poll-weather cron job from 5s to 30s
+- `15f0a66` Revert Feature 1 (max_notifications) + fix verify_jwt regression
+- `71b97ea` Document timezone gotcha in day-detail screen
+- `9395617` Two new features: per-cycle notification cap, hourly day-detail screen
+- `1a24828` Correct test purge count in MEMORY: 8, not 7
+- `26762d9` Polish round: forecast always-14-day, dev-gate push button, poll-weather fixes, dead test purge
+- `ba5ceb0` Unblock push notifications: fix silent registration, add Settings retry, document FCM V1 setup
+- `1b9f266` Switch password reset to Supabase PKCE flow
+- `bdb4461` Wire password reset deep link, fix Premium downgrade path
+- `9eb81d4` Unblock first EAS dev build and on-device smoke test
+- `6af583b` Update project memory with EAS build prerequisites and current state
+
+**Final test state:**
+- Logic: 378/378 passing (19 suites)
+- Components: 85/85 passing (9 suites) — still jsdom text-presence, still flagged as not real verification
+- tsc: clean
+- Migrations: 00001–00007 applied to live Supabase
+- Edge Functions: poll-weather v3, evaluate-alerts v5, register-push-token v1
 
 ## Project Overview
 
