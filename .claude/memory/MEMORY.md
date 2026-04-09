@@ -74,6 +74,18 @@ jsdom tests with `getByText` only verify text presence — they do NOT verify re
 - Delete the local JSON from Downloads immediately after upload — EAS stores it encrypted server-side, local copy is a credential leak risk.
 - NO APK rebuild required. The FCM V1 credentials are a server-side Expo config, the APK on the phone didn't change.
 
+### Day-detail hourly screen + forecasts navigation (2026-04-08)
+**Status:** code written + deployed as JS-only 2026-04-08 (no rebuild needed; the subagent that wrote it flagged horizontal scroll + Today/Tomorrow label timing as device-verification items). Runtime NOT yet verified by Jimmy.
+
+**Architecture:** tap a day row in the Forecasts tab 14-day list → navigate to `app/day-detail.tsx` with `{ locationId, date, locationName }` params. Screen re-fetches via `fetchForecast` and filters hourly arrays via `src/services/hourlyForDay.ts`. Weather icon emoji via `src/services/weatherIcon.ts` (WMO code → emoji with `❓` default).
+
+**CRITICAL TZ GOTCHA — do not "fix" this:**
+- Open-Meteo returns local time strings like `2026-04-09T14:00` with NO timezone suffix when `timezone=auto` is set.
+- `getHourlyForDay` uses `.startsWith(isoDate)` string matching — NOT `new Date(isoDate)` parsing. Parsing `"2026-04-09"` gives UTC midnight which drifts to the previous day for any user west of UTC.
+- `formatDayLabel` in `app/day-detail.tsx` parses from YYYY-MM-DD components the same way for the same reason — don't refactor either one to use Date() constructor.
+
+**weatherApi changes:** `weather_code: number[]` added to both `HourlyForecast` and `DailyForecast` types and to both arrays in the Open-Meteo request params. The existing `weatherApi.test.ts` mock response doesn't include `weather_code`; tsc passes because the response is cast through `unknown`. If someone later tightens the mock, add empty arrays for both.
+
 ### Rate-limit cycle semantic (max_notifications) — new 2026-04-08
 **Status:** code + migration + function deployed 2026-04-08. Schema ready, UI in create-rule, display in alerts tab. Runtime NOT yet verified on device (Jimmy tests next).
 
