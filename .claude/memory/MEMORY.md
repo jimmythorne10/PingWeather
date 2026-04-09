@@ -86,20 +86,18 @@ jsdom tests with `getByText` only verify text presence — they do NOT verify re
 
 **weatherApi changes:** `weather_code: number[]` added to both `HourlyForecast` and `DailyForecast` types and to both arrays in the Open-Meteo request params. The existing `weatherApi.test.ts` mock response doesn't include `weather_code`; tsc passes because the response is cast through `unknown`. If someone later tightens the mock, add empty arrays for both.
 
-### Rate-limit cycle semantic (max_notifications) — new 2026-04-08
-**Status:** code + migration + function deployed 2026-04-08. Schema ready, UI in create-rule, display in alerts tab. Runtime NOT yet verified on device (Jimmy tests next).
+### Rate-limit cycle feature — REVERTED 2026-04-09
+**Status:** fully removed. DO NOT re-attempt without concrete UX research.
 
-**Semantic:** per-cooldown-cycle fire cap. `max_notifications` on `alert_rules`:
-- `= 0` → unlimited (legacy: one fire per `cooldown_hours` window, `last_triggered_at` advances on each fire)
-- `> 0` → cap N fires per cycle. `last_triggered_at` is the CYCLE ANCHOR (first-fire timestamp of the current cycle), does NOT advance until the cycle fully elapses. `notifications_sent_count` counts fires in the current cycle. When cycle elapses (`now >= last_triggered_at + cooldown_hours`), the next matching evaluation starts a new cycle: count=1, anchor=now.
+Attempted 2026-04-08: a `max_notifications` per-cooldown-cycle cap with `notifications_sent_count` counter, pure function in `src/engine/notificationCycle.ts` + Deno mirror in `evaluate-alerts`, stepper UI in create-rule, display in alerts tab. Migrations 00005 added the columns, 00006 dropped them.
 
-Source of truth: `src/engine/notificationCycle.ts` (pure TS, 13 Jest tests). Mirror: `supabase/functions/evaluate-alerts/index.ts` (Deno, inline copy — must stay in lockstep with every src/ change). Both use the same `decideNotificationCycle(rule, now)` → `{ fire, next: { notifications_sent_count, last_triggered_at } }` contract.
+**Why it was reverted:** device testing revealed the semantic was the opposite of what Jimmy wanted. Jimmy's goal was "control how spammy it gets" — reduce the 84 notifications/14d that a 1h polling + 4h cooldown rule would produce. My implementation (cap per cooldown cycle) made setting `max_notifications > 0` fire MORE often than the default unlimited mode (which already does "one fire per cooldown window"). Neither of us could land a clean natural-language semantic that mapped cleanly to a tiny stepper UI. Jimmy's verdict: "an end user has no hope."
 
-Migration: `supabase/migrations/00005_add_max_notifications_to_alert_rules.sql` adds `max_notifications int not null default 0` and `notifications_sent_count int not null default 0`, both with non-negative CHECK constraints (max_notifications also capped at 100).
-
-UI: `app/create-rule.tsx` has a stepper (0–10) below the cooldown row with labels "Unlimited" for 0 and "N×" for > 0. Summary card text adapts: the "we'll wait" phrasing stays for unlimited, switches to "during that cooldown window you'll get at most N notifications" for capped. `app/(tabs)/alerts.tsx` shows "Sent X / N this cycle" below the polling/cooldown details when `max_notifications > 0`.
-
-Reset-on-edit: editing rate-limit fields via create-rule edit mode resets `notifications_sent_count` to 0 in the update payload — otherwise a mid-cycle count from the old settings would persist and confuse the new cap.
+**Lessons for any future retry:**
+1. "Cap per cooldown cycle" and "cap per matching event" and "total cap with cooldown spacing" are THREE different semantics and they produce wildly different notification counts over time. Nail the semantic with a concrete 14-day example BEFORE writing any code.
+2. The existing cooldown semantic is already "1 per cooldown window". Layering a numeric cap on top of this without renaming cooldown just creates a confusing second rate limit.
+3. If re-attempted: probably simpler to add a `max_total_notifications` with a "Reset notifications" button rather than trying to auto-reset on a cycle boundary. Or just remove the cooldown entirely and use polling_interval as the rate limit — fewer dials for the user.
+4. Don't test the cap via back-to-back SQL triggers — polling_interval filters them out before the cap even runs. Clear `last_polled_at` between each trigger OR set polling_interval to a very short value to exercise the cap semantic.
 
 ### poll-weather + evaluate-alerts bugs fixed 2026-04-08
 **Status:** code deployed to Supabase 2026-04-08 (evaluate-alerts + poll-weather via `npx supabase functions deploy`, migration 00004 applied via `db push`). Runtime NOT yet verified by Jimmy on device; next test is clear cooldown + manual poll-weather trigger + confirm phone buzzes AND new alert_history row has notification_sent=true AND alert_rules.last_polled_at is populated.

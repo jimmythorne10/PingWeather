@@ -47,8 +47,6 @@ export const mockRule = (overrides: Partial<AlertRule> = {}): AlertRule => ({
   polling_interval_hours: 12,
   is_active: true,
   cooldown_hours: 12,
-  max_notifications: 0,
-  notifications_sent_count: 0,
   last_triggered_at: null,
   last_polled_at: null,
   created_at: '2026-01-01T00:00:00Z',

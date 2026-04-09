@@ -253,11 +253,6 @@ export default function AlertsScreen() {
               <Text style={styles.ruleDetails}>
                 Every {rule.polling_interval_hours}h | {rule.lookahead_hours}h lookahead | {rule.cooldown_hours}h cooldown
               </Text>
-              {rule.max_notifications > 0 && (
-                <Text style={styles.ruleDetails}>
-                  Sent {rule.notifications_sent_count} / {rule.max_notifications} this cycle
-                </Text>
-              )}
               {rule.last_triggered_at && (
                 <Text style={styles.ruleTriggered}>
                   Last triggered: {new Date(rule.last_triggered_at).toLocaleDateString()}

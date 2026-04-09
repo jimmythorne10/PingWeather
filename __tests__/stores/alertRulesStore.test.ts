@@ -37,8 +37,6 @@ const sampleRule = {
   user_id: 'user-123',
   ...baseRuleInput,
   is_active: true,
-  max_notifications: 0,
-  notifications_sent_count: 0,
   last_triggered_at: null,
   last_polled_at: null,
   created_at: '2026-04-01',

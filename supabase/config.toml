@@ -14,3 +14,22 @@ major_version = 17
 [auth]
 enabled = true
 site_url = "http://localhost:3000"
+
+# Edge Functions: internal-only, called by pg_cron (via vault service_role
+# key) and by poll-weather → evaluate-alerts (via service_role client).
+# Neither needs Supabase's user-JWT gateway check — disabling it avoids
+# 401 Unauthorized errors on inter-function invocation. Auth is still
+# enforced inside the function via the Authorization header if needed
+# (and both callers pass the service_role key anyway).
+
+[functions.poll-weather]
+verify_jwt = false
+
+[functions.evaluate-alerts]
+verify_jwt = false
+
+[functions.register-push-token]
+# register-push-token is called from the mobile app with the user's JWT —
+# keep JWT verification ON for this one so only authenticated users can
+# register a push token against their own profile.
+verify_jwt = true

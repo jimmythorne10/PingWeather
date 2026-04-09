@@ -105,15 +105,6 @@ export interface AlertRule {
   polling_interval_hours: number; // how often to check
   is_active: boolean;
   cooldown_hours: number; // minimum hours between repeat alerts
-  /**
-   * Maximum notifications per cooldown period. 0 = unlimited (legacy
-   * cooldown semantic: one fire per cooldown_hours window). > 0 = cap N
-   * fires inside each cooldown_hours cycle, then wait for the cycle
-   * to elapse before firing again. See src/engine/notificationCycle.ts.
-   */
-  max_notifications: number;
-  /** Internal counter for the current cycle — not user-editable. */
-  notifications_sent_count: number;
   last_triggered_at: string | null;
   /** Internal stamp written by poll-weather after each poll run. */
   last_polled_at: string | null;
