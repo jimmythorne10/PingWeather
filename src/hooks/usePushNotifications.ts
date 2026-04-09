@@ -70,17 +70,36 @@ export function usePushNotifications() {
       }
 
       const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+      if (!projectId) {
+        setError('EAS projectId missing from app config — cannot get push token.');
+        return null;
+      }
       const tokenData = await N.getExpoPushTokenAsync({ projectId });
       const token = tokenData.data;
       setExpoPushToken(token);
 
-      // Register token with Supabase via Edge Function
-      const { error: fnError } = await supabase.functions.invoke('register-push-token', {
-        body: { push_token: token },
-      });
+      // Register token with Supabase via Edge Function.
+      // IMPORTANT: we must not return `token` as success if this call fails —
+      // the profile row would be left without a push_token and the app would
+      // silently behave as if notifications work when they don't.
+      const { error: fnError, data: fnData } = await supabase.functions.invoke(
+        'register-push-token',
+        { body: { push_token: token } }
+      );
 
       if (fnError) {
-        console.error('Failed to register push token:', fnError);
+        const msg =
+          (fnError as { message?: string }).message ??
+          (typeof fnError === 'string' ? fnError : 'Edge Function error');
+        setError(`Failed to save push token to server: ${msg}`);
+        return null;
+      }
+
+      // Belt + suspenders: some Edge Function errors come back as 2xx with
+      // an { error: "..." } body rather than as fnError. Surface those too.
+      if (fnData && typeof fnData === 'object' && 'error' in fnData && fnData.error) {
+        setError(`Server rejected push token: ${String(fnData.error)}`);
+        return null;
       }
 
       return token;

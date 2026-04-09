@@ -5,6 +5,7 @@ import { useStyles, useTokens } from '../../src/theme';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useThemeStore } from '../../src/stores/themeStore';
+import { usePushNotifications } from '../../src/hooks/usePushNotifications';
 import { isDevAccount } from '../../src/utils/devAccount';
 import { TIER_LIMITS } from '../../src/types';
 import type { ThemeTokens } from '../../src/theme';
@@ -22,8 +23,23 @@ export default function SettingsScreen() {
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const settings = useSettingsStore();
   const { themeName, setTheme } = useThemeStore();
+  const { registerForPushNotifications, error: pushError } = usePushNotifications();
 
   const [tierSwitching, setTierSwitching] = useState<SubscriptionTier | null>(null);
+  const [pushRegistering, setPushRegistering] = useState(false);
+  const [pushResult, setPushResult] = useState<string | null>(null);
+
+  const handleRegisterPush = async () => {
+    setPushResult(null);
+    setPushRegistering(true);
+    const token = await registerForPushNotifications();
+    setPushRegistering(false);
+    if (token) {
+      setPushResult(`✓ Registered: ${token.slice(0, 32)}…`);
+    } else {
+      setPushResult(`✗ ${pushError ?? 'Registration failed (check logs).'}`);
+    }
+  };
 
   const currentTier = (profile?.subscription_tier ?? 'free') as SubscriptionTier;
   const canOverrideTier = isDevAccount(profile?.email);
@@ -207,6 +223,26 @@ export default function SettingsScreen() {
             thumbColor={settings.notificationsEnabled ? tokens.primary : tokens.textTertiary}
           />
         </View>
+        <Pressable
+          style={[styles.pushRegisterButton, { borderColor: tokens.primary }]}
+          onPress={handleRegisterPush}
+          disabled={pushRegistering}
+        >
+          <Text style={[styles.pushRegisterText, { color: tokens.primary }]}>
+            {pushRegistering ? 'Registering…' : 'Register / Refresh Push Token'}
+          </Text>
+        </Pressable>
+        {pushResult && (
+          <Text
+            selectable
+            style={[
+              styles.pushResult,
+              { color: pushResult.startsWith('✓') ? tokens.success : tokens.error },
+            ]}
+          >
+            {pushResult}
+          </Text>
+        )}
       </View>
 
       {/* History */}
@@ -321,6 +357,21 @@ const createStyles = (t: ThemeTokens) => ({
   },
   tierButtonText: { fontSize: 14, fontWeight: '600' as const, color: t.textSecondary },
   tierButtonTextActive: { color: t.textOnPrimary },
+
+  // Push register button + result
+  pushRegisterButton: {
+    marginTop: 12,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center' as const,
+  },
+  pushRegisterText: { fontSize: 14, fontWeight: '600' as const },
+  pushResult: {
+    marginTop: 8,
+    fontSize: 11,
+    lineHeight: 15,
+  },
 
   // Toggles
   toggleRow: { flexDirection: 'row' as const, gap: 4 },

@@ -74,10 +74,18 @@ evaluator never runs.
 ### 3a. Enable required Postgres extensions
 
 Open https://supabase.com/dashboard/project/ziyxkgbrdliwvztotxli/database/extensions
-and enable all three if they aren't already green:
+and enable these two if they aren't already green:
 - `pg_cron`
 - `pg_net`
-- `supabase_vault`
+
+Vault is NOT an extension — it's a built-in Supabase feature in the `vault`
+schema, available on every project by default. Verify with:
+
+```sql
+select count(*) from vault.secrets;
+```
+
+If that query runs without error, vault is ready.
 
 ### 3b. Grab the service role key
 

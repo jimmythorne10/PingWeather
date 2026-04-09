@@ -61,13 +61,32 @@ jsdom tests with `getByText` only verify text presence — they do NOT verify re
 **Status:** placeholder created 2026-04-08 (96x96 RGBA, white circle on transparent bg, 851 bytes, generated via PowerShell System.Drawing)
 **What:** Good enough to unblock `eas build`. Replace with a proper monochrome brand icon before production.
 
+### FCM V1 push notification delivery
+**Status:** direct-push verified end-to-end on device 2026-04-08 (Jimmy saw a push land on his Android device via Supabase pg_net → Expo push API → FCM V1 → Android)
+**What:** The full FCM V1 credential chain is configured. Firebase project `pingweather-e6822` has a service account JSON uploaded to EAS and assigned to package `com.truthcenteredtech.pingweather`. Expo's push service accepted the token and the device received the notification.
+
+**CRITICAL GOTCHAS from the setup journey (save the next team a day):**
+- Expo's push service (`https://exp.host/--/api/v2/push/send`) needs **FCM V1 service account JSON** uploaded via `eas credentials`. Without it, every push returns `{"data":{"status":"error","details":{"error":"InvalidCredentials"},"message":"Unable to retrieve the FCM server key..."}}`.
+- Google Workspace orgs (including `truthcenteredtech.com`) enable `iam.disableServiceAccountKeyCreation` by default. This blocks the Firebase console's "Generate new private key" button with `Key creation is not allowed on this service account` error.
+- Fix: at the **organization** level (not project), grant yourself `roles/orgpolicy.policyAdmin`. Then go to the project's org policies page (`console.cloud.google.com/iam-admin/orgpolicies/list?project=pingweather-e6822`), find the **Active Legacy** `iam.disableServiceAccountKeyCreation` constraint, Manage policy → Override parent's policy → Enforcement Off → Save. Then generate the key. THEN IMMEDIATELY flip the policy back to Inherit parent's policy — the exception should be open for minutes, not days.
+- The key you generate is the `firebase-adminsdk` service account JSON from `console.firebase.google.com/project/pingweather-e6822/settings/serviceaccounts/adminsdk`. It's labeled "Admin SDK" but it's also the one Expo wants for FCM V1.
+- In `eas credentials` interactive menu: Android → development → **Google Service Account** → **Manage your Google Service Account Key for Push Notifications (FCM V1)** → **Set up a Google Service Account Key** → paste full Windows path. Do NOT confuse this with the top-level "Upload a Google Service Account Key" which is for Play Store submissions, a different service account.
+- Delete the local JSON from Downloads immediately after upload — EAS stores it encrypted server-side, local copy is a credential leak risk.
+- NO APK rebuild required. The FCM V1 credentials are a server-side Expo config, the APK on the phone didn't change.
+
 ### pg_cron scheduled polling
-**Status:** migration written 2026-04-08 (`supabase/migrations/00003_schedule_poll_weather.sql`), NOT YET APPLIED
-**What:** Hourly cron job that hits the `poll-weather` Edge Function. Uses `pg_net` + Supabase `vault` to avoid committing the service role key. Before applying:
-1. In Supabase Dashboard → Database → Extensions, enable `pg_cron`, `pg_net`, and `supabase_vault` if not already on
-2. In SQL editor, seed two vault secrets (see comments at top of the migration file): `poll_weather_service_role_key` and `poll_weather_function_url`
-3. `npx supabase db push` to apply the cron schedule
-4. Verify with `select * from cron.job_run_details where jobname = 'poll-weather-hourly' order by start_time desc limit 20;`
+**Status:** applied and verified end-to-end 2026-04-08 (manual trigger via `net.http_post` returned status 200 against the live `poll-weather` Edge Function)
+**What:** Hourly cron job `poll-weather-hourly` with schedule `0 * * * *`, active=true, registered via `supabase/migrations/00003_schedule_poll_weather.sql`. Uses `pg_net` + Supabase vault. Vault secrets live as:
+- `poll_weather_function_url` — length 66, value `https://ziyxkgbrdliwvztotxli.supabase.co/functions/v1/poll-weather`
+- `poll_weather_service_role_key` — length 219, the project's service_role JWT
+**Gotchas we hit during setup (noted for next time):**
+- `supabase_vault` is NOT a standard Postgres extension — it's built-in. Only `pg_cron` and `pg_net` need enabling on the Extensions page. Access the vault via the left sidebar "Vault (BETA)" entry.
+- Service role key is found under Project Settings → API Keys (or /settings/api-keys), not in the integrations pages. Supabase has shuffled this URL around.
+- Copy-paste via the Vault UI can introduce a stray trailing char (we had a `len=67` URL that should have been 66). `pg_net` rejects with "URL using bad/illegal format" and gives no hint it's a whitespace issue. Always check `length(decrypted_secret)` matches expected.
+**Still-pending verification:**
+- That the Edge Function actually did useful work (grid fetch, rule eval, notification dispatch) — need to read function logs, which only the 200 response proves the function was reached.
+- That pg_cron fires on schedule — will be visible in `cron.job_run_details` after the top of the next hour.
+- End-to-end notification delivery to a real device (create rule with matching conditions → wait for next cron → verify phone gets push).
 Hourly is the finest granularity any tier uses (Premium min = 1hr); the Edge Function decides per-rule whether each rule is due.
 
 ### Address search on locations no longer cosmetic
