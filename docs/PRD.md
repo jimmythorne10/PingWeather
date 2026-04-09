@@ -1,9 +1,9 @@
 # PingWeather — Product Requirements Document
 
 **Version:** 1.0.0-MVP
-**Last Updated:** 2026-04-07
+**Last Updated:** 2026-04-09 (original draft 2026-04-07; some sections below are historical design intent — see "Implementation delta" callouts for reality checks where they diverge)
 **Author:** Truth Centered Tech
-**Status:** Draft — MVP Definition
+**Status:** MVP backend pipeline complete and device-verified. Monetization wiring (INFRA-004), real SMTP (INFRA-005), Open-Meteo commercial license (INFRA-006), and store submission (INFRA-007) are the remaining gates before public launch. See `docs/JIMMY_HANDOFF.md` for the current punch list.
 
 ---
 
@@ -69,12 +69,12 @@ Truth Centered Tech, Delaware, US
 - **Then** they are prompted to enter their email and a password reset link is sent
 - **Acceptance Criteria:**
   - "Forgot Password?" link visible on login screen below the sign in button
-  - Tapping opens a simple screen/modal with email input and "Send Reset Link" button
-  - Calls Supabase `resetPasswordForEmail()` 
-  - Success message: "If an account exists for that email, we've sent a reset link. Check your inbox."
+  - Tapping opens `app/forgot-password.tsx` with email input and "Send Reset Link" button
+  - Calls Supabase `resetPasswordForEmail()` with `redirectTo: Linking.createURL('/reset-password')`
+  - Success message: "If an account exists for that email, a reset link has been sent. Check your inbox (and spam folder)."
   - Does NOT confirm whether the email exists (security — prevents account enumeration)
   - Error handling for network failure
-  - Password reset is handled by Supabase's built-in email flow — no custom reset screen needed in the app
+  - **Implementation delta (2026-04-08):** original PRD assumed Supabase's built-in email flow would land the user back at the app without a custom reset screen. In practice we needed BOTH a custom `app/reset-password.tsx` AND to switch the Supabase client to PKCE flow, because Expo Router strips URL hash fragments and the implicit-flow token was unreachable from `Linking.useURL`. The flow now is: email link → `pingweather://reset-password?code=<pkce>` → `useLocalSearchParams()` reads `code` → `supabase.auth.exchangeCodeForSession(code)` → password entry screen → `supabase.auth.updateUser({ password })` → sign out → `/login`. See MEMORY.md "Password reset deep link flow" for the full gotcha list.
 
 #### FR-AUTH-005: Sign Out
 - **Given** an authenticated user on the settings screen
@@ -392,18 +392,15 @@ Truth Centered Tech, Delaware, US
   - Data sourced from Open-Meteo API
   - Card is tappable — see FR-HOME-002
 
-#### FR-HOME-002: Forecast Card (Expanded — 14-Day View)
+#### FR-HOME-002: Forecast Card (14-Day View)
 - **Given** a user viewing the Forecast card on the Home screen
-- **When** they tap the Forecast card
-- **Then** the card expands to show a 14-day forecast in a horizontally scrollable view
+- **Then** the card shows a 14-day forecast in a horizontally scrollable view
 - **Acceptance Criteria:**
   - Fetches 14-day forecast from Open-Meteo (max supported: 16 days)
   - Horizontal scroll for days that overflow the screen width
-  - Each day shows: weather condition icon, day name, date, high temp, low temp, rain probability, wind speed
-  - Weather icons map to WMO weather codes from Open-Meteo (clear, partly cloudy, overcast, fog, drizzle, rain, snow, thunderstorm, etc.)
-  - Tapping again or a collapse control returns to the compact 3-day view
-  - Smooth transition between collapsed and expanded states
-  - Location picker persists — user can switch locations in expanded view too
+  - Each day shows: day name, high temp, low temp, rain probability, wind speed
+  - Location picker persists — user can switch locations via the picker button in the card header
+  - **Implementation delta (2026-04-09):** the original PRD called for a tap-to-expand behavior between compact 3-day and 14-day views. Device testing found the toggle unnecessary — the horizontal scroll already handles overflow gracefully. The collapse/expand state was removed. The card always shows 14 days. Tap-to-drill-in for hourly detail lives on the Forecasts tab instead (see FR-FORECAST-002).
 
 #### FR-HOME-003: Active Alerts Summary
 - **Given** a user with alert rules configured
@@ -440,29 +437,30 @@ Truth Centered Tech, Delaware, US
 
 > **Note:** Forecasts replaces the History tab. The Forecasts tab shows detailed weather for all monitored locations. Alert history is accessible as a sub-screen from Home's "View all history" link or from Settings.
 
-#### FR-FORECAST-001: All Locations Overview
+#### FR-FORECAST-001: All Locations Overview (implemented as expandable cards)
 - **Given** a user with one or more active locations
 - **When** they open the Forecasts tab
 - **Then** all locations are displayed with current conditions at a glance
 - **Acceptance Criteria:**
-  - Each location shown as a card with: location name, current temperature, weather condition icon, today's high/low, rain probability
-  - Cards ordered by default location first, then alphabetically
-  - Tapping a location card opens the detailed forecast view (FR-FORECAST-002)
+  - Each location shown as a card with: location name, current high/low, rain probability
+  - Tapping a location card expands inline to show hourly + 14-day sections (implementation delta: no separate detail screen — details expand inline)
   - Pull-to-refresh reloads all location forecasts
   - Loading spinner on initial fetch
   - Empty state if no locations: "Add a location to see forecasts" with button to Locations tab
 
-#### FR-FORECAST-002: Location Detail Forecast
-- **Given** a user taps a location card on the Forecasts tab
-- **When** the detail view loads
-- **Then** a full hourly and daily forecast is displayed for that location
+#### FR-FORECAST-002: Hourly Day Detail Drill-in
+- **Given** a user with an expanded location card on the Forecasts tab
+- **When** they tap a day row in the 14-day list
+- **Then** a day-detail screen opens showing 24 hourly rows for that date
 - **Acceptance Criteria:**
-  - Location name as screen title
-  - **Hourly forecast** (next 24-48 hours): horizontally scrollable, each hour shows time, temp, weather icon, rain %, wind speed
-  - **Daily forecast** (14 days): vertically scrollable list, each day shows day name, date, weather icon, high/low temp, rain probability, wind speed
+  - Screen title: "Day Forecast"
+  - Header shows location name + day label ("Today", "Tomorrow", or "Sat, Apr 13")
+  - Summary card at top: big weather emoji, high/low, rain %, wind range
+  - 24 hourly rows below, each with: time (12h format), weather emoji, temp, rain %, wind speed
   - All values respect user's unit preferences (°F/°C, mph/kmh/knots)
-  - Weather icons mapped from Open-Meteo WMO weather codes
-  - Back navigation to Forecasts overview
+  - Weather icons via `src/services/weatherIcon.ts` (WMO code → emoji)
+  - Back button returns to the Forecasts tab with scroll position preserved
+  - **CRITICAL:** Day-label formatting and hourly filtering both use YYYY-MM-DD string-prefix matching instead of `new Date()` to avoid UTC-midnight drift to the previous day in western timezones. Do not refactor.
 
 #### FR-FORECAST-003: Rule Trigger Preview
 - **Given** a user viewing a location's detailed forecast
@@ -674,6 +672,10 @@ Truth Centered Tech, Delaware, US
     - If opened from a push notification cold-start: auth gate runs first, then deep links to this screen with the `alert_history_id` from the notification payload
 
 ### 2.9 Subscriptions & In-App Purchases
+
+> **Implementation status (2026-04-09):** The paywall screen `app/upgrade.tsx` exists with all three tier cards per FR-IAP-001. Subscribe buttons currently show a "Coming Soon" alert — `react-native-purchases` is NOT in `package.json` yet. This is the single biggest blocker between the current code and a store submission. See `docs/KNOWN_ISSUES.md` INFRA-004 for the full wiring checklist. The spec below (FR-IAP-001 through 005) is the acceptance criteria for the wiring work.
+>
+> **Platform scope for IAP wiring:** both Google Play Billing (Android, primary) AND Apple StoreKit (iOS, secondary) via RevenueCat's unified SDK. The wiring does not need to be Android-only — RevenueCat's `Purchases.purchasePackage()` abstracts both stores behind the same call. Cross-platform support is "free" once the SDK is installed correctly and products are configured in both consoles.
 
 #### FR-IAP-001: Paywall Screen
 - **Given** a free-tier user encounters a tier-gated feature (compound conditions, polling < 12h, 2+ locations, etc.)
