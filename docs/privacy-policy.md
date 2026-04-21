@@ -71,7 +71,7 @@ As a Virginia resident, you have the right to:
 - **Obtain a copy** of your personal data in a portable format
 - **Opt out** of the sale of your personal data (we do not sell data)
 
-To exercise any of these rights, contact us at **privacy@truthcenteredtech.com**. We will respond within 45 days as required by the VCDPA.
+To delete your account and all associated data, use the **Delete Account** option in the app (Settings → Delete Account). You may also exercise any of these rights by contacting us at **privacy@truthcenteredtech.com** — we will respond within 45 days as required by the VCDPA.
 
 If you are a resident of another state with applicable privacy laws, we will honor comparable rights to the extent required by your state's law.
 
