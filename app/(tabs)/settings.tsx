@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, Switch, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, Switch, Alert, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useStyles, useTokens } from '../../src/theme';
@@ -7,6 +7,7 @@ import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useThemeStore } from '../../src/stores/themeStore';
 import { usePushNotifications } from '../../src/hooks/usePushNotifications';
 import { isDevAccount } from '../../src/utils/devAccount';
+import { supabase } from '../../src/utils/supabase';
 import { TIER_LIMITS } from '../../src/types';
 import type { ThemeTokens } from '../../src/theme';
 import type { ThemeName } from '../../src/theme/tokens';
@@ -28,6 +29,7 @@ export default function SettingsScreen() {
   const [tierSwitching, setTierSwitching] = useState<SubscriptionTier | null>(null);
   const [pushRegistering, setPushRegistering] = useState(false);
   const [pushResult, setPushResult] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const handleRegisterPush = async () => {
     setPushResult(null);
@@ -80,9 +82,20 @@ export default function SettingsScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            // TODO: wire to Supabase Edge Function that deletes the user server-side
-            Alert.alert('Coming Soon', 'Account deletion will be fully wired in the next release.');
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              const { error } = await supabase.functions.invoke('delete-account', {
+                method: 'POST',
+              });
+              if (error) throw error;
+              // Sign out clears local state; auth gate redirects to /login
+              await signOut();
+            } catch (err) {
+              setDeleting(false);
+              const msg = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+              Alert.alert('Deletion Failed', msg);
+            }
           },
         },
       ]
@@ -275,8 +288,15 @@ export default function SettingsScreen() {
       </View>
 
       {/* Delete Account */}
-      <Pressable style={styles.deleteButton} onPress={handleDeleteAccount}>
-        <Text style={styles.deleteButtonText}>Delete Account</Text>
+      <Pressable
+        style={[styles.deleteButton, deleting && { opacity: 0.6 }]}
+        onPress={handleDeleteAccount}
+        disabled={deleting}
+      >
+        {deleting
+          ? <ActivityIndicator color="#ffffff" />
+          : <Text style={styles.deleteButtonText}>Delete Account</Text>
+        }
       </Pressable>
 
       {/* Sign Out */}
