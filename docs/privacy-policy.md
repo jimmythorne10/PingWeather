@@ -10,7 +10,7 @@
 ## 1. Information We Collect
 
 ### Information You Provide
-- **Account Information:** When you create an account, we collect your email address and display name. Your password is encrypted by our authentication provider and is never accessible to us.
+- **Account Information:** When you create an account, we collect your email address. Your password is encrypted by our authentication provider and is never accessible to us.
 - **Location Data:** When you add a location for weather monitoring, you may enter an address or share your device's current GPS coordinates. We store the name you assign to the location and its precise coordinates. We do not track your location continuously or in the background — location is only accessed when you explicitly tap "Use My Location."
 - **Alert Preferences:** The weather conditions, thresholds, and notification rules you configure.
 
@@ -40,7 +40,7 @@ We share data only as necessary to operate the App:
 
 | Service | Purpose | Data Shared |
 |---|---|---|
-| **Supabase** | Database and authentication | Email, display name, location coordinates, alert rules, push token, subscription tier |
+| **Supabase** | Database and authentication | Email, location coordinates, alert rules, push token, subscription tier |
 | **Open-Meteo** | Weather forecast retrieval | Location coordinates only (no account information) |
 | **Expo Push Service** | Notification delivery | Push token, alert notification content |
 | **RevenueCat** | Subscription and billing management | User ID, purchase receipts, subscription status |
