@@ -1,12 +1,15 @@
 // ────────────────────────────────────────────────────────────
 // Open-Meteo Weather API Client
-// Free, no API key required, excellent forecast data
+// Commercial plan required for monetized use.
 // https://open-meteo.com/en/docs
 // ────────────────────────────────────────────────────────────
 
 import type { ForecastResponse } from '../types';
 
-const BASE_URL = 'https://api.open-meteo.com/v1/forecast';
+const COMMERCIAL_KEY = process.env.EXPO_PUBLIC_OPEN_METEO_API_KEY ?? '';
+const BASE_URL = COMMERCIAL_KEY
+  ? 'https://customer-api.open-meteo.com/v1/forecast'
+  : 'https://api.open-meteo.com/v1/forecast';
 
 interface FetchForecastOptions {
   latitude: number;
@@ -50,6 +53,7 @@ export async function fetchForecast(options: FetchForecastOptions): Promise<Fore
       'weather_code',
     ].join(','),
     timezone: 'auto',
+    ...(COMMERCIAL_KEY ? { apikey: COMMERCIAL_KEY } : {}),
   });
 
   const response = await fetch(`${BASE_URL}?${params}`);
