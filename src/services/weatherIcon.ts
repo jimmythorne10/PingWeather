@@ -21,6 +21,12 @@
  *   96, 99      thunderstorm with hail       → ⛈️
  *   anything else                            → ❓
  */
+const CARDINAL_DIRS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
+
+export function degreesToCardinal(degrees: number): string {
+  return CARDINAL_DIRS[Math.round(degrees / 45) % 8];
+}
+
 export function weatherCodeToEmoji(code: number): string {
   if (code === 0) return '☀️';
   if (code === 1 || code === 2) return '⛅';
