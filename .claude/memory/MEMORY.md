@@ -2,343 +2,217 @@
 
 > Persistent learnings accumulated across Claude sessions.
 > Updated when non-obvious behaviors, gotchas, or platform quirks are discovered.
-> Last updated: 2026-04-22
+> Last updated: 2026-04-23
+
+## Current Status — Ready for Android Closed Testing
+
+**Play Store internal testing: LIVE as of 2026-04-23**
+**Backend: fully deployed (migrations 00001–00011, all Edge Functions live)**
+**Next step: run closed testing (alpha) with 12+ testers for 14 days → Production**
+
+### What is complete (do not re-propose)
+
+| Item | Status |
+|---|---|
+| RevenueCat Android integration | Done — `goog_XykDmtoZwUNDfBgswNJaIkDLjNC`, products created, webhook live |
+| Open-Meteo commercial license | Done — $29/mo, `poll-weather` uses `customer-api.open-meteo.com` + `OPEN_METEO_API_KEY` Supabase secret. `weatherApi.ts` (client) uses `EXPO_PUBLIC_OPEN_METEO_API_KEY` EAS env var — **must be set before next build** |
+| Privacy policy | Live at `truthcenteredtech.com/pingweather-privacy` |
+| Play Store internal testing | Live — current build (preview AAB, versionCode 3 auto-incremented by EAS) |
+| Apple Developer Program | Enrolled — Apple ID unblocked via Apple Support |
+| Supabase migrations | 00001–00011 applied to live project |
+| Edge Functions deployed | poll-weather, evaluate-alerts, register-push-token, send-digest, fcm-keepalive, delete-account, subscription-webhook |
+| Forecast digest feature | Complete — settings UI, send-digest Edge Function, pg_cron hourly |
+| FCM keepalive | Complete — silent push daily at 10:00 UTC, keeps Android in active standby |
+| Battery opt prompt | Complete — platform-aware onboarding screen (Android: Unrestricted battery; iOS: Background App Refresh) |
+| Forecast UI | 14-day outlook: weather icons, column headers, wind direction (NW 12 mph) |
+| iOS config | On `feature/ios-support` branch — app.json, eas.json, roadmap. Blocked on M0 completion |
+
+### What is NOT yet done (gates production)
+
+1. **`EXPO_PUBLIC_OPEN_METEO_API_KEY` not yet set as EAS env var** — client-side forecast calls fall back to free endpoint until this is added. Run:
+   ```bash
+   eas env:create --name EXPO_PUBLIC_OPEN_METEO_API_KEY --value <key> --environment preview
+   eas env:create --name EXPO_PUBLIC_OPEN_METEO_API_KEY --value <key> --environment production
+   ```
+2. **Closed testing (12+ testers, 14 days)** — required before Google allows Production button
+3. **RevenueCat iOS** — blocked on Apple Developer M0 completion
+4. **Real SMTP (Resend)** — deferred, Supabase mailer acceptable for now
+5. **Maestro E2E suite** — deferred
+
+### Go-to-market status
+
+| Task | Status |
+|---|---|
+| Android internal testing live | Done |
+| Open-Meteo commercial license | Done (code fix committed — needs EAS env var next build) |
+| RevenueCat Android wired | Done |
+| Privacy policy live | Done |
+| Play Store store listing | Check Play Console → Store presence |
+| 20 testers recruited | In progress |
+| Closed testing (14 days) | Not started |
+| Android production | Blocked on closed testing |
+| iOS M0 (Apple enrollment) | Unblocked — Apple ID enrolled |
+| iOS M2 (credentials) | Blocked on APNs key creation |
+
+---
+
+## Session End State (2026-04-22/23) — Feature Build + Branch Cleanup
+
+### What was built this session
+
+**Forecast digest (`feature/forecast-digest` → merged to main):**
+- Migrations 00008-00009: digest columns on profiles, pg_cron hourly schedule
+- `src/services/digestScheduler.ts` + `digestFormatter.ts` — pure logic, 19 tests
+- `supabase/functions/send-digest` — hourly Edge Function, full F/C support
+- Settings UI: FORECAST DIGEST section with disable-warning alert
+- Migration 00010 + settings sync: `temperature_unit` column, server-synced
+
+**FCM keepalive (`feature/forecast-digest` → merged to main):**
+- Migration 00011: pg_cron daily at 10:00 UTC
+- `supabase/functions/fcm-keepalive` — silent `_contentAvailable: true` push
+
+**Battery optimization onboarding (`feature/battery-opt-prompt` → merged to main):**
+- `app/onboarding/battery-setup.tsx` — platform-aware:
+  - Android: "Set to Unrestricted" + `Linking.openSettings()`
+  - iOS: "Enable Background App Refresh" + `Linking.openURL('app-settings:')`
+
+**Forecast UI (`feature/forecast-ui-improvements` → merged to main):**
+- `degreesToCardinal()` in `weatherIcon.ts` (13 tests)
+- `wind_direction_10m_dominant` added to API + DailyForecast type
+- 14-day outlook: weather icon column, column headers, "NW 12 mph" wind format
+
+**iOS support (`feature/ios-support` — isolated, NOT merged to main):**
+- `app.json`: buildNumber, UIBackgroundModes, APNs entitlement, iOS RevenueCat placeholder
+- `eas.json`: iOS simulator dev profile, iOS production profile, submit skeleton
+- `docs/ios-roadmap.md`: M0→M10 milestone plan
+
+### Branch state
+- `main` — all Android features, clean
+- `feature/ios-support` — iOS additions only on top of main
+
+### Tests
+- 435/435 logic tests passing
+- tsc clean
+
+---
 
 ## Session End State (2026-04-22) — RC Complete, Internal Testing Build Running
-
-**Status: Preview build #3 running on EAS. All integrations complete. Directory rename pending.**
-
-### What was completed this session
 
 **RevenueCat integration — fully wired:**
 - RC service account JSON created in GCC (required disabling org policy `iam.disableServiceAccountKeyCreation` temporarily)
 - Play Console service account granted: View app info, View financial data, Manage orders and subscriptions
 - RC credentials now show "Valid credentials" (propagated ~36hr after setup)
-- Products created in Play Console: `pro_monthly` ($3.99), `premium_monthly` ($7.99) — US only (Open-Meteo compliance)
+- Products created in Play Console: `pro_monthly` ($3.99), `premium_monthly` ($7.99) — US only
 - Products imported to RC, entitlements (`pro`, `premium`) and default offering configured
-- `REVENUECAT_WEBHOOK_SECRET` set in Supabase dashboard (base64 value — CLI couldn't parse `=` in value, used dashboard instead)
-- `subscription-webhook` Edge Function deployed and verified: correct auth returns `{"received":true,"action":"upgrade","error":"db_update_failed"}`, wrong auth returns 401
-- RC SDK key `goog_XykDmtoZwUNDfBgswNJaIkDLjNC` added to `app.json` extra.revenueCatApiKey
-- `src/services/purchases.ts` TIER_PACKAGE_MAP corrected: `pro: '$rc_pro_monthly'`, `premium: '$rc_premium_monthly'`
-- `supabase/functions/subscription-webhook/index.ts` PRODUCT_TIER_MAP fixed to handle both bare and `product:base_plan` format
+- `REVENUECAT_WEBHOOK_SECRET` set in Supabase dashboard
+- `subscription-webhook` Edge Function deployed and verified
+- RC SDK key `goog_XykDmtoZwUNDfBgswNJaIkDLjNC` in `app.json` extra.revenueCatAndroidApiKey
+- `src/services/purchases.ts` TIER_PACKAGE_MAP: `pro: '$rc_pro_monthly'`, `premium: '$rc_premium_monthly'`
+- `supabase/functions/subscription-webhook/index.ts` PRODUCT_TIER_MAP handles both bare and `product:base_plan` format
 
-**Open-Meteo commercial license — purchased and deployed:**
+**Open-Meteo commercial license:**
 - $29/mo Standard plan purchased
-- `poll-weather` Edge Function updated: reads `OPEN_METEO_API_KEY` env var, uses `customer-api.open-meteo.com` when key present, falls back to free URL when absent
+- `poll-weather` Edge Function: reads `OPEN_METEO_API_KEY`, uses `customer-api.open-meteo.com`
 - `OPEN_METEO_API_KEY` secret set in Supabase dashboard
-- Edge Function redeployed and verified via live integration test: `{"message":"Polling complete","locationsChecked":3,"rulesEvaluated":5,"alertsTriggered":0}`
-
-**Repo renamed WeatherWatch → PingWeather:**
-- All source code WeatherWatch references updated (package.json name, Zustand store persistence keys, comments)
-- All config/agent/memory files updated (global CLAUDE.md, pingWeatherExpert.md, ship-framework docs, MEMORY.md)
-- Global CLAUDE.md Delaware → Virginia corrected
-- `mv ~/Code/WeatherWatch ~/Code/PingWeather` + `deploy.sh` still pending (requires Jimmy — Claude Code working dir holds the lock)
-- Tests post-rename: 403/403 logic, 85/85 components, tsc clean
-
-**Build #3 (preview AAB):**
-- Running on EAS as of this session
-- First build with RC API key baked in — required for testing subscription purchase flow
-- `eas.json` preview profile confirmed: `buildType: app-bundle`
-
-### Outstanding before internal testing goes live
-
-1. **Jimmy runs:** `mv ~/Code/WeatherWatch ~/Code/PingWeather && cd ~/Code/claude-config && bash scripts/deploy.sh`
-2. **Download AAB** from EAS when build finishes → upload to Play Console internal testing track
-3. **Add internal testers** in Play Console → Internal testing → Testers
-
-### What's deferred (post-launch)
-
-- Real SMTP via Resend (INFRA-005)
-- Maestro E2E suite (INFRA-001)
-- iOS track (waiting on Apple Developer Program)
-- Annual pricing products (pro_annual, premium_annual) — monthly-only for now
+- `weatherApi.ts` (client): reads `EXPO_PUBLIC_OPEN_METEO_API_KEY`, uses `customer-api.open-meteo.com` when present — **EAS env var still needs to be created**
 
 ---
 
 ## Session End State (2026-04-21) — Play Store Submission
 
-**Status: App submitted to Google Play, awaiting review.**
-
-### What was completed this session
-
 **Google Play compliance fixes:**
-- `ACCESS_BACKGROUND_LOCATION` removed from `android.permissions` in `app.json` — was flagged as a policy violation; we only use foreground location (user-initiated "Use My Location" tap).
-- Account deletion Edge Function built and deployed: `supabase/functions/delete-account/index.ts` — verifies JWT, calls `auth.admin.deleteUser(user.id)` which cascades via ON DELETE CASCADE to all child tables. Settings screen (`app/(tabs)/settings.tsx`) wired with real invocation + `deleting` state + ActivityIndicator. Required by Google Play policy for any app with account creation.
-- `supabase/config.toml` updated: `[functions.delete-account]` added with `verify_jwt = true`.
+- `ACCESS_BACKGROUND_LOCATION` removed
+- `delete-account` Edge Function built and deployed
+- Privacy policy live at `truthcenteredtech.com/pingweather-privacy`
 
-**Privacy policy cleanup:**
-- Removed "display name" from all four copies of the privacy policy (was never collected — inaccurate).
-- Added in-app deletion path (Settings → Delete Account) to Section 5 of all copies.
-- Affected files: `docs/privacy-policy.md`, `docs/privacy-policy.html`, `docs/privacy-policy-squarespace.html`, `docs/legal/privacy-policy.html`.
-- Live page at `truthcenteredtech.com/pingweather-privacy` was updated by Jimmy via Squarespace.
+**ADI (Android Developer Identity) fix:**
+- `plugins/withAdiRegistration.js` — copies `adi-registration.properties` to native path during prebuild
 
-**ADI (Android Developer Identity) verification — config plugin fix:**
-- Two EAS preview builds (#1, #2) failed Play Console package verification with "does not have the required token file."
-- Root cause: Expo managed workflow does NOT copy arbitrary files from the project `assets/` dir to the native `android/app/src/main/assets/` dir. `adi-registration.properties` existed at `assets/adi-registration.properties` but never landed in the APK.
-- Fix: created `plugins/withAdiRegistration.js` — an Expo config plugin using `withDangerousMod` that copies the file to the correct native path during prebuild.
-- Plugin registered as first entry in `app.json` plugins array.
-- Build #3 (preview) has NOT been triggered yet as of this session end — Jimmy needs to run it.
-
-### Outstanding before launch
-
-**Immediate (unblocking Play Console app creation):**
-1. Run `npx eas build --platform android --profile preview` — build #3 with the config plugin fix
-2. Download APK, upload to Play Console ADI verification flow
-3. Play Console will confirm `com.truthcenteredtech.pingweather` package ownership
-
-**Play Console setup (after package verified):**
-4. Create app listing — copy ready in `docs/store-listing/google-play-listing.md`
-5. Screenshots + feature graphic (1024×500px) — NOT done, manual process, requires device
-6. Data Safety form — answers ready (discussed this session, not yet filed)
-7. Content rating questionnaire
-8. App access credentials (test account for reviewers)
-
-**Infrastructure:**
-9. RevenueCat account setup — get API key, paste into `app.json` `extra.revenueCatApiKey`, create Play Console products (pro_monthly, pro_annual, premium_monthly, premium_annual), link RevenueCat to Play Console
-10. Open-Meteo commercial license — $29/mo, required before charging real users
-11. Real SMTP (Resend) — email delivery for password reset
-12. Production AAB build — `eas build --platform android --profile production` — only after RC API key is in
-
-**EAS build count:** 2 preview builds wasted on ADI (wrong profile, then wrong asset path). Next build is #3. Budget: ~3-5 total preview/production builds remaining before quota.
+---
 
 ## Session End State (2026-04-09)
 
-**MVP backend pipeline is COMPLETE and fully verified on device (Jimmy).**
-Full chain `pg_cron → poll-weather → evaluate-alerts → Expo push → FCM V1 → Android`
-works end-to-end. All bugs from this marathon session are fixed. The app
-is shippable once the non-backend items below are handled.
+**MVP backend pipeline COMPLETE and verified on device.**
+Full chain: `pg_cron → poll-weather → evaluate-alerts → Expo push → FCM V1 → Android`
 
-**Outstanding before store submission (updated 2026-04-09 overnight push):**
-1. ~~RevenueCat wiring (INFRA-004)~~ — **CODE DONE** (commit `66f2b15`). SDK installed, purchase service written, upgrade.tsx wired to real purchases, subscription webhook Edge Function deployed. **Jimmy still needs to:** create RevenueCat account, get API key (paste into app.json extra.revenueCatApiKey), create Play Console products, link RevenueCat to Play Console, set REVENUECAT_WEBHOOK_SECRET env var in Supabase dashboard.
-2. Real SMTP (INFRA-005) — forgot-password email reliability. Deferred.
-3. Open-Meteo commercial license (INFRA-006) — legal gate for paid users. **Research done:** Open-Meteo confirmed as best choice at $29/mo (100 users) to $99/mo (1K users). See weather API research below.
-4. ~~Store listings + production build (INFRA-007)~~ — **PREP DONE**: `eas.json` production profile ready, `docs/store-listing/google-play-listing.md` has listing copy, `docs/legal/privacy-policy.html` + `terms-of-use.html` are hostable. **Jimmy still needs to:** create Play Console account ($25), take screenshots, host legal pages, run `eas build --platform android --profile production`, submit.
-5. Annual pricing tier — part of RevenueCat product setup (Jimmy creates pro_annual + premium_annual in Play Console alongside monthly products).
-6. Maestro E2E regression suite (INFRA-001) — needed before scaling beyond first testers. Deferred.
+Schema at migration 00007. Vault: `poll_weather_service_role_key`, `poll_weather_function_url`. Cron: `poll-weather-hourly` active, 30s pg_net timeout.
 
-### Weather API research (2026-04-09)
-**Recommendation: Stay with Open-Meteo.** Migration cost = zero (already integrated). ECMWF IFS is the most accurate global model. 16-day hourly + daily. All 8 required metrics. $29/mo covers 100 users, $99/mo covers 1K+. Grid-square caching friendly.
-**Backup option:** WeatherAPI.com — generous free tier (1M calls/mo), 14-day hourly on paid plans, sub-$35/mo through 10K users. Less accuracy transparency than Open-Meteo.
-**Definitively ruled out:** OpenWeather (fails 14-day daily + cost-prohibitive), Visual Crossing (deceptive records billing), Tomorrow.io (no self-serve), NWS (missing metrics + unstable), Pirate Weather (20K/mo cap).
-Full research in the conversation history (2026-04-09 overnight session).
-
-**Killed this session:** Feature 1 (max_notifications per-cycle cap) — semantic was backwards from intent, UX couldn't be cleanly explained to a non-technical user. Full revert in commit `15f0a66`. See "Rate-limit cycle feature — REVERTED" below.
-
-**Session commit log (newest first):**
-- `9d679db` Raise pg_net timeout on poll-weather cron job from 5s to 30s
-- `15f0a66` Revert Feature 1 (max_notifications) + fix verify_jwt regression
-- `71b97ea` Document timezone gotcha in day-detail screen
-- `9395617` Two new features: per-cycle notification cap, hourly day-detail screen
-- `1a24828` Correct test purge count in MEMORY: 8, not 7
-- `26762d9` Polish round: forecast always-14-day, dev-gate push button, poll-weather fixes, dead test purge
-- `ba5ceb0` Unblock push notifications: fix silent registration, add Settings retry, document FCM V1 setup
-- `1b9f266` Switch password reset to Supabase PKCE flow
-- `bdb4461` Wire password reset deep link, fix Premium downgrade path
-- `9eb81d4` Unblock first EAS dev build and on-device smoke test
-- `6af583b` Update project memory with EAS build prerequisites and current state
-
-**Final test state:**
-- Logic: 378/378 passing (19 suites)
-- Components: 85/85 passing (9 suites) — still jsdom text-presence, still flagged as not real verification
-- tsc: clean
-- Migrations: 00001–00007 applied to live Supabase
-- Edge Functions: poll-weather v3, evaluate-alerts v5, register-push-token v1
+---
 
 ## Project Overview
 
-- **Name:** PingWeather (rebrand from original "WeatherWatch" — do NOT reintroduce the old name anywhere user-facing)
-- **Entity:** Truth Centered Tech, Virginia, US (legal@truthcenteredtech.com, privacy@truthcenteredtech.com)
-- **Stack:** Expo SDK 54 + React Native 0.81 + TypeScript strict + Zustand v5 + Expo Router v6 + Supabase
-- **Target:** Android primary, iOS secondary (untested)
-- **Supabase project id:** `ziyxkgbrdliwvztotxli` (already linked via `supabase/config.toml`)
-- **Developer account (special privileges):** `jimmy@truthcenteredtech.com` — only this email sees the dev tier override in Settings
+- **Name:** PingWeather (rebrand from "WeatherWatch" — DO NOT reintroduce old name)
+- **Entity:** Truth Centered Tech, Virginia, US
+- **Stack:** Expo SDK 54 + React Native + TypeScript strict + Zustand v5 + Expo Router v6 + Supabase
+- **Supabase project:** `ziyxkgbrdliwvztotxli`
+- **Developer account:** `jimmy@truthcenteredtech.com` — dev tier override in Settings
+
+---
 
 ## Architecture Learnings
 
+### Open-Meteo dual-endpoint pattern
+Server (`poll-weather`): reads `OPEN_METEO_API_KEY` Supabase secret → commercial endpoint.
+Client (`weatherApi.ts`): reads `EXPO_PUBLIC_OPEN_METEO_API_KEY` EAS env var → commercial endpoint.
+Both fall back to free URL when key absent (dev/test). The EAS env var must be set separately from the Supabase secret — they are different systems.
+
 ### Geocoding Service Structure
-**Discovered:** 2026-04-08
-Pure, testable service wrapping Open-Meteo Geocoding API. No deps, uses native `fetch`, handles optional fields, validates query length client-side (2+ chars) to avoid API spam.
+Pure, testable service wrapping Open-Meteo Geocoding API.
 - `src/services/geocoding.ts` — formatLocationLabel, searchPlaces
-- `__tests__/services/geocoding.test.ts` — 25 unit tests with mocked fetch
+- `__tests__/services/geocoding.test.ts` — 25 unit tests
 
 ### Store Return Contract
-**Discovered:** 2026-04-08 (after Save silent-failure bug)
-`locationsStore.addLocation` and `updateLocation` return `Promise<boolean>`, not `Promise<void>`. UI consumers MUST check the return to decide whether to reset forms. All catch blocks log via `console.error('[storeName] <action> error:', err)` and surface the real `err.message` to state — no generic fallback strings.
+`locationsStore.addLocation` and `updateLocation` return `Promise<boolean>`. UI consumers MUST check the return. All catch blocks log via `console.error('[storeName] <action> error:', err)`.
 
 ### Jest dual-project config
-**Discovered:** 2026-04-08
-Single jest-expo preset cannot handle both logic and component tests due to expo `winter/runtime.native.ts` lazy polyfills hitting Jest's sandbox. Split into two projects:
-- `logic` — testEnvironment `node`, babel-jest with preset-env + preset-typescript. Tests stores, services, helpers, engine.
-- `components` — testEnvironment `jsdom`, babel-jest with preset-env + preset-typescript + preset-react. Tests screen renders via `@testing-library/react-native`.
-- **jest-expo preset is NOT used anywhere** because it triggers the winter runtime bug. Dropped intentionally.
-- Global mocks in `jest.setup.ts` cover AsyncStorage, Supabase singleton, expo modules, expo-router.
-- Local `__mocks__/` stubs include `react-native.js` with just the primitives used in tests.
+- `logic` — node env, covers stores/services/helpers/engine/data/flows
+- `components` — jsdom env, text-presence only, FLAGGED AS FRAUDULENT VERIFICATION
+- jest-expo preset NOT used (triggers winter runtime bug)
 
-### Tests can be fraudulent
-**Discovered:** 2026-04-08 (Jimmy called this out multiple times)
-jsdom tests with `getByText` only verify text presence — they do NOT verify real behavior. A test that fails only when text is missing will PASS when `onPress={() => {}}` is a no-op, when a tab has the wrong label, when a route is unmatched, or when a scroll gesture is blocked by a Pressable wrapper. **Do not claim "works/done/fixed" based on jsdom tests.** State verification method explicitly per the ruthless-mentor contract. Maestro is the right tool for RN UI verification; until it's set up, Jimmy verifies on device.
+### Fraudulent component tests
+jsdom tests verify text presence only. Never cite as proof a UI works. Device or Maestro is required.
+
+### bash-gate.yaml
+- `version_incremented` rule replaced with `warn` — `autoIncrement: true` in eas.json handles version bumping
+- `field_nonempty` checks `revenueCatAndroidApiKey` (was `revenueCatApiKey` before platform-aware refactor)
+
+---
 
 ## Known Bugs & Workarounds
 
-### Dev tier override gate
-**Status:** fixed
-**What:** Only `jimmy@truthcenteredtech.com` sees the Developer Options section in Settings. Check lives in `src/utils/devAccount.ts` → `isDevAccount(email)` (case-insensitive, whitespace-trimmed). Unit tested.
+### Day-detail hourly screen — TZ gotcha
+`getHourlyForDay` uses `.startsWith(isoDate)` NOT `new Date()` — parsing YYYY-MM-DD gives UTC midnight, drifts to previous day west of UTC. DO NOT refactor to use Date() constructor.
 
-### app.json stripped for Expo Go
-**Status:** restored 2026-04-08 in prep for first EAS build
-**What:** During Expo Go crash troubleshooting, native config was stripped. All of it has been put back:
-- `expo-notifications` plugin (icon + color + defaultChannel)
-- `expo-location` plugin (iOS + Android permission strings, background location OFF)
-- Android `permissions` array (ACCESS_FINE/COARSE/BACKGROUND_LOCATION, RECEIVE_BOOT_COMPLETED, VIBRATE, POST_NOTIFICATIONS, WAKE_LOCK)
-- `googleServicesFile: "./google-services.json"` reference (file itself still needs to be dropped in by Jimmy from Firebase console)
-- `newArchEnabled: true`
-- `android.edgeToEdgeEnabled: true`
-- `android.package: com.truthcenteredtech.pingweather` + matching iOS `bundleIdentifier`
-- `extra.eas.projectId: ""` — empty string placeholder, `eas init` will populate
-**Not yet verified on device.** The restoration will be verified by: successful `eas build --platform android --profile development` + APK install + push notification round-trip.
+### supabase-js UPDATE + ORDER/LIMIT silently no-ops
+`.update(...).eq(...).order(...).limit(...)` — order/limit ignored on UPDATE. Always update by PK. (BUG-007)
 
-### assets/notification-icon.png placeholder
-**Status:** placeholder created 2026-04-08 (96x96 RGBA, white circle on transparent bg, 851 bytes, generated via PowerShell System.Drawing)
-**What:** Good enough to unblock `eas build`. Replace with a proper monochrome brand icon before production.
+### Rate-limit cycle feature — REVERTED
+DO NOT re-attempt without concrete UX research. See full post-mortem in prior session notes.
 
-### FCM V1 push notification delivery
-**Status:** direct-push verified end-to-end on device 2026-04-08 (Jimmy saw a push land on his Android device via Supabase pg_net → Expo push API → FCM V1 → Android)
-**What:** The full FCM V1 credential chain is configured. Firebase project `pingweather-e6822` has a service account JSON uploaded to EAS and assigned to package `com.truthcenteredtech.pingweather`. Expo's push service accepted the token and the device received the notification.
+### FCM V1 setup gotchas
+- Google Workspace orgs block service account key creation by default — must disable org policy temporarily
+- EAS credentials: Android → development → Google Service Account → Manage Push Notifications (FCM V1) — NOT the top-level "Upload" which is for Play Store submissions
+- Delete local JSON immediately after EAS upload
 
-**CRITICAL GOTCHAS from the setup journey (save the next team a day):**
-- Expo's push service (`https://exp.host/--/api/v2/push/send`) needs **FCM V1 service account JSON** uploaded via `eas credentials`. Without it, every push returns `{"data":{"status":"error","details":{"error":"InvalidCredentials"},"message":"Unable to retrieve the FCM server key..."}}`.
-- Google Workspace orgs (including `truthcenteredtech.com`) enable `iam.disableServiceAccountKeyCreation` by default. This blocks the Firebase console's "Generate new private key" button with `Key creation is not allowed on this service account` error.
-- Fix: at the **organization** level (not project), grant yourself `roles/orgpolicy.policyAdmin`. Then go to the project's org policies page (`console.cloud.google.com/iam-admin/orgpolicies/list?project=pingweather-e6822`), find the **Active Legacy** `iam.disableServiceAccountKeyCreation` constraint, Manage policy → Override parent's policy → Enforcement Off → Save. Then generate the key. THEN IMMEDIATELY flip the policy back to Inherit parent's policy — the exception should be open for minutes, not days.
-- The key you generate is the `firebase-adminsdk` service account JSON from `console.firebase.google.com/project/pingweather-e6822/settings/serviceaccounts/adminsdk`. It's labeled "Admin SDK" but it's also the one Expo wants for FCM V1.
-- In `eas credentials` interactive menu: Android → development → **Google Service Account** → **Manage your Google Service Account Key for Push Notifications (FCM V1)** → **Set up a Google Service Account Key** → paste full Windows path. Do NOT confuse this with the top-level "Upload a Google Service Account Key" which is for Play Store submissions, a different service account.
-- Delete the local JSON from Downloads immediately after upload — EAS stores it encrypted server-side, local copy is a credential leak risk.
-- NO APK rebuild required. The FCM V1 credentials are a server-side Expo config, the APK on the phone didn't change.
-
-### Day-detail hourly screen + forecasts navigation (2026-04-08)
-**Status:** code written + deployed as JS-only 2026-04-08 (no rebuild needed; the subagent that wrote it flagged horizontal scroll + Today/Tomorrow label timing as device-verification items). Runtime NOT yet verified by Jimmy.
-
-**Architecture:** tap a day row in the Forecasts tab 14-day list → navigate to `app/day-detail.tsx` with `{ locationId, date, locationName }` params. Screen re-fetches via `fetchForecast` and filters hourly arrays via `src/services/hourlyForDay.ts`. Weather icon emoji via `src/services/weatherIcon.ts` (WMO code → emoji with `❓` default).
-
-**CRITICAL TZ GOTCHA — do not "fix" this:**
-- Open-Meteo returns local time strings like `2026-04-09T14:00` with NO timezone suffix when `timezone=auto` is set.
-- `getHourlyForDay` uses `.startsWith(isoDate)` string matching — NOT `new Date(isoDate)` parsing. Parsing `"2026-04-09"` gives UTC midnight which drifts to the previous day for any user west of UTC.
-- `formatDayLabel` in `app/day-detail.tsx` parses from YYYY-MM-DD components the same way for the same reason — don't refactor either one to use Date() constructor.
-
-**weatherApi changes:** `weather_code: number[]` added to both `HourlyForecast` and `DailyForecast` types and to both arrays in the Open-Meteo request params. The existing `weatherApi.test.ts` mock response doesn't include `weather_code`; tsc passes because the response is cast through `unknown`. If someone later tightens the mock, add empty arrays for both.
-
-### Rate-limit cycle feature — REVERTED 2026-04-09
-**Status:** fully removed. DO NOT re-attempt without concrete UX research.
-
-Attempted 2026-04-08: a `max_notifications` per-cooldown-cycle cap with `notifications_sent_count` counter, pure function in `src/engine/notificationCycle.ts` + Deno mirror in `evaluate-alerts`, stepper UI in create-rule, display in alerts tab. Migrations 00005 added the columns, 00006 dropped them.
-
-**Why it was reverted:** device testing revealed the semantic was the opposite of what Jimmy wanted. Jimmy's goal was "control how spammy it gets" — reduce the 84 notifications/14d that a 1h polling + 4h cooldown rule would produce. My implementation (cap per cooldown cycle) made setting `max_notifications > 0` fire MORE often than the default unlimited mode (which already does "one fire per cooldown window"). Neither of us could land a clean natural-language semantic that mapped cleanly to a tiny stepper UI. Jimmy's verdict: "an end user has no hope."
-
-**Lessons for any future retry:**
-1. "Cap per cooldown cycle" and "cap per matching event" and "total cap with cooldown spacing" are THREE different semantics and they produce wildly different notification counts over time. Nail the semantic with a concrete 14-day example BEFORE writing any code.
-2. The existing cooldown semantic is already "1 per cooldown window". Layering a numeric cap on top of this without renaming cooldown just creates a confusing second rate limit.
-3. If re-attempted: probably simpler to add a `max_total_notifications` with a "Reset notifications" button rather than trying to auto-reset on a cycle boundary. Or just remove the cooldown entirely and use polling_interval as the rate limit — fewer dials for the user.
-4. Don't test the cap via back-to-back SQL triggers — polling_interval filters them out before the cap even runs. Clear `last_polled_at` between each trigger OR set polling_interval to a very short value to exercise the cap semantic.
-
-### poll-weather + evaluate-alerts bugs fixed 2026-04-08
-**Status:** code deployed to Supabase 2026-04-08 (evaluate-alerts + poll-weather via `npx supabase functions deploy`, migration 00004 applied via `db push`). Runtime NOT yet verified by Jimmy on device; next test is clear cooldown + manual poll-weather trigger + confirm phone buzzes AND new alert_history row has notification_sent=true AND alert_rules.last_polled_at is populated.
-
-**Bug A — wrong "last poll" timestamp:** poll-weather used to filter dueRules by `rule.updated_at`, which changes on both user edits and last_triggered_at updates. Added `last_polled_at timestamptz` column to `alert_rules` via `00004_add_last_polled_at_to_alert_rules.sql`, plus a partial index on active rules. poll-weather now stamps it unconditionally via `.update({ last_polled_at }).in("id", ...)` after each grid's rules are evaluated. The dueRules filter reads `last_polled_at` directly.
-
-**Bug B — alert_history update chain:** poll-weather used `.from("alert_history").update(...).eq(user_id).eq(rule_id).order("triggered_at", desc).limit(1)`. `.order()` and `.limit()` are silently ignored on UPDATE in supabase-js, so the update would have stamped `notification_sent=true` on every alert_history row for the user+rule, not just the most recent. Fix: evaluate-alerts now inserts with `.select("id").single()`, captures the inserted id in a `historyIdByRule` Map, and includes it in the `alerts` array as `alert_history_id`. poll-weather updates by that PK: `.update({ notification_sent: true }).eq("id", alert.alert_history_id)`.
-
-### pg_cron scheduled polling
-**Status:** applied and verified end-to-end 2026-04-08 (manual trigger via `net.http_post` returned status 200 against the live `poll-weather` Edge Function)
-**What:** Hourly cron job `poll-weather-hourly` with schedule `0 * * * *`, active=true, registered via `supabase/migrations/00003_schedule_poll_weather.sql`. Uses `pg_net` + Supabase vault. Vault secrets live as:
-- `poll_weather_function_url` — length 66, value `https://ziyxkgbrdliwvztotxli.supabase.co/functions/v1/poll-weather`
-- `poll_weather_service_role_key` — length 219, the project's service_role JWT
-**Gotchas we hit during setup (noted for next time):**
-- `supabase_vault` is NOT a standard Postgres extension — it's built-in. Only `pg_cron` and `pg_net` need enabling on the Extensions page. Access the vault via the left sidebar "Vault (BETA)" entry.
-- Service role key is found under Project Settings → API Keys (or /settings/api-keys), not in the integrations pages. Supabase has shuffled this URL around.
-- Copy-paste via the Vault UI can introduce a stray trailing char (we had a `len=67` URL that should have been 66). `pg_net` rejects with "URL using bad/illegal format" and gives no hint it's a whitespace issue. Always check `length(decrypted_secret)` matches expected.
-**Still-pending verification:**
-- That the Edge Function actually did useful work (grid fetch, rule eval, notification dispatch) — need to read function logs, which only the 200 response proves the function was reached.
-- That pg_cron fires on schedule — will be visible in `cron.job_run_details` after the top of the next hour.
-- End-to-end notification delivery to a real device (create rule with matching conditions → wait for next cron → verify phone gets push).
-Hourly is the finest granularity any tier uses (Premium min = 1hr); the Edge Function decides per-rule whether each rule is due.
-
-### Address search on locations no longer cosmetic
-**Status:** fixed 2026-04-08
-**What:** BUG-001. Was previously a dead TextInput. Now uses real `<LocationSearchInput>` component backed by `searchPlaces` from the geocoding service. Debounced 300ms, race-guard via `lastSelectedLabelRef`, keeps selected label visible after tap-to-select, suppresses follow-up search via ref check in debounce effect.
-
-### Premium → Free downgrade path in Settings
-**Status:** verified on device 2026-04-08 (Jimmy, EAS build 76d143c2)
-**What:** BUG-002 — Settings "Upgrade" CTA was hidden when `currentTier === 'premium'`, leaving Premium users with no way to reach `/upgrade` and downgrade. Fixed by always rendering the CTA and relabeling as "Manage Plan →" when on Premium. Confirmed working on device.
-
-### Password reset deep link flow
-**Status:** verified end-to-end on device 2026-04-08 (Jimmy)
-**What:** Full flow works: `/forgot-password` → Supabase PKCE email → tap link → Android intent → `pingweather://reset-password?code=<pkce_code>` → `app/reset-password.tsx` reads `code` via `useLocalSearchParams()` → `supabase.auth.exchangeCodeForSession(code)` → new-password form → `supabase.auth.updateUser({ password })` → sign out → `/login` → sign in with new password.
-
-**CRITICAL ARCHITECTURE NOTE — why PKCE, not implicit flow:**
-- Supabase's default implicit flow delivers recovery tokens as a URL **hash fragment** (`#access_token=...&refresh_token=...&type=recovery`).
-- Hash fragments are a **browser** concept. On mobile, Expo Router's deep-link routing **consumes and strips the fragment** before any screen can read it. Both `Linking.useURL()` and `Linking.getInitialURL()` return null on the screen even though the link successfully opened the app.
-- Diagnosed on-device 2026-04-08 via a debug display that showed both URL sources as `<null>`.
-- Fix: enable `flowType: 'pkce'` in `src/utils/supabase.ts` → Supabase switches to delivering the recovery token as `?code=<pkce_code>` query string → Expo Router parses it → `useLocalSearchParams()` returns it → `supabase.auth.exchangeCodeForSession(code)` activates the recovery session.
-- PKCE does NOT affect `signInWithPassword` (no redirect involved).
-- `src/services/parseRecoveryUrl.ts` and its 11 unit tests are dead code on this path but kept as utility for potential future implicit-flow fallback. Safe to delete later if never needed.
-
-**Required native/config setup (done):**
-- `app.json` has `"scheme": "pingweather"` — native, required rebuild (done 2026-04-08).
-- Supabase dashboard Site URL = `pingweather://reset-password`, allow list includes `pingweather://reset-password`, `pingweather://*`, and `exp://` variants for Expo Go. See `docs/JIMMY_HANDOFF.md` §1.
-- Auth gate in `app/_layout.tsx` exempts `/reset-password` from both unauthenticated-redirect and authenticated-out-of-auth-group branches; `exchangeCodeForSession` flips session to truthy mid-flow and the gate would otherwise kick the user off the screen.
-- `forgotPassword` in `authStore.ts` passes `redirectTo: Linking.createURL('/reset-password')` which resolves to `pingweather://reset-password` in builds and `exp://HOST:8081/--/reset-password` in Expo Go.
-
-### Expo Go cannot test push notifications
-**Status:** by-design
-**What:** expo-notifications was removed from Expo Go in SDK 53+. Any push notification work requires an EAS development build. Lazy-load the notifications module via `usePushNotifications.ts` (already done) so the app doesn't crash in Expo Go when the feature is unused.
-
-### Dead fraudulent component tests
-**Status:** 8 failing shallow tests purged 2026-04-08 per the "delete, don't massage" rule (4 in forecasts.test.tsx, 1 each in settings/home/alerts/locations). Initial jest run showed 7 failures, stable count was 8 — the first run hit a stale cache. Remaining 85 passing component tests are still jsdom text-presence and still MUST NOT be treated as behavior verification. `forecasts.test.tsx` has 2 more shallow probes ("shows a card for each location", "provides a way to view alert history") flagged by the subagent as genre-matching candidates for a future wider sweep but currently passing so left alone. Device or Maestro tests are the real verification. When any future test breaks, delete it rather than fixing the assertion.
+---
 
 ## Environment & Tooling Notes
 
-### SDK version pins
-All `expo-*` packages must match Expo SDK 54 (NOT 55). Several packages default to latest (SDK 55) on `npm install` and must be pinned:
-```
-expo-router ~6.0.23
-expo-notifications ~0.32.16
-expo-location ~19.0.8
-expo-constants ~18.0.13
-expo-linking ~8.0.11
-expo-secure-store ~15.0.8
-jest-expo ~54.0.0    (still in devDeps but NOT used by jest config)
-react-native-reanimated ~4.1.1
-react-native-gesture-handler ~2.28.0
-react-native-safe-area-context ~5.6.0
-react-native-screens ~4.16.0
-@react-native-async-storage/async-storage 2.2.0
-```
-
-### Windows terminal
-Jimmy uses Windows with Git Bash and PowerShell/CMD. `~` shortcut only works in Git Bash. PowerShell/CMD need `C:\Users\jimmy\Code\WeatherWatch\`.
-
-### Expo Go lazy loading
-`expo-notifications` is imported lazily in `src/hooks/usePushNotifications.ts` via `require` inside the hook (not top-level) so Expo Go doesn't crash when the hook is referenced but not invoked.
+### SDK version pins (Expo SDK 54)
+expo-router ~6.0.23, expo-notifications ~0.32.16, expo-location ~19.0.8,
+expo-constants ~18.0.13, expo-linking ~8.0.11, expo-secure-store ~15.0.8
 
 ### Supabase migration workflow
-`npx supabase db push` is linked and authenticated. Migrations live in `supabase/migrations/`:
-- `00001_initial_schema.sql` — base tables (profiles, locations, alert_rules, alert_history) + RLS
-- `00002_add_location_default_and_timezone.sql` — adds `is_default boolean` and `timezone text` to locations + partial unique index for one default per user
+`npx supabase db push` — linked and authenticated. Migrations 00001–00011 applied.
 
-### Supabase auth email confirmation
-Turned OFF in the Supabase project dashboard (Sign In / Providers → Email → Confirm email = off). If a new Supabase project is created, this must be turned off again or signup won't work without email verification.
+### EAS build discipline
+`autoIncrement: true` in preview + production profiles handles versionCode. Never manually bump unless removing autoIncrement.
+
+---
 
 ## Deployment Notes
 
-### EAS build — not yet attempted
-When picking this up: see docs/KNOWN_ISSUES.md INFRA-003 for the full checklist. Short version:
-1. Create Firebase project "PingWeather" → add Android app with package `com.truthcenteredtech.pingweather` → download `google-services.json` to project root (gitignored). NOTE: package rebranded from `...weatherwatch` on 2026-04-08, before any build was ever cut, so there is no legacy install base to worry about.
-2. Restore stripped `app.json` native config (see "app.json stripped for Expo Go" above)
-3. Add placeholder `assets/notification-icon.png`
-4. `eas init` to populate `extra.eas.projectId` in app.json
-5. `eas build --platform android --profile development`
-6. Install APK on device
-7. Run `npx expo start --dev-client` to iterate without rebuilding
-Expo push service (`https://exp.host/--/api/v2/push/send`) is used by the poll-weather Edge Function — works with EAS builds, no direct FCM setup needed for MVP.
-
-### Build quota discipline
-Jimmy has blown through EAS build quota before. Rule: ONE good dev build, then iterate JS over `--dev-client`. Only rebuild when changing native modules, plugin config, permissions, or Expo SDK. Plan for ~3-5 total rebuilds over MVP, not 30.
+### Deploy order (always)
+1. `npx supabase functions deploy <name>` — deploy functions first
+2. `npx supabase db push` — apply migrations (pg_cron schedules reference deployed functions)
+3. `eas build --platform android --profile preview` — build only after backend is live
