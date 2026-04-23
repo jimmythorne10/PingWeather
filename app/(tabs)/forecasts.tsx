@@ -6,6 +6,7 @@ import { useLocationsStore } from '../../src/stores/locationsStore';
 import { useAlertRulesStore } from '../../src/stores/alertRulesStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { fetchForecast } from '../../src/services/weatherApi';
+import { weatherCodeToEmoji, degreesToCardinal } from '../../src/services/weatherIcon';
 import type { ThemeTokens } from '../../src/theme';
 import type { HourlyForecast, DailyForecast, AlertRule } from '../../src/types';
 
@@ -216,6 +217,13 @@ export default function ForecastsScreen() {
 
                     {/* Daily list */}
                     <Text style={styles.sectionLabel}>14-day Outlook</Text>
+                    <View style={styles.dailyHeader}>
+                      <View style={styles.dailyIconCol} />
+                      <Text style={styles.dailyHeaderCell}>Day</Text>
+                      <Text style={styles.dailyHeaderTemps}>High / Low</Text>
+                      <Text style={styles.dailyHeaderRight}>Rain</Text>
+                      <Text style={styles.dailyHeaderRight}>Wind</Text>
+                    </View>
                     {forecast.daily.time.map((date, i) => (
                       <Pressable
                         key={date}
@@ -227,6 +235,9 @@ export default function ForecastsScreen() {
                           })
                         }
                       >
+                        <Text style={styles.dailyIcon}>
+                          {weatherCodeToEmoji(forecast.daily.weather_code[i])}
+                        </Text>
                         <Text style={styles.dailyDate}>{formatDayLabel(date, i)}</Text>
                         <Text style={styles.dailyTemps}>
                           {Math.round(forecast.daily.temperature_2m_max[i])}{unitSymbol} /{' '}
@@ -238,6 +249,7 @@ export default function ForecastsScreen() {
                           {forecast.daily.precipitation_probability_max[i]}%
                         </Text>
                         <Text style={styles.dailyWind}>
+                          {degreesToCardinal(forecast.daily.wind_direction_10m_dominant[i])}{' '}
                           {Math.round(forecast.daily.wind_speed_10m_max[i])} {windSpeedUnit}
                         </Text>
                       </Pressable>
@@ -386,6 +398,18 @@ const createStyles = (t: ThemeTokens) => ({
   hourlyTemp: { fontSize: 16, fontWeight: '600' as const, color: t.textPrimary },
   hourlyRain: { fontSize: 10, color: t.rainBlue, marginTop: 2 },
 
+  dailyHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: t.divider,
+    marginBottom: 2,
+  },
+  dailyIconCol: { width: 26 as const },
+  dailyHeaderCell: { fontSize: 11, color: t.textTertiary, flex: 1.5 as const, fontWeight: '500' as const },
+  dailyHeaderTemps: { fontSize: 11, color: t.textTertiary, flex: 2 as const, fontWeight: '500' as const },
+  dailyHeaderRight: { fontSize: 11, color: t.textTertiary, flex: 1.2 as const, textAlign: 'right' as const, fontWeight: '500' as const },
   dailyRow: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
@@ -393,11 +417,12 @@ const createStyles = (t: ThemeTokens) => ({
     borderBottomWidth: 1,
     borderBottomColor: t.divider,
   },
-  dailyDate: { fontSize: 13, color: t.textPrimary, flex: 2 as const },
+  dailyIcon: { fontSize: 16, width: 26 as const },
+  dailyDate: { fontSize: 13, color: t.textPrimary, flex: 1.5 as const },
   dailyTemps: { fontSize: 14, color: t.textPrimary, flex: 2 as const, fontWeight: '600' as const },
   dailyLow: { color: t.textTertiary, fontWeight: '400' as const },
-  dailyRain: { fontSize: 12, color: t.rainBlue, flex: 1 as const, textAlign: 'right' as const },
-  dailyWind: { fontSize: 12, color: t.textTertiary, flex: 1 as const, textAlign: 'right' as const },
+  dailyRain: { fontSize: 12, color: t.rainBlue, flex: 1.2 as const, textAlign: 'right' as const },
+  dailyWind: { fontSize: 11, color: t.textTertiary, flex: 1.2 as const, textAlign: 'right' as const },
 
   ruleStatusRow: {
     flexDirection: 'row' as const,

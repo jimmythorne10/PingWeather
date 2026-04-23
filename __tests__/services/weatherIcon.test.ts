@@ -3,7 +3,7 @@
  * Covers every branch of the WMO weather code mapping.
  */
 
-import { weatherCodeToEmoji } from '../../src/services/weatherIcon';
+import { weatherCodeToEmoji, degreesToCardinal } from '../../src/services/weatherIcon';
 
 describe('weatherCodeToEmoji', () => {
   it('returns clear sky sun for code 0', () => {
@@ -77,4 +77,20 @@ describe('weatherCodeToEmoji', () => {
   it('treats NaN as unknown', () => {
     expect(weatherCodeToEmoji(Number.NaN)).toBe('❓');
   });
+});
+
+describe('degreesToCardinal', () => {
+  it('maps 0 to N', () => expect(degreesToCardinal(0)).toBe('N'));
+  it('maps 360 to N', () => expect(degreesToCardinal(360)).toBe('N'));
+  it('maps 45 to NE', () => expect(degreesToCardinal(45)).toBe('NE'));
+  it('maps 90 to E', () => expect(degreesToCardinal(90)).toBe('E'));
+  it('maps 135 to SE', () => expect(degreesToCardinal(135)).toBe('SE'));
+  it('maps 180 to S', () => expect(degreesToCardinal(180)).toBe('S'));
+  it('maps 225 to SW', () => expect(degreesToCardinal(225)).toBe('SW'));
+  it('maps 270 to W', () => expect(degreesToCardinal(270)).toBe('W'));
+  it('maps 315 to NW', () => expect(degreesToCardinal(315)).toBe('NW'));
+  it('rounds 22° to N (boundary)', () => expect(degreesToCardinal(22)).toBe('N'));
+  it('rounds 23° to NE (boundary)', () => expect(degreesToCardinal(23)).toBe('NE'));
+  it('rounds 337° to NW', () => expect(degreesToCardinal(337)).toBe('NW'));
+  it('rounds 338° back to N (wraps)', () => expect(degreesToCardinal(338)).toBe('N'));
 });
