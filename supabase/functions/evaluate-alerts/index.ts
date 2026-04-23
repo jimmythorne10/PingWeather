@@ -5,7 +5,7 @@
 // Evaluates all active alert rules for a given location against forecast data.
 // Returns which rules triggered and the human-readable summary.
 //
-// This is the core IP of WeatherWatch.
+// This is the core IP of PingWeather.
 // ────────────────────────────────────────────────────────────
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";

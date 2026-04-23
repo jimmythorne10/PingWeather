@@ -51,6 +51,13 @@ export interface Profile {
   eula_accepted_version: string | null;
   eula_accepted_at: string | null;
   push_token: string | null;
+  digest_enabled: boolean;
+  digest_frequency: 'daily' | 'weekly';
+  digest_hour: number;
+  digest_day_of_week: number;
+  digest_location_id: string | null;
+  digest_last_sent_at: string | null;
+  temperature_unit: 'fahrenheit' | 'celsius';
   created_at: string;
   updated_at: string;
 }

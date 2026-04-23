@@ -5,6 +5,7 @@ import { useStyles, useTokens } from '../../src/theme';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useThemeStore } from '../../src/stores/themeStore';
+import { useLocationsStore } from '../../src/stores/locationsStore';
 import { usePushNotifications } from '../../src/hooks/usePushNotifications';
 import { isDevAccount } from '../../src/utils/devAccount';
 import { supabase } from '../../src/utils/supabase';
@@ -14,6 +15,15 @@ import type { ThemeName } from '../../src/theme/tokens';
 import type { SubscriptionTier } from '../../src/types';
 
 const APP_VERSION = '1.0.0';
+
+const DAY_LABELS = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+function formatHour(h: number): string {
+  if (h === 0) return '12:00 AM';
+  if (h < 12) return `${h}:00 AM`;
+  if (h === 12) return '12:00 PM';
+  return `${h - 12}:00 PM`;
+}
 
 export default function SettingsScreen() {
   const styles = useStyles(createStyles);
@@ -26,10 +36,50 @@ export default function SettingsScreen() {
   const { themeName, setTheme } = useThemeStore();
   const { registerForPushNotifications, error: pushError } = usePushNotifications();
 
+  const locations = useLocationsStore((s) => s.locations);
+
   const [tierSwitching, setTierSwitching] = useState<SubscriptionTier | null>(null);
   const [pushRegistering, setPushRegistering] = useState(false);
   const [pushResult, setPushResult] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [digestSaving, setDigestSaving] = useState(false);
+
+  const digestEnabled = profile?.digest_enabled ?? false;
+  const digestFrequency = profile?.digest_frequency ?? 'daily';
+  const digestHour = profile?.digest_hour ?? 7;
+  const digestDayOfWeek = profile?.digest_day_of_week ?? 1;
+  const digestLocationId = profile?.digest_location_id ?? null;
+
+  const handleDigestUpdate = async (updates: Partial<{
+    digest_enabled: boolean;
+    digest_frequency: 'daily' | 'weekly';
+    digest_hour: number;
+    digest_day_of_week: number;
+    digest_location_id: string | null;
+  }>) => {
+    if (updates.digest_enabled === false) {
+      Alert.alert(
+        'Turn Off Digest?',
+        'Without a regular forecast digest, Android may put this app into deep sleep and delay or skip your weather alerts. Are you sure?',
+        [
+          { text: 'Keep It On', style: 'cancel' },
+          {
+            text: 'Turn Off',
+            style: 'destructive',
+            onPress: async () => {
+              setDigestSaving(true);
+              await updateProfile(updates);
+              setDigestSaving(false);
+            },
+          },
+        ]
+      );
+      return;
+    }
+    setDigestSaving(true);
+    await updateProfile(updates);
+    setDigestSaving(false);
+  };
 
   const handleRegisterPush = async () => {
     setPushResult(null);
@@ -212,13 +262,13 @@ export default function SettingsScreen() {
           <View style={styles.toggleRow}>
             <Pressable
               style={[styles.toggleButton, settings.temperatureUnit === 'fahrenheit' && styles.toggleActive]}
-              onPress={() => settings.setTemperatureUnit('fahrenheit')}
+              onPress={() => { settings.setTemperatureUnit('fahrenheit'); void updateProfile({ temperature_unit: 'fahrenheit' }); }}
             >
               <Text style={[styles.toggleText, settings.temperatureUnit === 'fahrenheit' && styles.toggleTextActive]}>°F</Text>
             </Pressable>
             <Pressable
               style={[styles.toggleButton, settings.temperatureUnit === 'celsius' && styles.toggleActive]}
-              onPress={() => settings.setTemperatureUnit('celsius')}
+              onPress={() => { settings.setTemperatureUnit('celsius'); void updateProfile({ temperature_unit: 'celsius' }); }}
             >
               <Text style={[styles.toggleText, settings.temperatureUnit === 'celsius' && styles.toggleTextActive]}>°C</Text>
             </Pressable>
@@ -265,6 +315,119 @@ export default function SettingsScreen() {
             thumbColor={settings.notificationsEnabled ? tokens.primary : tokens.textTertiary}
           />
         </View>
+      </View>
+
+      {/* Forecast Digest */}
+      <Text style={styles.sectionTitle}>{'FORECAST DIGEST'}</Text>
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <Text style={styles.label}>Daily or weekly forecast summary</Text>
+            <Text style={[styles.devHint, { marginTop: 2, marginBottom: 0 }]}>
+              Keeps alerts working reliably on Android and gives you a weather heads-up even on quiet days.
+            </Text>
+          </View>
+          <Switch
+            value={digestEnabled}
+            onValueChange={(val) => handleDigestUpdate({ digest_enabled: val })}
+            disabled={digestSaving}
+            trackColor={{ false: tokens.border, true: tokens.primaryLight }}
+            thumbColor={digestEnabled ? tokens.primary : tokens.textTertiary}
+          />
+        </View>
+
+        {digestEnabled && (
+          <>
+            {/* Frequency */}
+            <View style={[styles.row, { marginTop: 12 }]}>
+              <Text style={styles.label}>Frequency</Text>
+              <View style={styles.toggleRow}>
+                {(['daily', 'weekly'] as const).map((f) => (
+                  <Pressable
+                    key={f}
+                    style={[styles.toggleButton, digestFrequency === f && styles.toggleActive]}
+                    onPress={() => handleDigestUpdate({ digest_frequency: f })}
+                    disabled={digestSaving}
+                  >
+                    <Text style={[styles.toggleText, digestFrequency === f && styles.toggleTextActive]}>
+                      {f.charAt(0).toUpperCase() + f.slice(1)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Day of week (weekly only) */}
+            {digestFrequency === 'weekly' && (
+              <View style={[styles.row, { marginTop: 8, flexWrap: 'wrap' as const, gap: 4 }]}>
+                <Text style={[styles.label, { width: '100%' as unknown as number, marginBottom: 6 }]}>Day</Text>
+                {DAY_LABELS.slice(1).map((label, i) => {
+                  const day = i + 1;
+                  return (
+                    <Pressable
+                      key={day}
+                      style={[styles.toggleButton, digestDayOfWeek === day && styles.toggleActive]}
+                      onPress={() => handleDigestUpdate({ digest_day_of_week: day })}
+                      disabled={digestSaving}
+                    >
+                      <Text style={[styles.toggleText, digestDayOfWeek === day && styles.toggleTextActive]}>
+                        {label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Hour picker */}
+            <View style={[styles.row, { marginTop: 8 }]}>
+              <Text style={styles.label}>Send at</Text>
+              <View style={{ flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12 }}>
+                <Pressable
+                  onPress={() => handleDigestUpdate({ digest_hour: (digestHour + 23) % 24 })}
+                  disabled={digestSaving}
+                  style={styles.hourButton}
+                >
+                  <Text style={[styles.hourButtonText, { color: tokens.primary }]}>{'‹'}</Text>
+                </Pressable>
+                <Text style={[styles.label, { minWidth: 72, textAlign: 'center' as const }]}>
+                  {formatHour(digestHour)}
+                </Text>
+                <Pressable
+                  onPress={() => handleDigestUpdate({ digest_hour: (digestHour + 1) % 24 })}
+                  disabled={digestSaving}
+                  style={styles.hourButton}
+                >
+                  <Text style={[styles.hourButtonText, { color: tokens.primary }]}>{'›'}</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Location picker */}
+            <Text style={[styles.label, { marginTop: 12, marginBottom: 6 }]}>Location</Text>
+            {locations.length === 0 ? (
+              <Text style={styles.devHint}>Add a location first to enable the digest.</Text>
+            ) : (
+              locations.map((loc) => (
+                <Pressable
+                  key={loc.id}
+                  style={[styles.row, { paddingVertical: 10 }]}
+                  onPress={() => handleDigestUpdate({ digest_location_id: loc.id })}
+                  disabled={digestSaving}
+                >
+                  <Text style={styles.label}>{loc.name}</Text>
+                  <Text style={{ fontSize: 16, color: tokens.primary }}>
+                    {digestLocationId === loc.id ? '●' : '○'}
+                  </Text>
+                </Pressable>
+              ))
+            )}
+
+            {digestSaving && (
+              <ActivityIndicator size="small" color={tokens.primary} style={{ marginTop: 8 }} />
+            )}
+          </>
+        )}
       </View>
 
       {/* History */}
@@ -437,6 +600,17 @@ const createStyles = (t: ThemeTokens) => ({
     borderColor: t.error,
   },
   signOutText: { color: t.error, fontSize: 16, fontWeight: '600' as const },
+
+  // Digest hour picker
+  hourButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: t.inputBackground,
+    borderWidth: 1,
+    borderColor: t.borderLight,
+  },
+  hourButtonText: { fontSize: 20, fontWeight: '600' as const, lineHeight: 24 },
 
   // Version
   versionContainer: { marginTop: 24, alignItems: 'center' as const, paddingVertical: 8 },

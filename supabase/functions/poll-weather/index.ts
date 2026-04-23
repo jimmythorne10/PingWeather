@@ -15,7 +15,10 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
+const OPEN_METEO_API_KEY = Deno.env.get("OPEN_METEO_API_KEY") ?? "";
+const OPEN_METEO_URL = OPEN_METEO_API_KEY
+  ? "https://customer-api.open-meteo.com/v1/forecast"
+  : "https://api.open-meteo.com/v1/forecast";
 
 // ── Grid-square key ────────────────────────────────────────
 // Round to 0.1° (~11km) to cluster nearby locations
@@ -26,6 +29,7 @@ function gridKey(lat: number, lon: number): string {
 // ── Fetch forecast from Open-Meteo ─────────────────────────
 async function fetchForecast(lat: number, lon: number) {
   const params = new URLSearchParams({
+    ...(OPEN_METEO_API_KEY ? { apikey: OPEN_METEO_API_KEY } : {}),
     latitude: lat.toString(),
     longitude: lon.toString(),
     forecast_days: "7",

@@ -1,0 +1,5 @@
+# bash-gate.yaml — PingWeather pre-execution gates
+# Format: "pattern | check_type | arg1 | arg2 | message"
+rules:
+  - "eas build | version_incremented | app.json | versionCode | Play Console rejects duplicate version codes. Bump android.versionCode in app.json before building."
+  - "eas build | field_nonempty | app.json | revenueCatApiKey | expo.extra.revenueCatApiKey is empty. Build will have RevenueCat silently disabled at runtime."

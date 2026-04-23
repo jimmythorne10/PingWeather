@@ -54,6 +54,12 @@ export function usePushNotifications() {
           lightColor: '#1E3A5F',
           sound: 'default',
         });
+        await N.setNotificationChannelAsync('forecast-digest', {
+          name: 'Forecast Digest',
+          description: 'Daily or weekly forecast summaries',
+          importance: N.AndroidImportance.DEFAULT,
+          sound: 'default',
+        });
       }
 
       const { status: existingStatus } = await N.getPermissionsAsync();

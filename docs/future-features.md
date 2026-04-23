@@ -1,5 +1,43 @@
 # Future Features
 
+## Daily / Weekly Forecast Digest Notification
+**Source:** Jimmy, 2026-04-22
+**Priority:** Post-MVP (high — also solves Android deep-sleep)
+
+Send users a proactive weather summary on a schedule they choose, even when no alert has fired. Two motivations:
+
+### 1. Android App Keep-Alive
+Android aggressively kills background processes for apps that haven't had user activity. Apps with no recent notifications get deprioritized for FCM delivery — which is exactly the pipe we rely on for alert notifications. A scheduled digest keeps the FCM channel warm and signals to Android's battery optimizer that the app is actively engaged, preventing the OS from severing the connection before a real alert fires.
+
+### 2. User Value — Proactive Forecast Digest
+Users check the weather anyway. Putting a condensed 24h or 7-day outlook for their primary location into their notification shade (without opening the app) is a daily touchpoint that reinforces the app's value even on quiet days.
+
+### Feature Scope
+
+**New setup screen (`app/digest-settings.tsx` or inside Settings tab):**
+- Toggle: Enable daily / weekly digest (off by default)
+- Frequency: Daily or Weekly
+- Time of day: User picks delivery time (e.g., 7:00 AM)
+- Location: Which monitored location to use (default: primary)
+- Content preview so users know what to expect
+
+**Server-side (new Edge Function or extend `poll-weather`):**
+- New pg_cron job: `digest-notify` running at user-configured times
+- Or: store `digest_time` + `digest_frequency` on the `profiles` table and have `poll-weather` evaluate who needs a digest on each hourly run
+- Pull today's / this week's forecast summary from Open-Meteo cache (already fetched hourly — no extra API cost)
+- Format: high/low temp, precipitation chance, wind summary for the period
+- Dispatch via Expo Push (same FCM path as alert notifications)
+
+**DB changes:**
+- `profiles` table: add `digest_enabled bool`, `digest_frequency text` (daily/weekly), `digest_hour int`, `digest_location_id uuid` (FK to locations)
+- Migration needed
+
+### Implementation Notes
+- Zero extra Open-Meteo API cost — data is already cached from the polling pipeline
+- Notification should be visually distinct from alert notifications (different icon/channel on Android)
+- Free tier can have daily digest; weekly-only could be a Pro differentiator (or both free — it's a retention tool, not a revenue feature)
+- This is the lowest-cost feature with the highest retention impact — worth prioritizing over historical tracking
+
 ## Historical Weather Accuracy Tracking
 **Source:** Market research during initial standup (2026-03-31)
 **Priority:** Post-MVP

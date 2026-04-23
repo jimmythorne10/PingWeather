@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useTokens } from '../src/theme';
 import { useAuthStore } from '../src/stores/authStore';
 import { TIER_LIMITS } from '../src/types';
-import { purchasePackage as doPurchase, restorePurchases as doRestore } from '../src/services/purchases';
+import { purchasePackage as doPurchase, restorePurchases as doRestore, TIER_PACKAGE_MAP } from '../src/services/purchases';
 import type { SubscriptionTier } from '../src/types';
 
 interface TierCard {
@@ -57,16 +57,6 @@ const TIERS: TierCard[] = [
   },
 ];
 
-// Map tier → RevenueCat package identifier.
-// RevenueCat uses package identifiers like "$rc_monthly", "$rc_annual" but
-// we define custom ones in the RevenueCat dashboard that match our product IDs.
-// When RevenueCat products aren't configured yet, the purchase service returns
-// "No offerings available" and the UI falls back to the "Coming Soon" alert.
-const TIER_PACKAGE_MAP: Record<SubscriptionTier, string> = {
-  free: '', // Can't purchase free
-  pro: '$rc_monthly', // Maps to pro_monthly offering
-  premium: '$rc_monthly', // Maps to premium_monthly offering — TODO: let user choose monthly/annual
-};
 
 export default function UpgradeScreen() {
   const t = useTokens();
@@ -91,7 +81,7 @@ export default function UpgradeScreen() {
     }
 
     setPurchasing(tier);
-    const packageId = TIER_PACKAGE_MAP[tier];
+    const packageId = TIER_PACKAGE_MAP[tier as Exclude<SubscriptionTier, 'free'>];
     const result = await doPurchase(packageId);
     setPurchasing(null);
 
@@ -211,7 +201,7 @@ export default function UpgradeScreen() {
 
       <Text style={[styles.legalText, { color: t.textTertiary }]}>
         Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period.
-        Manage or cancel in your Apple ID or Google Play account settings.
+        Manage or cancel in your Google Play account settings.
       </Text>
     </ScrollView>
   );

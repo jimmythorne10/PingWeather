@@ -12,10 +12,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // ── Product → tier mapping (mirrors src/services/subscriptionLogic.ts) ──
 const PRODUCT_TIER_MAP: Record<string, string> = {
-  pro_monthly: "pro",
-  pro_annual: "pro",
-  premium_monthly: "premium",
-  premium_annual: "premium",
+  "pro_monthly": "pro",
+  "pro_monthly:monthly": "pro",
+  "pro_annual": "pro",
+  "premium_monthly": "premium",
+  "premium_monthly:monthly": "premium",
+  "premium_annual": "premium",
 };
 
 function mapProductToTier(productId: string): string | null {

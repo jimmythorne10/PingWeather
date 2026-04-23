@@ -1,4 +1,4 @@
-// Shared mock factories for WeatherWatch tests
+// Shared mock factories for PingWeather tests
 // ────────────────────────────────────────────────────────────
 
 import type {
@@ -18,6 +18,13 @@ export const mockProfile = (overrides: Partial<Profile> = {}): Profile => ({
   eula_accepted_version: '1.0.0',
   eula_accepted_at: '2026-01-01T00:00:00Z',
   push_token: null,
+  digest_enabled: false,
+  digest_frequency: 'daily',
+  digest_hour: 7,
+  digest_day_of_week: 1,
+  digest_location_id: null,
+  digest_last_sent_at: null,
+  temperature_unit: 'fahrenheit',
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
   ...overrides,
