@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.truthcenteredtech.pingweather",
-      "versionCode": 1,
+      "versionCode": 3,
       "googleServicesFile": "./google-services.json",
       "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
@@ -38,6 +38,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./plugins/withAdiRegistration",
       "expo-router",
       [
         "expo-notifications",
@@ -62,7 +63,7 @@
       "eas": {
         "projectId": "6456b66e-6e5a-4881-984f-20e2f3b477f4"
       },
-      "revenueCatApiKey": ""
+      "revenueCatAndroidApiKey": "goog_XykDmtoZwUNDfBgswNJaIkDLjNC"
     },
     "owner": "jimmy.thorne.10"
   }

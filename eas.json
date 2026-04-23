@@ -5,13 +5,19 @@
       "developmentClient": true,
       "distribution": "internal"
     },
-    "preview": { "distribution": "internal" },
-    "production": {
-      "distribution": "store",
+    "preview": {
+      "distribution": "internal",
+      "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
-      },
-      "autoIncrement": true
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   },
   "submit": { "production": {} }

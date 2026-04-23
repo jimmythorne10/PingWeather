@@ -86,7 +86,7 @@ to:
 
 ### 2b. Add Supabase secret for the webhook
 ```bash
-cd C:/Users/jimmy/Code/WeatherWatch
+cd C:/Users/jimmy/Code/PingWeather
 npx supabase secrets set REVENUECAT_WEBHOOK_SECRET=<the secret from step 1b.6>
 ```
 This makes the secret available to the `subscription-webhook` Edge Function
@@ -186,7 +186,7 @@ https://adapticon.tooo.io/.
 ## Part 4 — Production Build (30 minutes + 20 min wait)
 
 ```bash
-cd C:/Users/jimmy/Code/WeatherWatch
+cd C:/Users/jimmy/Code/PingWeather
 eas build --platform android --profile production
 ```
 

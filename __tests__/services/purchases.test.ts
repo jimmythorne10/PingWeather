@@ -6,7 +6,7 @@
  * The SDK itself is mocked in jest.setup.ts.
  */
 
-import { mapProductToTier, PRODUCT_TIER_MAP } from '../../src/services/purchases';
+import { mapProductToTier, PRODUCT_TIER_MAP, TIER_PACKAGE_MAP } from '../../src/services/purchases';
 
 describe('mapProductToTier', () => {
   it('maps pro_monthly to pro', () => {
@@ -41,5 +41,19 @@ describe('mapProductToTier', () => {
     for (const tier of Object.values(PRODUCT_TIER_MAP)) {
       expect(['pro', 'premium']).toContain(tier);
     }
+  });
+});
+
+describe('TIER_PACKAGE_MAP', () => {
+  it('pro and premium map to different package identifiers', () => {
+    expect(TIER_PACKAGE_MAP['pro']).not.toBe(TIER_PACKAGE_MAP['premium']);
+  });
+
+  it('pro package identifier is non-empty', () => {
+    expect(TIER_PACKAGE_MAP['pro']).toBeTruthy();
+  });
+
+  it('premium package identifier is non-empty', () => {
+    expect(TIER_PACKAGE_MAP['premium']).toBeTruthy();
   });
 });

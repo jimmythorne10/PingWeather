@@ -236,4 +236,4 @@ These rules emerged from real bugs this session. Treat as load-bearing:
 ## Entity: Truth Centered Tech
 - Legal contact: legal@truthcenteredtech.com
 - Privacy contact: privacy@truthcenteredtech.com
-- Governing law: Delaware, US
+- Governing law: Virginia, US

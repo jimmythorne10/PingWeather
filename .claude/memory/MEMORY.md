@@ -1,8 +1,105 @@
 # Project Memory — PingWeather
 
-> Persistent learnings maintained across Claude sessions.
+> Persistent learnings accumulated across Claude sessions.
 > Updated when non-obvious behaviors, gotchas, or platform quirks are discovered.
-> Last updated: 2026-04-09
+> Last updated: 2026-04-22
+
+## Session End State (2026-04-22) — RC Complete, Internal Testing Build Running
+
+**Status: Preview build #3 running on EAS. All integrations complete. Directory rename pending.**
+
+### What was completed this session
+
+**RevenueCat integration — fully wired:**
+- RC service account JSON created in GCC (required disabling org policy `iam.disableServiceAccountKeyCreation` temporarily)
+- Play Console service account granted: View app info, View financial data, Manage orders and subscriptions
+- RC credentials now show "Valid credentials" (propagated ~36hr after setup)
+- Products created in Play Console: `pro_monthly` ($3.99), `premium_monthly` ($7.99) — US only (Open-Meteo compliance)
+- Products imported to RC, entitlements (`pro`, `premium`) and default offering configured
+- `REVENUECAT_WEBHOOK_SECRET` set in Supabase dashboard (base64 value — CLI couldn't parse `=` in value, used dashboard instead)
+- `subscription-webhook` Edge Function deployed and verified: correct auth returns `{"received":true,"action":"upgrade","error":"db_update_failed"}`, wrong auth returns 401
+- RC SDK key `goog_XykDmtoZwUNDfBgswNJaIkDLjNC` added to `app.json` extra.revenueCatApiKey
+- `src/services/purchases.ts` TIER_PACKAGE_MAP corrected: `pro: '$rc_pro_monthly'`, `premium: '$rc_premium_monthly'`
+- `supabase/functions/subscription-webhook/index.ts` PRODUCT_TIER_MAP fixed to handle both bare and `product:base_plan` format
+
+**Open-Meteo commercial license — purchased and deployed:**
+- $29/mo Standard plan purchased
+- `poll-weather` Edge Function updated: reads `OPEN_METEO_API_KEY` env var, uses `customer-api.open-meteo.com` when key present, falls back to free URL when absent
+- `OPEN_METEO_API_KEY` secret set in Supabase dashboard
+- Edge Function redeployed and verified via live integration test: `{"message":"Polling complete","locationsChecked":3,"rulesEvaluated":5,"alertsTriggered":0}`
+
+**Repo renamed WeatherWatch → PingWeather:**
+- All source code WeatherWatch references updated (package.json name, Zustand store persistence keys, comments)
+- All config/agent/memory files updated (global CLAUDE.md, pingWeatherExpert.md, ship-framework docs, MEMORY.md)
+- Global CLAUDE.md Delaware → Virginia corrected
+- `mv ~/Code/WeatherWatch ~/Code/PingWeather` + `deploy.sh` still pending (requires Jimmy — Claude Code working dir holds the lock)
+- Tests post-rename: 403/403 logic, 85/85 components, tsc clean
+
+**Build #3 (preview AAB):**
+- Running on EAS as of this session
+- First build with RC API key baked in — required for testing subscription purchase flow
+- `eas.json` preview profile confirmed: `buildType: app-bundle`
+
+### Outstanding before internal testing goes live
+
+1. **Jimmy runs:** `mv ~/Code/WeatherWatch ~/Code/PingWeather && cd ~/Code/claude-config && bash scripts/deploy.sh`
+2. **Download AAB** from EAS when build finishes → upload to Play Console internal testing track
+3. **Add internal testers** in Play Console → Internal testing → Testers
+
+### What's deferred (post-launch)
+
+- Real SMTP via Resend (INFRA-005)
+- Maestro E2E suite (INFRA-001)
+- iOS track (waiting on Apple Developer Program)
+- Annual pricing products (pro_annual, premium_annual) — monthly-only for now
+
+---
+
+## Session End State (2026-04-21) — Play Store Submission
+
+**Status: App submitted to Google Play, awaiting review.**
+
+### What was completed this session
+
+**Google Play compliance fixes:**
+- `ACCESS_BACKGROUND_LOCATION` removed from `android.permissions` in `app.json` — was flagged as a policy violation; we only use foreground location (user-initiated "Use My Location" tap).
+- Account deletion Edge Function built and deployed: `supabase/functions/delete-account/index.ts` — verifies JWT, calls `auth.admin.deleteUser(user.id)` which cascades via ON DELETE CASCADE to all child tables. Settings screen (`app/(tabs)/settings.tsx`) wired with real invocation + `deleting` state + ActivityIndicator. Required by Google Play policy for any app with account creation.
+- `supabase/config.toml` updated: `[functions.delete-account]` added with `verify_jwt = true`.
+
+**Privacy policy cleanup:**
+- Removed "display name" from all four copies of the privacy policy (was never collected — inaccurate).
+- Added in-app deletion path (Settings → Delete Account) to Section 5 of all copies.
+- Affected files: `docs/privacy-policy.md`, `docs/privacy-policy.html`, `docs/privacy-policy-squarespace.html`, `docs/legal/privacy-policy.html`.
+- Live page at `truthcenteredtech.com/pingweather-privacy` was updated by Jimmy via Squarespace.
+
+**ADI (Android Developer Identity) verification — config plugin fix:**
+- Two EAS preview builds (#1, #2) failed Play Console package verification with "does not have the required token file."
+- Root cause: Expo managed workflow does NOT copy arbitrary files from the project `assets/` dir to the native `android/app/src/main/assets/` dir. `adi-registration.properties` existed at `assets/adi-registration.properties` but never landed in the APK.
+- Fix: created `plugins/withAdiRegistration.js` — an Expo config plugin using `withDangerousMod` that copies the file to the correct native path during prebuild.
+- Plugin registered as first entry in `app.json` plugins array.
+- Build #3 (preview) has NOT been triggered yet as of this session end — Jimmy needs to run it.
+
+### Outstanding before launch
+
+**Immediate (unblocking Play Console app creation):**
+1. Run `npx eas build --platform android --profile preview` — build #3 with the config plugin fix
+2. Download APK, upload to Play Console ADI verification flow
+3. Play Console will confirm `com.truthcenteredtech.pingweather` package ownership
+
+**Play Console setup (after package verified):**
+4. Create app listing — copy ready in `docs/store-listing/google-play-listing.md`
+5. Screenshots + feature graphic (1024×500px) — NOT done, manual process, requires device
+6. Data Safety form — answers ready (discussed this session, not yet filed)
+7. Content rating questionnaire
+8. App access credentials (test account for reviewers)
+
+**Infrastructure:**
+9. RevenueCat account setup — get API key, paste into `app.json` `extra.revenueCatApiKey`, create Play Console products (pro_monthly, pro_annual, premium_monthly, premium_annual), link RevenueCat to Play Console
+10. Open-Meteo commercial license — $29/mo, required before charging real users
+11. Real SMTP (Resend) — email delivery for password reset
+12. Production AAB build — `eas build --platform android --profile production` — only after RC API key is in
+
+**EAS build count:** 2 preview builds wasted on ADI (wrong profile, then wrong asset path). Next build is #3. Budget: ~3-5 total preview/production builds remaining before quota.
 
 ## Session End State (2026-04-09)
 
@@ -50,7 +147,7 @@ Full research in the conversation history (2026-04-09 overnight session).
 ## Project Overview
 
 - **Name:** PingWeather (rebrand from original "WeatherWatch" — do NOT reintroduce the old name anywhere user-facing)
-- **Entity:** Truth Centered Tech, Delaware, US (legal@truthcenteredtech.com, privacy@truthcenteredtech.com)
+- **Entity:** Truth Centered Tech, Virginia, US (legal@truthcenteredtech.com, privacy@truthcenteredtech.com)
 - **Stack:** Expo SDK 54 + React Native 0.81 + TypeScript strict + Zustand v5 + Expo Router v6 + Supabase
 - **Target:** Android primary, iOS secondary (untested)
 - **Supabase project id:** `ziyxkgbrdliwvztotxli` (already linked via `supabase/config.toml`)

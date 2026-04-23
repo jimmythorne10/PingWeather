@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useTokens } from '../../src/theme';
@@ -17,8 +17,13 @@ export default function NotificationSetupScreen() {
     setRegistering(false);
     if (token) {
       setDone(true);
-      // Brief delay to show success state
-      setTimeout(() => router.push('/onboarding/complete'), 800);
+      // Brief delay to show success state, then navigate to battery setup (Android) or complete (iOS)
+      setTimeout(() => {
+        const nextScreen = Platform.OS === 'android'
+          ? '/onboarding/battery-setup'
+          : '/onboarding/complete';
+        router.push(nextScreen);
+      }, 800);
     }
   };
 
@@ -65,7 +70,12 @@ export default function NotificationSetupScreen() {
 
           <Pressable
             style={styles.skipButton}
-            onPress={() => router.push('/onboarding/complete')}
+            onPress={() => {
+              const nextScreen = Platform.OS === 'android'
+                ? '/onboarding/battery-setup'
+                : '/onboarding/complete';
+              router.push(nextScreen);
+            }}
           >
             <Text style={[styles.skipText, { color: t.textTertiary }]}>
               I'll do this later in Settings

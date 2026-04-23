@@ -39,6 +39,7 @@ function getPurchases() {
 
 // ── Product → Tier mapping ──────────────────────────────────
 
+// Maps Play Console product IDs → subscription tier (used server-side and for receipt validation)
 export const PRODUCT_TIER_MAP: Record<string, SubscriptionTier> = {
   pro_monthly: 'pro',
   pro_annual: 'pro',
@@ -50,12 +51,25 @@ export function mapProductToTier(productId: string): SubscriptionTier | null {
   return PRODUCT_TIER_MAP[productId] ?? null;
 }
 
+// Maps subscription tier → RevenueCat package identifier for the default monthly offering.
+// These must match the package identifiers created in the RevenueCat dashboard.
+export const TIER_PACKAGE_MAP: Record<Exclude<SubscriptionTier, 'free'>, string> = {
+  pro: '$rc_pro_monthly',
+  premium: '$rc_premium_monthly',
+};
+
 // ── Initialization ──────────────────────────────────────────
 
-const API_KEY =
-  Constants.expoConfig?.extra?.revenueCatApiKey ??
-  process.env.EXPO_PUBLIC_REVENUECAT_API_KEY ??
-  '';
+const API_KEY = Platform.select({
+  ios:
+    Constants.expoConfig?.extra?.revenueCatIosApiKey ??
+    process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ??
+    '',
+  default:
+    Constants.expoConfig?.extra?.revenueCatAndroidApiKey ??
+    process.env.EXPO_PUBLIC_REVENUECAT_API_KEY ??
+    '',
+});
 
 export async function initializePurchases(appUserId?: string): Promise<boolean> {
   const P = getPurchases();
