@@ -3,3 +3,4 @@
 rules:
   - "eas build | warn | | | versionCode is managed by autoIncrement in eas.json — EAS bumps it automatically. No manual change needed."
   - "eas build | field_nonempty | app.json | revenueCatAndroidApiKey | expo.extra.revenueCatAndroidApiKey is empty. Build will have RevenueCat silently disabled at runtime."
+  - "eas build | warn | | | REMINDER: Verify EXPO_PUBLIC_OPEN_METEO_API_KEY is set as EAS env var (eas env:list --environment preview). Client-side forecast calls fall back to free Open-Meteo endpoint without it."
