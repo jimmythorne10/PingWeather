@@ -164,6 +164,7 @@ export interface DailyForecast {
   temperature_2m_min: number[];
   precipitation_probability_max: number[];
   wind_speed_10m_max: number[];
+  wind_direction_10m_dominant: number[];
   uv_index_max: number[];
   weather_code: number[];
 }
