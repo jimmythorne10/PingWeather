@@ -13,12 +13,14 @@ export default function LocationSetupScreen() {
   const addLocation = useLocationsStore((s) => s.addLocation);
   const [locationName, setLocationName] = useState('');
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [timezone, setTimezone] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const handleUseCurrentLocation = async () => {
     const result = await getLocation();
     if (result) {
       setCoords(result);
+      setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
       if (!locationName) setLocationName('My Location');
     }
   };
@@ -26,7 +28,7 @@ export default function LocationSetupScreen() {
   const handleNext = async () => {
     if (coords && locationName) {
       setSaving(true);
-      await addLocation(locationName.trim(), coords.latitude, coords.longitude);
+      await addLocation(locationName.trim(), coords.latitude, coords.longitude, timezone);
       setSaving(false);
     }
     router.push('/onboarding/notification-setup');
@@ -64,6 +66,7 @@ export default function LocationSetupScreen() {
           onSelect={(result) => {
             setLocationName(result.name);
             setCoords({ latitude: result.latitude, longitude: result.longitude });
+            setTimezone(result.timezone ?? null);
           }}
           placeholder="Search place or address"
         />

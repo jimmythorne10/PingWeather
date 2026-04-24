@@ -26,13 +26,23 @@ const OPEN_METEO_URL = OPEN_METEO_API_KEY
 const CONCURRENCY_LIMIT = 10;
 
 // ── Grid-square key ────────────────────────────────────────
-// Round to 0.1° (~11km) to cluster nearby locations — unchanged
+// Round to 0.1° (~11km) to cluster nearby locations into one API call.
 function gridKey(lat: number, lon: number): string {
   return `${Math.round(lat * 10) / 10},${Math.round(lon * 10) / 10}`;
 }
 
+// ── Timezone extraction ─────────────────────────────────────
+// Open-Meteo returns a "timezone" field (IANA string, e.g. "America/New_York")
+// in every forecast response when timezone=auto is requested. Used to backfill
+// locations that have timezone: null (e.g., added via manual coordinate entry).
+export function extractTimezone(forecast: Record<string, unknown> | null): string | null {
+  if (!forecast) return null;
+  const tz = forecast.timezone;
+  if (typeof tz !== "string" || !tz) return null;
+  return tz;
+}
+
 // ── Fetch forecast from Open-Meteo ─────────────────────────
-// Unchanged from original
 async function fetchForecast(lat: number, lon: number) {
   const params = new URLSearchParams({
     ...(OPEN_METEO_API_KEY ? { apikey: OPEN_METEO_API_KEY } : {}),
@@ -67,7 +77,7 @@ async function fetchForecast(lat: number, lon: number) {
 }
 
 // ── Send push notification via Expo Push Service ───────────
-// Unchanged from original — Expo routes to FCM V1
+// Expo Push Service routes to FCM V1 on Android.
 async function sendPushNotification(
   pushToken: string,
   title: string,
@@ -79,7 +89,7 @@ async function sendPushNotification(
     sound: "default",
     title,
     body,
-    data: data || {},
+    data: data ?? {},
   };
 
   const response = await fetch("https://exp.host/--/api/v2/push/send", {
@@ -120,8 +130,10 @@ export async function processInBatches<T, R>(
 interface GridGroup {
   lat: number;
   lon: number;
-  rules: Record<string, unknown>[];
+  locationId: string;
   locationName: string;
+  locationTimezone: string | null;
+  rules: Record<string, unknown>[];
 }
 
 interface GridResult {
@@ -138,6 +150,23 @@ async function processGrid(group: GridGroup): Promise<GridResult> {
   }
 
   const forecast = await fetchForecast(group.lat, group.lon);
+  const cacheKey = `${group.lat},${group.lon}`;
+
+  // Write to forecast_cache and backfill timezone in parallel — both are
+  // best-effort and must not abort grid processing if they fail.
+  const tz = extractTimezone(forecast);
+  const cacheWrite = supabase
+    .from("forecast_cache")
+    .upsert({ grid_key: cacheKey, latitude: group.lat, longitude: group.lon, forecast_json: forecast, fetched_at: new Date().toISOString() })
+    .then(() => {})
+    .catch((err: unknown) => console.error("forecast cache write failed:", err));
+
+  const tzBackfill = group.locationTimezone === null && tz
+    ? supabase.from("locations").update({ timezone: tz }).eq("id", group.locationId)
+        .then(() => {}).catch((err: unknown) => console.error("timezone backfill failed:", err))
+    : Promise.resolve();
+
+  await Promise.all([cacheWrite, tzBackfill]);
 
   const evalResponse = await supabase.functions.invoke("evaluate-alerts", {
     body: {
@@ -170,16 +199,11 @@ async function processGrid(group: GridGroup): Promise<GridResult> {
 
 Deno.serve(async (req) => {
   try {
-    // Auth header present for cron calls (service role key). The check body
-    // is intentionally empty — this function is internal-only.
-    const _authHeader = req.headers.get("Authorization");
-
-    // 1. Find all active rules that are due for polling — unchanged
     const { data: rules, error: rulesError } = await supabase
       .from("alert_rules")
       .select(`
         *,
-        locations!inner(id, name, latitude, longitude, is_active)
+        locations!inner(id, name, latitude, longitude, timezone, is_active)
       `)
       .eq("is_active", true)
       .eq("locations.is_active", true);
@@ -192,7 +216,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Filter to rules that are due for polling — unchanged
     const now = new Date();
     const dueRules = rules.filter((rule: Record<string, unknown>) => {
       if (!rule.last_polled_at) return true;
@@ -208,7 +231,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Group by location grid square — unchanged
     const locationGroups = new Map<string, GridGroup>();
 
     for (const rule of dueRules) {
@@ -219,22 +241,21 @@ Deno.serve(async (req) => {
         locationGroups.set(key, {
           lat: loc.latitude as number,
           lon: loc.longitude as number,
-          rules: [],
+          locationId: loc.id as string,
           locationName: loc.name as string,
+          locationTimezone: loc.timezone as string | null,
+          rules: [],
         });
       }
       locationGroups.get(key)!.rules.push(rule);
     }
 
-    // 3. Process all grids concurrently (CONCURRENCY_LIMIT at a time).
-    //    processInBatches uses Promise.allSettled so a failed grid never
-    //    prevents other grids from completing.
+    // processInBatches uses Promise.allSettled — a failed grid never blocks others.
     const groups = [...locationGroups.values()];
     const gridResults = await processInBatches(groups, CONCURRENCY_LIMIT, processGrid);
 
-    // 4. Collect triggered alerts and processed rule IDs from successful grids.
-    //    Failed grids are logged; their rules are NOT stamped with last_polled_at
-    //    so they will be retried on the next poll cycle.
+    // Failed grids are logged. Their rules are NOT stamped last_polled_at
+    // so they retry on the next cron cycle.
     const allTriggeredAlerts: Record<string, unknown>[] = [];
     const allRuleIds: string[] = [];
     let failedGrids = 0;
@@ -249,8 +270,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 5. Stamp last_polled_at on all successfully processed rules in one query.
-    //    (Was per-grid; now batched across all grids — same timestamp, negligible skew.)
     if (allRuleIds.length > 0) {
       const polledAt = new Date().toISOString();
       await supabase
@@ -259,8 +278,6 @@ Deno.serve(async (req) => {
         .in("id", allRuleIds);
     }
 
-    // 6. Batch-fetch push tokens for all users with triggered alerts.
-    //    Was: one SELECT per alert (N+1). Now: one SELECT for all unique users.
     if (allTriggeredAlerts.length > 0) {
       const uniqueUserIds = [
         ...new Set(allTriggeredAlerts.map((a) => a.user_id as string)),
@@ -277,7 +294,6 @@ Deno.serve(async (req) => {
           .map((p: Record<string, unknown>) => [p.id as string, p.push_token as string])
       );
 
-      // 7. Send notifications in parallel — all alerts, no artificial serialization.
       await Promise.allSettled(
         allTriggeredAlerts.map(async (alert) => {
           const pushToken = pushTokenByUserId.get(alert.user_id as string);
