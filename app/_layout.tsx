@@ -4,6 +4,7 @@ import { useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Updates from 'expo-updates';
 import { useAuthStore } from '../src/stores/authStore';
 import { initializePurchases, loginPurchaseUser, logoutPurchaseUser } from '../src/services/purchases';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
@@ -14,13 +15,25 @@ export default function RootLayout() {
   const { session, profile, initialize } = useAuthStore();
   const [ready, setReady] = useState(false);
 
-  // Initialize auth first, then RevenueCat.
+  // Initialize auth and check for OTA updates in parallel.
+  // The loading spinner covers both; reloadAsync() restarts before setReady
+  // fires, so users always launch into the latest bundle.
   useEffect(() => {
-    initialize().then(() => {
+    const checkUpdate = async () => {
+      if (__DEV__) return;
+      try {
+        const result = await Updates.checkForUpdateAsync();
+        if (result.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          await Updates.reloadAsync(); // restarts JS runtime — never returns
+        }
+      } catch (_) {
+        // network failure or no update available — continue normally
+      }
+    };
+
+    Promise.all([initialize(), checkUpdate()]).then(() => {
       setReady(true);
-      // Initialize RevenueCat after auth is ready. Non-blocking — if the
-      // API key isn't configured or the SDK fails, purchases simply stay
-      // disabled and the app functions normally on the free tier.
       initializePurchases().catch(() => {});
     });
   }, []);
