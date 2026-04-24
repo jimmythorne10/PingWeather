@@ -200,7 +200,7 @@ export default function ForecastsScreen() {
                   <>
                     {/* Hourly scroll */}
                     <Text style={styles.sectionLabel}>Next 24 hours</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourlyRow}>
+                    <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourlyRow}>
                       {forecast.hourly.time.slice(0, 24).map((time, i) => (
                         <View key={time} style={styles.hourlyItem}>
                           <Text style={styles.hourlyTime}>{formatHourLabel(time)}</Text>

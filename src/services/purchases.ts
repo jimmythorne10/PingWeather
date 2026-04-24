@@ -39,11 +39,18 @@ function getPurchases() {
 
 // ── Product → Tier mapping ──────────────────────────────────
 
-// Maps Play Console product IDs → subscription tier (used server-side and for receipt validation)
+// Maps Play Console product IDs → subscription tier (used server-side and for receipt validation).
+// FIX 14: RevenueCat's restorePurchases() returns product IDs with a
+// "<product>:<offering>" format (e.g., "pro_monthly:monthly") on some SDK
+// versions and platforms. The subscription-webhook server already handles
+// both formats. Without the colon variants here, mapProductToTier() returns
+// null on restore and the user appears as free despite an active subscription.
 export const PRODUCT_TIER_MAP: Record<string, SubscriptionTier> = {
   pro_monthly: 'pro',
+  'pro_monthly:monthly': 'pro',
   pro_annual: 'pro',
   premium_monthly: 'premium',
+  'premium_monthly:monthly': 'premium',
   premium_annual: 'premium',
 };
 

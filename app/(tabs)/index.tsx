@@ -121,6 +121,7 @@ export default function HomeScreen() {
         ) : weather ? (
           <ScrollView
             horizontal
+            nestedScrollEnabled
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.forecastRow}
           >

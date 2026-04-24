@@ -105,7 +105,7 @@ export default function BatterySetupScreen() {
             ))}
           </View>
 
-          <View style={[styles.warningCard, { backgroundColor: t.primary, opacity: 0.1 }]}>
+          <View style={[styles.warningCard, { backgroundColor: t.primaryLight }]}>
             <Text style={[styles.warningIcon, { color: t.primary }]}>⚠️</Text>
             <Text style={[styles.warningText, { color: t.textPrimary }]}>
               If you skip this step, you may not receive push notifications when weather

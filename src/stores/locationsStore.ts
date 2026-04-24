@@ -118,15 +118,18 @@ export const useLocationsStore = create<LocationsState>()(
 
           const remaining = locations.filter((l) => l.id !== id);
 
-          // If we removed the default and there are others, promote the next one
+          // If we removed the default and there are others, promote the next one.
+          // This MUST be awaited — fire-and-forget means the next loadLocations()
+          // overwrites our local state with stale server data (multiple is_default rows).
           if (removing?.is_default && remaining.length > 0) {
             remaining[0] = { ...remaining[0], is_default: true };
-            // Persist the promotion to Supabase (best-effort; test doesn't assert on this)
-            supabase
+            const { error: promoteError } = await supabase
               .from('locations')
               .update({ is_default: true })
-              .eq('id', remaining[0].id)
-              .then(() => {/* ignore */});
+              .eq('id', remaining[0].id);
+            if (promoteError) {
+              console.error('[locationsStore] removeLocation promotion error:', promoteError);
+            }
           }
 
           set({ locations: remaining });
@@ -157,11 +160,33 @@ export const useLocationsStore = create<LocationsState>()(
       },
 
       setDefaultLocation: async (id) => {
+        // FIX 2: Guard against null user. Without this, the "unset all" UPDATE
+        // runs with an empty string user_id and silently touches zero rows,
+        // then the "set one" UPDATE fires — leaving multiple is_default rows.
+        const userId = useAuthStore.getState().user?.id;
+        if (!userId) {
+          set({ error: 'Not authenticated' });
+          return;
+        }
+
         try {
-          // Unset all, then set the target
-          await supabase.from('locations').update({ is_default: false }).eq('user_id',
-            useAuthStore.getState().user?.id ?? '');
-          await supabase.from('locations').update({ is_default: true }).eq('id', id);
+          // Unset all defaults for this user, then mark the target
+          const { error: unsetError } = await supabase
+            .from('locations')
+            .update({ is_default: false })
+            .eq('user_id', userId);
+          if (unsetError) {
+            console.error('[locationsStore] setDefaultLocation unset error:', unsetError);
+          }
+
+          const { error: setError } = await supabase
+            .from('locations')
+            .update({ is_default: true })
+            .eq('id', id);
+          if (setError) {
+            console.error('[locationsStore] setDefaultLocation set error:', setError);
+          }
+
           set({
             locations: get().locations.map((l) => ({ ...l, is_default: l.id === id })),
           });
@@ -187,6 +212,17 @@ export const useLocationsStore = create<LocationsState>()(
           if (toActivate.length === 0) return;
 
           const activateIds = new Set(toActivate.map((l) => l.id));
+
+          // FIX 3: Persist activation to Supabase so the next loadLocations()
+          // doesn't overwrite local state with stale server data.
+          const { error } = await supabase
+            .from('locations')
+            .update({ is_active: true })
+            .in('id', [...activateIds]);
+          if (error) {
+            console.error('[locationsStore] enforceTierLimits activate error:', error);
+          }
+
           set({
             locations: locations.map((l) =>
               activateIds.has(l.id) ? { ...l, is_active: true } : l
@@ -195,6 +231,21 @@ export const useLocationsStore = create<LocationsState>()(
         } else {
           // Over limit — deactivate excess (keep first `limit` active ones)
           const toKeep = new Set(active.slice(0, limit).map((l) => l.id));
+          const toDeactivateIds = active
+            .filter((l) => !toKeep.has(l.id))
+            .map((l) => l.id);
+
+          // FIX 3: Batch-deactivate on the server so enforcement survives reload.
+          if (toDeactivateIds.length > 0) {
+            const { error } = await supabase
+              .from('locations')
+              .update({ is_active: false })
+              .in('id', toDeactivateIds);
+            if (error) {
+              console.error('[locationsStore] enforceTierLimits deactivate error:', error);
+            }
+          }
+
           set({
             locations: locations.map((l) =>
               toKeep.has(l.id) ? l : { ...l, is_active: false }

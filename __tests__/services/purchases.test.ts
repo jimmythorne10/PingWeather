@@ -33,8 +33,21 @@ describe('mapProductToTier', () => {
     expect(mapProductToTier('')).toBeNull();
   });
 
-  it('PRODUCT_TIER_MAP has exactly 4 entries', () => {
-    expect(Object.keys(PRODUCT_TIER_MAP)).toHaveLength(4);
+  // FIX 14: RevenueCat restore returns colon-format product IDs on some SDK
+  // versions. Without these entries the user appears free after restore.
+  it('maps pro_monthly:monthly to pro', () => {
+    expect(mapProductToTier('pro_monthly:monthly')).toBe('pro');
+  });
+
+  it('maps premium_monthly:monthly to premium', () => {
+    expect(mapProductToTier('premium_monthly:monthly')).toBe('premium');
+  });
+
+  it('PRODUCT_TIER_MAP has exactly 6 entries (including RevenueCat colon-format variants)', () => {
+    // FIX 14: Two colon-format entries were added (pro_monthly:monthly,
+    // premium_monthly:monthly) to handle the product ID format RevenueCat
+    // returns on restorePurchases() on some SDK versions.
+    expect(Object.keys(PRODUCT_TIER_MAP)).toHaveLength(6);
   });
 
   it('every PRODUCT_TIER_MAP value is either pro or premium', () => {

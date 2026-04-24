@@ -91,6 +91,34 @@ Deno.serve(async (req) => {
     }
 
     const { type, app_user_id, product_id } = event;
+
+    // Validate types before using them — a poisoned payload with a non-UUID
+    // app_user_id would silently match zero rows; catch it explicitly.
+    const isValidUuid = (s: unknown): s is string =>
+      typeof s === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+
+    if (!isValidUuid(app_user_id)) {
+      console.error(
+        `subscription-webhook: invalid app_user_id format: ${app_user_id}`,
+      );
+      // ACK to prevent retry storms on a structurally malformed event.
+      return new Response(
+        JSON.stringify({ received: true, action: "invalid_user_id" }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    if (typeof type !== "string" || typeof product_id !== "string") {
+      console.error(
+        `subscription-webhook: malformed event fields type=${type} product=${product_id}`,
+      );
+      return new Response(
+        JSON.stringify({ received: true, action: "malformed_event" }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     console.log(
       `subscription-webhook: type=${type} user=${app_user_id} product=${product_id}`,
     );
@@ -104,6 +132,23 @@ Deno.serve(async (req) => {
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       );
+
+      // Verify the profile exists before updating — if app_user_id doesn't
+      // match a Supabase UUID, the UPDATE silently touches zero rows.
+      const { count } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("id", app_user_id);
+
+      if (!count) {
+        console.error(
+          `subscription-webhook: no profile found for app_user_id ${app_user_id} — RC user ID may not match Supabase UUID`,
+        );
+        return new Response(
+          JSON.stringify({ received: true, action: "user_not_found" }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
 
       const { error: updateError } = await supabase
         .from("profiles")

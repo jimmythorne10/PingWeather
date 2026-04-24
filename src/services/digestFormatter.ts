@@ -23,11 +23,20 @@ function formatTemp(f: number, unit: 'fahrenheit' | 'celsius'): string {
   return unit === 'celsius' ? `${fToC(f)}°C` : `${Math.round(f)}°F`;
 }
 
+// FIX 13: Wind was always formatted as "mph" regardless of the user's setting.
+// Accept the unit explicitly so callers can pass the persisted preference.
+function formatWind(mph: number, unit: 'mph' | 'kmh' | 'knots'): string {
+  if (unit === 'kmh') return `${Math.round(mph * 1.60934)} km/h`;
+  if (unit === 'knots') return `${Math.round(mph * 0.868976)} kn`;
+  return `${Math.round(mph)} mph`;
+}
+
 export function formatDigestNotification(
   forecast: ForecastData,
   locationName: string,
   temperatureUnit: 'fahrenheit' | 'celsius',
-  frequency: 'daily' | 'weekly'
+  frequency: 'daily' | 'weekly',
+  windSpeedUnit: 'mph' | 'kmh' | 'knots' = 'mph'
 ): DigestNotification {
   const { daily } = forecast;
   if (!daily.time.length) throw new Error('Forecast daily data is empty');
@@ -36,11 +45,11 @@ export function formatDigestNotification(
     const high = formatTemp(daily.temperature_2m_max[0], temperatureUnit);
     const low = formatTemp(daily.temperature_2m_min[0], temperatureUnit);
     const rain = daily.precipitation_probability_max[0];
-    const wind = Math.round(daily.wind_speed_10m_max[0]);
+    const wind = formatWind(daily.wind_speed_10m_max[0], windSpeedUnit);
 
     return {
       title: `Today's forecast — ${locationName}`,
-      body: `High ${high}, Low ${low} · ${rain}% rain · ${wind} mph wind`,
+      body: `High ${high}, Low ${low} · ${rain}% rain · ${wind} wind`,
     };
   }
 
