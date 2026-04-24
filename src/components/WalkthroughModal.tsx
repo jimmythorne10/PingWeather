@@ -11,12 +11,12 @@ const STEPS = [
   {
     emoji: '📍',
     title: 'Add a Location First',
-    body: "Before building an alert, you need at least one saved location. Tap the Locations tab to add your farm, hunting land, or any place you want to monitor.",
+    body: "Before building an alert, you need at least one saved location. Tap the Locations tab to add your home, property, or any place you want to monitor.",
   },
   {
     emoji: '🔔',
     title: 'Your Alert Rules',
-    body: "The Alerts tab is where rules live. Presets like 'Good Hunting Conditions' get you started fast — just pick your location and tap confirm.",
+    body: "The Alerts tab is where rules live. Presets like 'Freeze Warning' get you started fast — just pick your location and tap confirm.",
   },
   {
     emoji: '⚙️',

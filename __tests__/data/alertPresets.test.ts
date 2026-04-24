@@ -102,8 +102,8 @@ describe('ALERT_PRESETS', () => {
     expect(categories).toEqual(new Set(VALID_CATEGORIES));
   });
 
-  it('includes a Freeze Warning preset (livestock/plant use case)', () => {
-    // PRD target user: livestock owners — freeze alerts
+  it('includes a Freeze Warning preset (freeze/cold use case)', () => {
+    // Target use case: freeze alerts for pipes, plants, and equipment
     const freeze = ALERT_PRESETS.find((p) => p.id === 'freeze-warning');
     expect(freeze).toBeDefined();
     expect(freeze!.category).toBe('temperature');
