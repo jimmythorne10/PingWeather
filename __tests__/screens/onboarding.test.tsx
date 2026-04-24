@@ -53,7 +53,7 @@ jest.mock('../../src/hooks/useLocation', () => ({
 // Push notifications hook
 jest.mock('../../src/hooks/usePushNotifications', () => ({
   usePushNotifications: () => ({
-    registerForPushNotifications: jest.fn(() => Promise.resolve('token-123')),
+    registerForPushNotifications: jest.fn(() => Promise.resolve({ token: 'token-123', error: null })),
     error: null,
   }),
 }));

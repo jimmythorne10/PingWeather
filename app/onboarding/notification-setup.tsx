@@ -13,7 +13,7 @@ export default function NotificationSetupScreen() {
 
   const handleEnable = async () => {
     setRegistering(true);
-    const token = await registerForPushNotifications();
+    const { token } = await registerForPushNotifications();
     setRegistering(false);
     if (token) {
       setDone(true);

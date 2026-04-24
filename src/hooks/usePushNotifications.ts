@@ -38,11 +38,12 @@ export function usePushNotifications() {
   const [error, setError] = useState<string | null>(null);
   const subscriptions = useRef<Array<{ remove: () => void }>>([]);
 
-  const registerForPushNotifications = useCallback(async (): Promise<string | null> => {
+  const registerForPushNotifications = useCallback(async (): Promise<{ token: string | null; error: string | null }> => {
+    const fail = (msg: string) => { setError(msg); return { token: null, error: msg }; };
+
     const N = getNotifications();
     if (!N) {
-      setError('Push notifications are not available in Expo Go. Use a development build.');
-      return null;
+      return fail('Push notifications are not available in Expo Go. Use a development build.');
     }
 
     try {
@@ -71,14 +72,12 @@ export function usePushNotifications() {
       }
 
       if (finalStatus !== 'granted') {
-        setError('Push notification permission denied.');
-        return null;
+        return fail('Push notification permission denied.');
       }
 
       const projectId = Constants.expoConfig?.extra?.eas?.projectId;
       if (!projectId) {
-        setError('EAS projectId missing from app config — cannot get push token.');
-        return null;
+        return fail('EAS projectId missing from app config — cannot get push token.');
       }
       const tokenData = await N.getExpoPushTokenAsync({ projectId });
       const token = tokenData.data;
@@ -94,25 +93,27 @@ export function usePushNotifications() {
       );
 
       if (fnError) {
-        const msg =
-          (fnError as { message?: string }).message ??
-          (typeof fnError === 'string' ? fnError : 'Edge Function error');
-        setError(`Failed to save push token to server: ${msg}`);
-        return null;
+        let msg = (fnError as { message?: string }).message ?? 'Edge Function error';
+        const ctx = (fnError as { context?: Response }).context;
+        if (ctx) {
+          try {
+            const body = await ctx.json() as { error?: string };
+            if (body?.error) msg = `${ctx.status}: ${body.error}`;
+          } catch { /* ignore body parse failure */ }
+        }
+        return fail(`Failed to save push token to server: ${msg}`);
       }
 
       // Belt + suspenders: some Edge Function errors come back as 2xx with
       // an { error: "..." } body rather than as fnError. Surface those too.
       if (fnData && typeof fnData === 'object' && 'error' in fnData && fnData.error) {
-        setError(`Server rejected push token: ${String(fnData.error)}`);
-        return null;
+        return fail(`Server rejected push token: ${String(fnData.error)}`);
       }
 
-      return token;
+      return { token, error: null };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to register for push notifications';
-      setError(message);
-      return null;
+      return fail(message);
     }
   }, []);
 
