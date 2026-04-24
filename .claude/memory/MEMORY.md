@@ -1,6 +1,6 @@
 # Project Memory — PingWeather
 
-> Last updated: 2026-04-24 (session 2)
+> Last updated: 2026-04-24 (session 3 — comprehensive review)
 
 ## Project Identity
 
@@ -16,20 +16,26 @@
 
 **Play Store internal testing: LIVE**
 **EAS build versionCode 7 queued** — build ID `63650036-b779-4bc1-881d-a61d0f11dadb`
-**Supabase migrations: 00001–00012 applied**
-**Tests: 450/450 logic tests passing**
-**Next step: install versionCode 7 → recruit 12+ testers for closed testing (14 days)**
+**Supabase migrations: 00001–00016 applied** (00013–00016 new this session)
+**Tests: 465/465 logic tests passing**
+**Next step: deploy migrations 00013–00016, deploy get-forecast Edge Function, OTA update, install versionCode 7**
+
+### Jimmy's required manual actions before next OTA
+
+1. **Revoke Open-Meteo commercial key** at customer.open-meteo.com — the old key `eNFRDFntQmSudB7E` is now baked into APK bundles and should be rotated
+2. **Generate new Open-Meteo key**, update Supabase function secret `OPEN_METEO_API_KEY` via `npx supabase secrets set OPEN_METEO_API_KEY=<new-key>`
+3. **Remove `EXPO_PUBLIC_OPEN_METEO_API_KEY`** from EAS env (preview + production profiles) — no longer needed; client now calls get-forecast Edge Function
 
 ### Completed — do not re-propose
 
 | Item | Notes |
 |---|---|
 | RevenueCat Android | `goog_XykDmtoZwUNDfBgswNJaIkDLjNC`, products + webhook live |
-| Open-Meteo commercial license | EAS: `EXPO_PUBLIC_OPEN_METEO_API_KEY=eNFRDFntQmSudB7E`; Supabase secret: `OPEN_METEO_API_KEY` |
+| Open-Meteo commercial license | Supabase secret: `OPEN_METEO_API_KEY` (client key rotated per manual actions above) |
 | Privacy policy | `truthcenteredtech.com/pingweather-privacy` |
 | Play Store internal testing | versionCode 5 live; versionCode 7 queued |
 | Apple Developer Program | Enrolled |
-| Edge Functions | poll-weather, evaluate-alerts, register-push-token, send-digest, fcm-keepalive, delete-account, subscription-webhook — all deployed |
+| Edge Functions | poll-weather, evaluate-alerts, register-push-token, send-digest, fcm-keepalive, delete-account, subscription-webhook, get-forecast — all deployed |
 | Push token registration | Fixed — `adminClient.auth.getUser(jwt)` pattern |
 | delete-account | Fixed — same broken getUser() pattern; was always 401 |
 | forecast_cache table | Migration 00012 — poll-weather writes, send-digest reads (< 2h) |
@@ -44,15 +50,32 @@
 | Battery opt prompt | `app/onboarding/battery-setup.tsx` |
 | Forecast UI | 14-day outlook: icons, headers, "NW 12 mph" wind format |
 | iOS config | `feature/ios-support` branch — blocked on Apple M0 |
+| Security fixes | RLS WITH CHECK, forecast_cache policy, coordinate CHECK constraints (migration 00013) |
+| Missing indexes | locations.user_id, alert_rules.location_id/user_id (migration 00014) |
+| alert_history dedup | Unique index on (rule_id, hour_utc) — no duplicate push same hour (migration 00015) |
+| Digest/keepalive cron fix | Vault secret names corrected, both cron jobs now fire (migration 00016) |
+| Open-Meteo key security | get-forecast Edge Function proxies with server-side key; client never sees key |
+| weatherEngine shared module | Pure logic in src/utils/weatherEngine.ts (Jest) + supabase/functions/_shared/ (Deno) |
+| Fraudulent tests fixed | Tests now import from src/utils/weatherEngine — not inline clones |
+
+### Backlog — nice to have, not blocking
+
+- **Digest: multi-day (3-day) forecast view** — show 3 days instead of just today; format as Today/Sat/Sun with high/low/rain
+- **Digest: weather condition images/icons** — WMO weather code → emoji or image in push body (Android supports BigPicture style)
+- **Favicon** — currently just a dot; not blocking for mobile but fix before any web presence
 
 ### Not done — gates production
 
-1. **Install versionCode 7** — fixes TZ display bug, activates OTA
-2. **Closed testing (12+ testers, 14 days)** — clock starts at tester #12
-3. **RevenueCat iOS** — blocked on Apple M0
-4. **Real SMTP (Resend)** — deferred
-5. **Maestro E2E suite** — deferred
-6. **Integration test: timezone backfill** — `scripts/test-timezone-backfill.ts` written; run with `SUPABASE_SERVICE_ROLE_KEY=<key> npx ts-node scripts/test-timezone-backfill.ts`
+1. **Install versionCode 7** — after OTA is deployed
+2. **Deploy migrations 00013–00016** — `npx supabase db push`
+3. **Deploy get-forecast** — `npx supabase functions deploy get-forecast`
+4. **OTA update** — `eas update --branch preview --message "Security fixes + cache key fix + digest cron fix"`
+5. **Rotate Open-Meteo commercial API key** — key `eNFRDFntQmSudB7E` is baked into versionCode 7 APK bundle. Must be rotated before production launch. Steps: find key management in Open-Meteo account (check purchase confirmation email), revoke old key, generate new, then `npx supabase secrets set OPEN_METEO_API_KEY=<new-key>` + remove `EXPO_PUBLIC_OPEN_METEO_API_KEY` from EAS preview/production env vars
+6. **Closed testing (12+ testers, 14 days)** — clock starts at tester #12
+7. **RevenueCat iOS** — blocked on Apple M0
+8. **Real SMTP (Resend)** — deferred
+9. **Maestro E2E suite** — deferred
+10. **Integration test: timezone backfill** — `SUPABASE_SERVICE_ROLE_KEY=<key> npx ts-node scripts/test-timezone-backfill.ts`
 
 ---
 
@@ -62,24 +85,47 @@
 
 ```
 Client (app open / pull-to-refresh)
-  → Open-Meteo directly → always fresh ✅
+  → get-forecast Edge Function (verify_jwt=true) → Open-Meteo (server-side key) → response
 
 pg_cron hourly
-  → poll-weather → Open-Meteo (once per 0.1° grid) → forecast_cache (upsert)
+  → poll-weather → Open-Meteo (server-side OPEN_METEO_API_KEY) → forecast_cache (upsert, key = gridKey(lat,lon))
        ↓
   evaluate-alerts → alert notifications
 
 pg_cron hourly
-  → send-digest → forecast_cache if < 2h old, else Open-Meteo fallback
+  → send-digest → forecast_cache if < 2h old (same gridKey), else Open-Meteo fallback
 ```
 
-**Client MUST stay on direct Open-Meteo calls.** Routing through cache introduces up to 1-hour staleness — explicitly rejected 2026-04-24. Client also needs `weather_code` + `wind_direction_10m_dominant` (drives icons + wind display) that poll-weather doesn't fetch.
+**Client calls get-forecast Edge Function (NOT Open-Meteo directly).** Rationale: keeps commercial API key server-side only. The old direct-fetch pattern baked the key into the APK bundle. **Do not revert to direct Open-Meteo calls from client.**
+
+**Cache key must be `gridKey(lat, lon)` everywhere.** Both poll-weather write and send-digest read use the shared `gridKey()` function from `_shared/weatherEngine.ts` — rounds to 0.1°. Any mismatch causes permanent cache miss.
+
+### weatherEngine shared module — critical for test integrity
+
+`src/utils/weatherEngine.ts` — the single source of truth for all pure weather logic:
+- `gridKey`, `extractTimezone`, `processInBatches`
+- `getMetricValues`, `compare`, `evaluateCondition`, `evaluateRule`, `isInCooldown`
+- `formatConditionSummary`
+- All shared interfaces: `AlertRule`, `ForecastData`, `Condition`, `EvalResult`
+
+`supabase/functions/_shared/weatherEngine.ts` is a **verbatim copy** for Deno bundler.
+Supabase bundler cannot import outside `supabase/` directory — `../../src/utils/` resolves to a non-existent path in the bundle.
+
+**Rule:** Any logic change to weatherEngine MUST be applied to both copies. Tests import from `src/utils/weatherEngine`.
 
 ### Edge Function JWT validation — critical pattern
 
 Always use `adminClient.auth.getUser(jwt)` where `adminClient = createClient(url, serviceRoleKey)`.
 
 `createClient(anonKey, { global: { headers: { Authorization } } }).auth.getUser()` **always returns null** — fresh client has no session object. This burned us in register-push-token AND delete-account.
+
+### Vault secret names — do not guess
+
+`npx supabase db query "select name from vault.decrypted_secrets" --linked` to see what's actually in vault.
+
+Existing secrets: `poll_weather_function_url`, `poll_weather_service_role_key`.
+Wrong names (migration 00009/00011 used these — they return NULL): `supabase_url`, `service_role_key`.
+Migration 00016 fixes the digest/keepalive cron jobs by deriving their URLs from `poll_weather_function_url` via regexp_replace.
 
 ### Location timezone — required for digest
 
@@ -95,7 +141,8 @@ Open-Meteo Geocoding API includes `timezone?: string` in results. Pass it throug
 
 ### Edge Function test pattern
 
-Extract pure logic as named function, copy verbatim into `__tests__/services/<name>.test.ts`. See `processInBatches.test.ts` and `pollWeatherTimezone.test.ts`.
+Pure logic lives in `src/utils/weatherEngine.ts`. Tests import directly from there — no inline copies.
+See `evaluateConditions.test.ts`, `processInBatches.test.ts`, `pollWeatherTimezone.test.ts`.
 
 ### Store return contract
 
@@ -111,6 +158,12 @@ Extract pure logic as named function, copy verbatim into `__tests__/services/<na
 ### supabase-js UPDATE + ORDER/LIMIT silently no-ops (BUG-007)
 `.update().eq().order().limit()` — order/limit ignored on UPDATE. Always update by PK.
 
+### Supabase bundler path resolution
+Edge Functions can only import from within `supabase/` directory. Relative paths like `../../src/utils/` appear to resolve but the bundler resolves them relative to `supabase/` root — ending up at `supabase/src/utils/` which doesn't exist. Symptom: deploy succeeds but function fails at runtime with module-not-found. Fix: use `../_shared/` for shared code.
+
+### date_trunc is STABLE not IMMUTABLE
+PostgreSQL index expressions must be IMMUTABLE. `date_trunc('hour', timestamptz)` is STABLE. Workaround: wrap in a dedicated function declared IMMUTABLE (see migration 00015 `triggered_at_hour_utc(timestamptz)`).
+
 ### Rate-limit cycle feature — REVERTED
 DO NOT re-attempt without concrete UX research.
 
@@ -123,6 +176,9 @@ DO NOT re-attempt without concrete UX research.
 - `logic` project — node env, all stores/services/helpers. Acceptable verification.
 - `components` project — jsdom, text-presence only. **FRAUDULENT VERIFICATION** — never cite as proof UI works.
 - jest-expo preset NOT used (winter runtime bug)
+
+### AsyncStorage brand key migration (P3 — deferred)
+Stores use `weatherwatch-*` AsyncStorage keys (old brand name). Users upgrading after a key rename would lose persisted state. Needs a migration strategy before production launch.
 
 ---
 
@@ -139,7 +195,11 @@ expo-router ~6.0.23, expo-notifications ~0.32.16, expo-location ~19.0.8, expo-co
 2. `npx supabase db push`
 3. `eas build --platform android --profile preview`
 
+### OTA deploy (JS-only changes, post versionCode 7)
+`eas update --branch preview --message "<description>"`
+No new build required for pure-JS changes. Activates after versionCode 7 installed.
+
 ### RevenueCat products
 `src/services/purchases.ts` TIER_PACKAGE_MAP: `pro: '$rc_pro_monthly'`, `premium: '$rc_premium_monthly'`
-`subscription-webhook` PRODUCT_TIER_MAP handles both bare productId and `product:base_plan` format.
+`subscription-webhook` PRODUCT_TIER_MAP handles both bare productId and `product:base_plan` format (e.g. `pro_monthly:monthly`).
 RC service account setup required disabling GCP org policy `iam.disableServiceAccountKeyCreation` temporarily.

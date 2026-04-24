@@ -8,6 +8,8 @@ import { useAlertRulesStore } from '../../src/stores/alertRulesStore';
 import { useAlertHistoryStore } from '../../src/stores/alertHistoryStore';
 import { fetchForecast } from '../../src/services/weatherApi';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { useWalkthrough } from '../../src/hooks/useWalkthrough';
+import { WalkthroughModal } from '../../src/components/WalkthroughModal';
 import type { ThemeTokens } from '../../src/theme';
 import type { DailyForecast, WatchLocation } from '../../src/types';
 
@@ -15,6 +17,7 @@ export default function HomeScreen() {
   const styles = useStyles(createStyles);
   const tokens = useTokens();
   const router = useRouter();
+  const { visible: walkthroughVisible, dismiss: dismissWalkthrough } = useWalkthrough({ autoShow: true });
   const { locations, loadLocations } = useLocationsStore();
   const { rules, loadRules } = useAlertRulesStore();
   const { entries, loadHistory } = useAlertHistoryStore();
@@ -250,6 +253,8 @@ export default function HomeScreen() {
           </Pressable>
         )}
       </View>
+
+      <WalkthroughModal visible={walkthroughVisible} onDismiss={dismissWalkthrough} />
     </ScrollView>
   );
 }

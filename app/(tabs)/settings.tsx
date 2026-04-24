@@ -7,6 +7,8 @@ import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useThemeStore } from '../../src/stores/themeStore';
 import { useLocationsStore } from '../../src/stores/locationsStore';
 import { usePushNotifications } from '../../src/hooks/usePushNotifications';
+import { useWalkthrough } from '../../src/hooks/useWalkthrough';
+import { WalkthroughModal } from '../../src/components/WalkthroughModal';
 import { isDevAccount } from '../../src/utils/devAccount';
 import { supabase } from '../../src/utils/supabase';
 import { TIER_LIMITS } from '../../src/types';
@@ -37,6 +39,8 @@ export default function SettingsScreen() {
   const { registerForPushNotifications } = usePushNotifications();
 
   const locations = useLocationsStore((s) => s.locations);
+
+  const { visible: walkthroughVisible, show: showWalkthrough, dismiss: dismissWalkthrough } = useWalkthrough();
 
   const [tierSwitching, setTierSwitching] = useState<SubscriptionTier | null>(null);
   const [pushRegistering, setPushRegistering] = useState(false);
@@ -439,6 +443,15 @@ export default function SettingsScreen() {
         </Pressable>
       </View>
 
+      {/* Help */}
+      <Text style={styles.sectionTitle}>{'HELP'}</Text>
+      <View style={styles.card}>
+        <Pressable style={styles.row} onPress={showWalkthrough}>
+          <Text style={styles.label}>Watch Tutorial</Text>
+          <Text style={{ fontSize: 16, color: tokens.textTertiary }}>{'›'}</Text>
+        </Pressable>
+      </View>
+
       {/* Legal */}
       <Text style={styles.sectionTitle}>{'LEGAL'}</Text>
       <View style={styles.card}>
@@ -472,6 +485,8 @@ export default function SettingsScreen() {
         <Text style={styles.versionText}>{`PingWeather v${APP_VERSION}`}</Text>
         <Text style={styles.versionSubtext}>by Truth Centered Tech</Text>
       </View>
+
+      <WalkthroughModal visible={walkthroughVisible} onDismiss={dismissWalkthrough} />
     </ScrollView>
   );
 }
