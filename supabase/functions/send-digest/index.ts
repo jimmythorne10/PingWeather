@@ -217,7 +217,26 @@ Deno.serve(async (req) => {
     );
   }
 
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const digestSecret = Deno.env.get("SEND_DIGEST_SECRET") ?? "";
+  const validTokens = [
+    `Bearer ${serviceRoleKey}`,
+    ...(digestSecret ? [`Bearer ${digestSecret}`] : []),
+  ];
+  if (!validTokens.includes(authHeader)) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   try {
+    const body = await req.json().catch(() => ({}));
+    // notifyNow: bypass the shouldSendNow time gate — sends immediately
+    // userId: scope to a single profile (omit to run for all digest users)
+    const notifyNow: boolean = body?.notifyNow === true;
+    const filterUserId: string | null = body?.userId ?? null;
+
     const nowUtc = new Date();
 
     // Fetch all profiles with digest enabled + their digest location
@@ -256,6 +275,8 @@ Deno.serve(async (req) => {
     let skipped = 0;
 
     for (const profile of profiles) {
+      if (filterUserId && profile.id !== filterUserId) continue;
+
       const loc = Array.isArray(profile.locations)
         ? profile.locations[0]
         : profile.locations;
@@ -264,7 +285,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const due = shouldSendNow(
+      const due = notifyNow || shouldSendNow(
         profile.digest_hour,
         profile.digest_frequency,
         profile.digest_day_of_week,

@@ -210,11 +210,15 @@ async function processGrid(group: GridGroup): Promise<GridResult> {
 // ── Main handler ───────────────────────────────────────────
 
 Deno.serve(async (req) => {
-  // Bearer auth — pg_cron passes the service_role key. This prevents the
-  // function from being invoked anonymously (verify_jwt is off because the
-  // service_role key is not a user JWT).
+  // Bearer auth — accepts POLL_WEATHER_SECRET (cron path, stored in vault)
+  // or SUPABASE_SERVICE_ROLE_KEY (internal service-to-service calls).
   const authHeader = req.headers.get("Authorization") ?? "";
-  if (authHeader !== `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`) {
+  const pollSecret = Deno.env.get("POLL_WEATHER_SECRET") ?? "";
+  const validTokens = [
+    `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+    ...(pollSecret ? [`Bearer ${pollSecret}`] : []),
+  ];
+  if (!validTokens.includes(authHeader)) {
     return new Response(
       JSON.stringify({ error: "Unauthorized" }),
       { status: 401, headers: { "Content-Type": "application/json" } }
