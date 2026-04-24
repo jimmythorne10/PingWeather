@@ -65,6 +65,12 @@
       },
       "revenueCatAndroidApiKey": "goog_XykDmtoZwUNDfBgswNJaIkDLjNC"
     },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6456b66e-6e5a-4881-984f-20e2f3b477f4"
+    },
     "owner": "jimmy.thorne.10"
   }
 }
