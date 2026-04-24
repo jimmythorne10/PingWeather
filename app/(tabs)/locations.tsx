@@ -24,6 +24,7 @@ export default function LocationsScreen() {
   const [name, setName] = useState('');
   const [lat, setLat] = useState('');
   const [lon, setLon] = useState('');
+  const [timezone, setTimezone] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -45,6 +46,7 @@ export default function LocationsScreen() {
     if (result) {
       setLat(result.latitude.toString());
       setLon(result.longitude.toString());
+      setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
     }
   };
 
@@ -54,6 +56,7 @@ export default function LocationsScreen() {
     setName('');
     setLat('');
     setLon('');
+    setTimezone(null);
   };
 
   const handleRefresh = async () => {
@@ -72,7 +75,7 @@ export default function LocationsScreen() {
     if (editingId) {
       success = await updateLocation(editingId, { name: name.trim(), latitude, longitude });
     } else {
-      success = await addLocation(name.trim(), latitude, longitude);
+      success = await addLocation(name.trim(), latitude, longitude, timezone);
     }
     setSaving(false);
     if (success) {
@@ -159,6 +162,7 @@ export default function LocationsScreen() {
               setName(result.name);
               setLat(result.latitude.toString());
               setLon(result.longitude.toString());
+              setTimezone(result.timezone ?? null);
             }}
             placeholder="Search place or address"
           />

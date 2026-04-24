@@ -266,56 +266,52 @@ Deno.serve(async (req) => {
       location_name: string;
     };
 
-    // Track alert_history row id per triggered rule so poll-weather can
-    // update the exact row after sending the push (the old code used a
-    // broken .update().eq().order().limit() chain — .order/.limit are
-    // silently ignored on UPDATE in supabase-js).
-    const historyIdByRule = new Map<string, string>();
-    const results: EvaluationResult[] = [];
-
     const evalNow = new Date();
-    for (const rule of rules) {
-      if (!rule.is_active) continue;
-      if (isInCooldown(rule, evalNow)) continue;
 
-      const result = evaluateRule(rule, forecast);
-      results.push(result);
+    // Evaluate all rules (pure computation — no DB calls yet).
+    const results: EvaluationResult[] = rules
+      .filter((rule) => rule.is_active && !isInCooldown(rule, evalNow))
+      .map((rule) => evaluateRule(rule, forecast));
 
-      if (!result.triggered) continue;
+    const triggered = results.filter((r) => r.triggered);
 
-      // Insert alert_history and capture the id for later UPDATE by PK.
-      const { data: historyRow, error: historyErr } = await supabase
-        .from("alert_history")
-        .insert({
-          user_id: rule.user_id,
-          rule_id: rule.id,
-          rule_name: rule.name,
-          location_name,
-          conditions_met: result.summary,
-          forecast_data: {
-            matchDetails: result.matchDetails,
-            evaluatedAt: evalNow.toISOString(),
-          },
-          notification_sent: false, // poll-weather will flip after sending push
-        })
-        .select("id")
-        .single();
+    // Parallel-insert alert_history for all triggered rules, then batch-update
+    // last_triggered_at in one query. N+1 DB round trips → N parallel + 1 batch.
+    const historyIdByRule = new Map<string, string>();
 
-      if (historyErr) {
-        console.error("alert_history insert error:", historyErr);
-      } else if (historyRow?.id) {
-        historyIdByRule.set(rule.id, historyRow.id);
-      }
+    await Promise.all(
+      triggered.map(async (result) => {
+        const { data: historyRow, error: historyErr } = await supabase
+          .from("alert_history")
+          .insert({
+            user_id: result.rule.user_id,
+            rule_id: result.rule.id,
+            rule_name: result.rule.name,
+            location_name,
+            conditions_met: result.summary,
+            forecast_data: {
+              matchDetails: result.matchDetails,
+              evaluatedAt: evalNow.toISOString(),
+            },
+            notification_sent: false,
+          })
+          .select("id")
+          .single();
 
-      // Update last_triggered_at — this is what the cooldown check reads
-      // on the next evaluation.
+        if (historyErr) {
+          console.error("alert_history insert error:", historyErr);
+        } else if (historyRow?.id) {
+          historyIdByRule.set(result.rule.id, historyRow.id);
+        }
+      })
+    );
+
+    if (triggered.length > 0) {
       await supabase
         .from("alert_rules")
         .update({ last_triggered_at: evalNow.toISOString() })
-        .eq("id", rule.id);
+        .in("id", triggered.map((r) => r.rule.id));
     }
-
-    const triggered = results.filter((r) => r.triggered);
 
     return new Response(
       JSON.stringify({

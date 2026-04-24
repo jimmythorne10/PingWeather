@@ -20,6 +20,9 @@ const OPEN_METEO_URL = OPEN_METEO_API_KEY
   : "https://api.open-meteo.com/v1/forecast";
 
 const MIN_RESEND_HOURS = 23;
+// Accept cached forecast if poll-weather wrote it within the last 2 hours.
+// poll-weather runs hourly, so this gives a one-cycle grace window.
+const CACHE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 
 // ── Scheduling check ───────────────────────────────────────
 
@@ -68,9 +71,29 @@ function shouldSendNow(
   return true;
 }
 
-// ── Forecast fetch ─────────────────────────────────────────
+// ── Forecast retrieval ─────────────────────────────────────
+// Checks the forecast_cache table first (written by poll-weather hourly).
+// Falls back to a direct Open-Meteo call only if the cache is missing or stale.
 
-async function fetchForecast(lat: number, lon: number) {
+function gridKey(lat: number, lon: number): string {
+  return `${Math.round(lat * 10) / 10},${Math.round(lon * 10) / 10}`;
+}
+
+async function getForecast(lat: number, lon: number, nowUtc: Date): Promise<ForecastResponse> {
+  const key = gridKey(lat, lon);
+  const { data: cached } = await supabase
+    .from("forecast_cache")
+    .select("forecast_json, fetched_at")
+    .eq("grid_key", key)
+    .single();
+
+  if (cached) {
+    const ageMs = nowUtc.getTime() - new Date(cached.fetched_at).getTime();
+    if (ageMs < CACHE_MAX_AGE_MS) {
+      return cached.forecast_json as ForecastResponse;
+    }
+  }
+
   const params = new URLSearchParams({
     ...(OPEN_METEO_API_KEY ? { apikey: OPEN_METEO_API_KEY } : {}),
     latitude: lat.toString(),
@@ -104,8 +127,18 @@ function formatTemp(fahrenheit: number, unit: string): string {
     : `${Math.round(fahrenheit)}°F`;
 }
 
+interface ForecastResponse {
+  daily: {
+    time: string[];
+    temperature_2m_max: number[];
+    temperature_2m_min: number[];
+    precipitation_probability_max: number[];
+    wind_speed_10m_max: number[];
+  };
+}
+
 function formatDigest(
-  forecast: any,
+  forecast: ForecastResponse,
   locationName: string,
   frequency: string,
   temperatureUnit: string
@@ -203,7 +236,7 @@ Deno.serve(async () => {
       if (!due) { skipped++; continue; }
 
       try {
-        const forecast = await fetchForecast(loc.latitude, loc.longitude);
+        const forecast = await getForecast(loc.latitude, loc.longitude, nowUtc);
         const { title, body } = formatDigest(forecast, loc.name, profile.digest_frequency, profile.temperature_unit ?? "fahrenheit");
         const ok = await sendPush(profile.push_token!, title, body);
 

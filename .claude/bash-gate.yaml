@@ -1,5 +1,64 @@
 # bash-gate.yaml — PingWeather pre-execution gates
+#
+# Comprehensive upfront rules covering ALL known PingWeather build failure
+# modes. Hard blocks fire before the command executes. Warnings follow.
+#
 # Format: "pattern | check_type | arg1 | arg2 | message"
+#
+# check_types:
+#   field_nonempty       arg1=json_file    arg2=field_name        block if JSON string field is absent/empty
+#   file_exists          arg1=file_path    arg2=(unused)          block if file missing at project root
+#   string_in_file       arg1=file_path    arg2=search_string     block if literal string not in file
+#   string_not_in_file   arg1=file_path    arg2=search_string     block if literal string IS in file
+#   eas_env_set          arg1=environment  arg2=var_name          block if EAS env var missing for that environment
+#   warn                 arg1=(unused)     arg2=(unused)          print reminder, never block
+
 rules:
-  - "eas build | version_incremented | app.json | versionCode | Play Console rejects duplicate version codes. Bump android.versionCode in app.json before building."
-  - "eas build | field_nonempty | app.json | revenueCatApiKey | expo.extra.revenueCatApiKey is empty. Build will have RevenueCat silently disabled at runtime."
+  # ── EAS ENV VAR GATES ──────────────────────────────────────────────────────
+  # These vars are not in source control — they must be set in EAS for the
+  # build environment or the app crashes on open with a blank Supabase client.
+  # This is what burned the EAS build credit — never again.
+
+  - "eas build | eas_env_set | preview | EXPO_PUBLIC_SUPABASE_URL | EXPO_PUBLIC_SUPABASE_URL is not set in EAS preview environment. The app will crash on open — Supabase client initialises with an empty URL. Run: eas env:create --name EXPO_PUBLIC_SUPABASE_URL --value <url> --environment preview"
+  - "eas build | eas_env_set | preview | EXPO_PUBLIC_SUPABASE_ANON_KEY | EXPO_PUBLIC_SUPABASE_ANON_KEY is not set in EAS preview environment. All Supabase calls will 401. Run: eas env:create --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value <key> --environment preview"
+  - "eas build | eas_env_set | production | EXPO_PUBLIC_SUPABASE_URL | EXPO_PUBLIC_SUPABASE_URL is not set in EAS production environment."
+  - "eas build | eas_env_set | production | EXPO_PUBLIC_SUPABASE_ANON_KEY | EXPO_PUBLIC_SUPABASE_ANON_KEY is not set in EAS production environment."
+
+  # ── OPEN-METEO COMMERCIAL ENDPOINT GATES ───────────────────────────────────
+  # Cross-layer consistency check: the Edge Function (poll-weather) was migrated
+  # to the commercial endpoint in a prior session. The client (weatherApi.ts)
+  # must also use it before shipping a paid build. Forgetting this cost a build.
+
+  - "eas build | string_in_file | src/services/weatherApi.ts | customer-api.open-meteo.com | weatherApi.ts is not using the commercial Open-Meteo endpoint. This violates the Open-Meteo commercial license. Ensure COMMERCIAL_KEY pattern is in place before shipping a paid build."
+
+  # Open-Meteo EAS env var — client-side key must exist in EAS or it falls back
+  # to the free endpoint silently.
+  - "eas build | eas_env_set | preview | EXPO_PUBLIC_OPEN_METEO_API_KEY | EXPO_PUBLIC_OPEN_METEO_API_KEY not set in EAS preview — client-side forecast calls will use free endpoint (non-compliant for a commercial app once users pay)."
+
+  # ── REQUIRED FILE GATES ────────────────────────────────────────────────────
+  # google-services.json is required for FCM V1 push delivery.
+  # Gitignored (contains Firebase secrets) — easy to forget on a new machine.
+  - "eas build | file_exists | google-services.json | google-services.json is missing. FCM V1 push notifications will be completely non-functional. Restore from 1Password or re-download from Firebase Console → Project Settings → Android app."
+
+  # ── REQUIRED JSON FIELD GATES ──────────────────────────────────────────────
+  # RevenueCat Android key must be set — build succeeds but RevenueCat is
+  # silently disabled at runtime, breaking all in-app purchase flows.
+  - "eas build | field_nonempty | app.json | revenueCatAndroidApiKey | expo.extra.revenueCatAndroidApiKey is empty. Build will ship with in-app purchases silently broken — no error, no crash, just no paywall."
+
+  # EAS project ID must be set — without it, builds cannot be routed to the
+  # correct project in the EAS dashboard and credential lookups fail.
+  - "eas build | field_nonempty | app.json | projectId | expo.extra.eas.projectId is empty. EAS cannot route this build. Check app.json expo.extra.eas.projectId."
+
+  # ── WARNINGS (informational, never block) ──────────────────────────────────
+  # versionCode is managed by autoIncrement in eas.json — EAS bumps it automatically.
+  - "eas build | warn | | | versionCode is managed by autoIncrement in eas.json — EAS bumps it automatically. Do NOT manually change versionCode or buildNumber before building."
+
+  # Remind about the mandatory deploy order before every build.
+  - "eas build | warn | | | DEPLOY ORDER CHECK: Have Edge Functions been deployed? Have migrations been pushed? Required sequence: supabase functions deploy → supabase db push → eas build. A build that references a stale backend causes silent runtime failures."
+
+  # ── SUPABASE DEPLOY GATES ──────────────────────────────────────────────────
+  # Warn about the mandatory deploy order when pushing migrations.
+  - "supabase db push | warn | | | REMINDER: Edge Functions must be deployed BEFORE db push if migrations reference them (pg_cron schedules reference already-deployed function URLs). Run: npx supabase functions deploy <name> first."
+
+  # Never reset the live database.
+  - "supabase db reset | warn | | | WARNING: This wipes ALL data. Only valid in local dev. NEVER run against the linked production Supabase project (ziyxkgbrdliwvztotxli)."

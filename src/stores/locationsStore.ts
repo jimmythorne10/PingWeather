@@ -12,7 +12,7 @@ interface LocationsState {
   error: string | null;
 
   loadLocations: () => Promise<void>;
-  addLocation: (name: string, latitude: number, longitude: number) => Promise<boolean>;
+  addLocation: (name: string, latitude: number, longitude: number, timezone?: string | null) => Promise<boolean>;
   updateLocation: (id: string, updates: Partial<Pick<WatchLocation, 'name' | 'latitude' | 'longitude'>>) => Promise<boolean>;
   removeLocation: (id: string) => Promise<void>;
   toggleLocation: (id: string, isActive: boolean) => Promise<void>;
@@ -44,7 +44,7 @@ export const useLocationsStore = create<LocationsState>()(
         }
       },
 
-      addLocation: async (name, latitude, longitude) => {
+      addLocation: async (name, latitude, longitude, timezone) => {
         set({ loading: true, error: null });
         try {
           const userId = useAuthStore.getState().user?.id;
@@ -71,7 +71,7 @@ export const useLocationsStore = create<LocationsState>()(
               longitude,
               is_active: true,
               is_default: isFirst,
-              timezone: null,
+              timezone: timezone ?? null,
             })
             .select()
             .single();

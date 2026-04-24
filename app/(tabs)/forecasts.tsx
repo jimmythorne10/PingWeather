@@ -87,7 +87,8 @@ export default function ForecastsScreen() {
   const formatDayLabel = (date: string, index: number) => {
     if (index === 0) return 'Today';
     if (index === 1) return 'Tomorrow';
-    return new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
+    const [y, m, d] = date.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
   };
 
   const formatHourLabel = (time: string) => {

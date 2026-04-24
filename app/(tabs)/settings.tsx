@@ -34,7 +34,7 @@ export default function SettingsScreen() {
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const settings = useSettingsStore();
   const { themeName, setTheme } = useThemeStore();
-  const { registerForPushNotifications, error: pushError } = usePushNotifications();
+  const { registerForPushNotifications } = usePushNotifications();
 
   const locations = useLocationsStore((s) => s.locations);
 
@@ -84,12 +84,12 @@ export default function SettingsScreen() {
   const handleRegisterPush = async () => {
     setPushResult(null);
     setPushRegistering(true);
-    const token = await registerForPushNotifications();
+    const { token, error: regError } = await registerForPushNotifications();
     setPushRegistering(false);
     if (token) {
       setPushResult(`✓ Registered: ${token.slice(0, 32)}…`);
     } else {
-      setPushResult(`✗ ${pushError ?? 'Registration failed (check logs).'}`);
+      setPushResult(`✗ ${regError ?? 'Registration failed (check logs).'}`);
     }
   };
 

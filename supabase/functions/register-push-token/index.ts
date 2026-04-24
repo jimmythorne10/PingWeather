@@ -10,9 +10,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// Single admin client — used for both user validation and profile update.
+const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
 Deno.serve(async (req) => {
   try {
-    // Get the user's JWT from the Authorization header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -21,12 +23,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create a client with the user's JWT to get their identity
-    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    // Extract JWT and validate it via the admin client.
+    // adminClient.auth.getUser(jwt) is the documented Edge Function pattern —
+    // it validates the token against the Supabase auth server and returns the
+    // user identity. This is NOT the same as createClient(anonKey, { global:
+    // { headers: { Authorization } } }).auth.getUser() — the latter creates a
+    // sessionless client and getUser() without args returns null because there
+    // is no session object to read from, even with a valid JWT in the header.
+    const jwt = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await adminClient.auth.getUser(jwt);
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
@@ -42,8 +47,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Use service role to update the profile (bypasses RLS for this specific update)
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { error: updateError } = await adminClient
       .from("profiles")
       .update({ push_token })

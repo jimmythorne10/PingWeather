@@ -15,7 +15,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+// Single admin client reused for both JWT validation and user deletion.
+const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
@@ -34,11 +36,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify the JWT and extract the user identity
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    // adminClient.auth.getUser(jwt) is the correct Edge Function pattern.
+    // createClient(anonKey).auth.getUser() always returns null — no session object exists.
+    const jwt = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await adminClient.auth.getUser(jwt);
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
@@ -47,7 +48,6 @@ Deno.serve(async (req) => {
     }
 
     // Delete the auth user — cascades to profiles, locations, alert_rules, alert_history
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
     if (deleteError) {
       console.error("[delete-account] deleteUser error:", deleteError);
