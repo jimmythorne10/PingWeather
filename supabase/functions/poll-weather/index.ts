@@ -8,9 +8,17 @@
 // 4. Calls evaluate-alerts for each location's rules  ← parallel
 // 5. Batch-fetches push tokens for all triggered users  ← one query, was N+1
 // 6. Sends push notifications for triggered alerts  ← parallel
+//
+// Auth: Bearer ${SUPABASE_SERVICE_ROLE_KEY} — called by pg_cron via pg_net.
+// verify_jwt = false in config.toml (service_role key is not a user JWT).
 // ────────────────────────────────────────────────────────────
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  gridKey,
+  extractTimezone,
+  processInBatches,
+} from "../_shared/weatherEngine.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -25,25 +33,10 @@ const OPEN_METEO_URL = OPEN_METEO_API_KEY
 // concurrency and Open-Meteo commercial rate limits are both factors.
 const CONCURRENCY_LIMIT = 10;
 
-// ── Grid-square key ────────────────────────────────────────
-// Round to 0.1° (~11km) to cluster nearby locations into one API call.
-function gridKey(lat: number, lon: number): string {
-  return `${Math.round(lat * 10) / 10},${Math.round(lon * 10) / 10}`;
-}
-
-// ── Timezone extraction ─────────────────────────────────────
-// Open-Meteo returns a "timezone" field (IANA string, e.g. "America/New_York")
-// in every forecast response when timezone=auto is requested. Used to backfill
-// locations that have timezone: null (e.g., added via manual coordinate entry).
-export function extractTimezone(forecast: Record<string, unknown> | null): string | null {
-  if (!forecast) return null;
-  const tz = forecast.timezone;
-  if (typeof tz !== "string" || !tz) return null;
-  return tz;
-}
-
 // ── Fetch forecast from Open-Meteo ─────────────────────────
-async function fetchForecast(lat: number, lon: number) {
+// 10-second AbortController timeout prevents a slow Open-Meteo response from
+// hanging the function until Deno's default network timeout (~30s).
+async function fetchForecast(lat: number, lon: number): Promise<Record<string, unknown>> {
   const params = new URLSearchParams({
     ...(OPEN_METEO_API_KEY ? { apikey: OPEN_METEO_API_KEY } : {}),
     latitude: lat.toString(),
@@ -69,21 +62,33 @@ async function fetchForecast(lat: number, lon: number) {
     timezone: "auto",
   });
 
-  const response = await fetch(`${OPEN_METEO_URL}?${params}`);
-  if (!response.ok) {
-    throw new Error(`Open-Meteo error: ${response.status}`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
+  try {
+    const response = await fetch(`${OPEN_METEO_URL}?${params}`, {
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`Open-Meteo error: ${response.status}`);
+    }
+    return response.json();
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return response.json();
 }
 
 // ── Send push notification via Expo Push Service ───────────
 // Expo Push Service routes to FCM V1 on Android.
+// Returns both delivery status and whether the token is permanently invalid.
+// The HTTP response is always 200 for per-message errors — the actual status
+// lives in the JSON body (data.status / data.details.error).
 async function sendPushNotification(
   pushToken: string,
   title: string,
   body: string,
   data?: Record<string, string>
-) {
+): Promise<{ sent: boolean; isInvalidToken: boolean }> {
   const message = {
     to: pushToken,
     sound: "default",
@@ -99,34 +104,39 @@ async function sendPushNotification(
   });
 
   if (!response.ok) {
-    console.error("Push notification failed:", await response.text());
+    console.error(
+      `sendPushNotification HTTP error for token ${pushToken.slice(0, 20)}…: ${response.status}`
+    );
+    return { sent: false, isInvalidToken: false };
   }
 
-  return response.ok;
-}
-
-// ── Batch concurrency helper ────────────────────────────────
-// Processes items in fixed-size batches. All items within a batch run
-// concurrently; the next batch starts only after all items in the current
-// batch settle. A failure in one item never prevents others from running.
-export async function processInBatches<T, R>(
-  items: T[],
-  batchSize: number,
-  fn: (item: T) => Promise<R>
-): Promise<PromiseSettledResult<R>[]> {
-  const results: PromiseSettledResult<R>[] = [];
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    const batchResults = await Promise.allSettled(batch.map(fn));
-    results.push(...batchResults);
+  let result: { data?: { status?: string; details?: { error?: string } } };
+  try {
+    result = await response.json();
+  } catch {
+    return { sent: false, isInvalidToken: false };
   }
-  return results;
+
+  const msgData = result?.data;
+  if (msgData?.status === "error") {
+    const isInvalidToken = msgData?.details?.error === "DeviceNotRegistered";
+    if (!isInvalidToken) {
+      console.error(
+        `sendPushNotification error for token ${pushToken.slice(0, 20)}…:`,
+        msgData
+      );
+    }
+    return { sent: false, isInvalidToken };
+  }
+
+  return { sent: true, isInvalidToken: false };
 }
 
 // ── Process one grid square ─────────────────────────────────
 // Fetches forecast, evaluates all rules for this grid, and returns the
 // triggered alerts enriched with location_name (needed for notification
 // title — this context is lost once grids are processed in parallel).
+
 interface GridGroup {
   lat: number;
   lon: number;
@@ -142,7 +152,10 @@ interface GridResult {
 }
 
 async function processGrid(group: GridGroup): Promise<GridResult> {
-  if (group.lat < -90 || group.lat > 90 || group.lon < -180 || group.lon > 180) {
+  if (
+    group.lat < -90 || group.lat > 90 ||
+    group.lon < -180 || group.lon > 180
+  ) {
     throw new Error(
       `Invalid coordinates for "${group.locationName}": lat=${group.lat}, lon=${group.lon}. ` +
       `Location must be deleted and re-added through the app.`
@@ -150,21 +163,38 @@ async function processGrid(group: GridGroup): Promise<GridResult> {
   }
 
   const forecast = await fetchForecast(group.lat, group.lon);
-  const cacheKey = `${group.lat},${group.lon}`;
+
+  // Cache key uses gridKey (shared with send-digest) so the cache lookup
+  // always hits. Using `${group.lat},${group.lon}` directly would miss whenever
+  // the raw lat/lon differs from the rounded key send-digest uses for lookup.
+  const cacheKey = gridKey(group.lat, group.lon);
 
   // Write to forecast_cache and backfill timezone in parallel — both are
   // best-effort and must not abort grid processing if they fail.
   const tz = extractTimezone(forecast);
   const cacheWrite = supabase
     .from("forecast_cache")
-    .upsert({ grid_key: cacheKey, latitude: group.lat, longitude: group.lon, forecast_json: forecast, fetched_at: new Date().toISOString() })
+    .upsert({
+      grid_key: cacheKey,
+      latitude: group.lat,
+      longitude: group.lon,
+      forecast_json: forecast,
+      fetched_at: new Date().toISOString(),
+    })
     .then(() => {})
     .catch((err: unknown) => console.error("forecast cache write failed:", err));
 
-  const tzBackfill = group.locationTimezone === null && tz
-    ? supabase.from("locations").update({ timezone: tz }).eq("id", group.locationId)
-        .then(() => {}).catch((err: unknown) => console.error("timezone backfill failed:", err))
-    : Promise.resolve();
+  const tzBackfill =
+    group.locationTimezone === null && tz
+      ? supabase
+          .from("locations")
+          .update({ timezone: tz })
+          .eq("id", group.locationId)
+          .then(() => {})
+          .catch((err: unknown) =>
+            console.error("timezone backfill failed:", err)
+          )
+      : Promise.resolve();
 
   await Promise.all([cacheWrite, tzBackfill]);
 
@@ -177,16 +207,20 @@ async function processGrid(group: GridGroup): Promise<GridResult> {
   });
 
   if (evalResponse.error) {
-    throw new Error(`evaluate-alerts failed: ${JSON.stringify(evalResponse.error)}`);
+    throw new Error(
+      `evaluate-alerts failed: ${JSON.stringify(evalResponse.error)}`
+    );
   }
 
   const evalResult = evalResponse.data;
 
   // Enrich each triggered alert with location_name so the notification
-  // title can be built as "rule_name - location_name" after parallelization
-  // (group context is not available at notification dispatch time).
+  // title can be built as "rule_name - location_name" after parallelization.
   const triggeredAlerts = (evalResult.alerts ?? []).map(
-    (alert: Record<string, unknown>) => ({ ...alert, location_name: group.locationName })
+    (alert: Record<string, unknown>) => ({
+      ...alert,
+      location_name: group.locationName,
+    })
   );
 
   return {
@@ -198,6 +232,21 @@ async function processGrid(group: GridGroup): Promise<GridResult> {
 // ── Main handler ───────────────────────────────────────────
 
 Deno.serve(async (req) => {
+  // Bearer auth — accepts POLL_WEATHER_SECRET (cron path, stored in vault)
+  // or SUPABASE_SERVICE_ROLE_KEY (internal service-to-service calls).
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const pollSecret = Deno.env.get("POLL_WEATHER_SECRET") ?? "";
+  const validTokens = [
+    `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+    ...(pollSecret ? [`Bearer ${pollSecret}`] : []),
+  ];
+  if (!validTokens.includes(authHeader)) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     const { data: rules, error: rulesError } = await supabase
       .from("alert_rules")
@@ -220,7 +269,8 @@ Deno.serve(async (req) => {
     const dueRules = rules.filter((rule: Record<string, unknown>) => {
       if (!rule.last_polled_at) return true;
       const lastPoll = new Date(rule.last_polled_at as string);
-      const intervalMs = (rule.polling_interval_hours as number) * 60 * 60 * 1000;
+      const intervalMs =
+        (rule.polling_interval_hours as number) * 60 * 60 * 1000;
       return now.getTime() - lastPoll.getTime() >= intervalMs;
     });
 
@@ -235,7 +285,10 @@ Deno.serve(async (req) => {
 
     for (const rule of dueRules) {
       const loc = rule.locations as Record<string, unknown>;
-      const key = gridKey(loc.latitude as number, loc.longitude as number);
+      const key = gridKey(
+        loc.latitude as number,
+        loc.longitude as number
+      );
 
       if (!locationGroups.has(key)) {
         locationGroups.set(key, {
@@ -252,7 +305,11 @@ Deno.serve(async (req) => {
 
     // processInBatches uses Promise.allSettled — a failed grid never blocks others.
     const groups = [...locationGroups.values()];
-    const gridResults = await processInBatches(groups, CONCURRENCY_LIMIT, processGrid);
+    const gridResults = await processInBatches(
+      groups,
+      CONCURRENCY_LIMIT,
+      processGrid
+    );
 
     // Failed grids are logged. Their rules are NOT stamped last_polled_at
     // so they retry on the next cron cycle.
@@ -272,10 +329,14 @@ Deno.serve(async (req) => {
 
     if (allRuleIds.length > 0) {
       const polledAt = new Date().toISOString();
-      await supabase
+      const { error: polledAtErr } = await supabase
         .from("alert_rules")
         .update({ last_polled_at: polledAt })
         .in("id", allRuleIds);
+      // Non-fatal: rules will re-evaluate on the next cycle. Log for ops.
+      if (polledAtErr) {
+        console.error("last_polled_at batch update failed:", polledAtErr);
+      }
     }
 
     if (allTriggeredAlerts.length > 0) {
@@ -291,15 +352,18 @@ Deno.serve(async (req) => {
       const pushTokenByUserId = new Map<string, string>(
         (profiles ?? [])
           .filter((p: Record<string, unknown>) => p.push_token)
-          .map((p: Record<string, unknown>) => [p.id as string, p.push_token as string])
+          .map((p: Record<string, unknown>) => [
+            p.id as string,
+            p.push_token as string,
+          ])
       );
 
-      await Promise.allSettled(
+      const pushResults = await Promise.allSettled(
         allTriggeredAlerts.map(async (alert) => {
           const pushToken = pushTokenByUserId.get(alert.user_id as string);
           if (!pushToken) return;
 
-          const sent = await sendPushNotification(
+          const { sent, isInvalidToken } = await sendPushNotification(
             pushToken,
             `${alert.rule_name} - ${alert.location_name}`,
             alert.summary as string,
@@ -312,8 +376,25 @@ Deno.serve(async (req) => {
               .update({ notification_sent: true })
               .eq("id", alert.alert_history_id as string);
           }
+
+          // Prune stale tokens immediately so future cron cycles don't retry
+          // and waste cooldown windows on a device that will never receive them.
+          if (isInvalidToken) {
+            await supabase
+              .from("profiles")
+              .update({ push_token: null })
+              .eq("id", alert.user_id as string);
+            console.log(`Pruned stale push token for user ${alert.user_id as string}`);
+          }
         })
       );
+
+      // Log any push dispatch failures so they appear in function logs.
+      for (const result of pushResults) {
+        if (result.status === "rejected") {
+          console.error("Push dispatch rejected:", result.reason);
+        }
+      }
     }
 
     return new Response(

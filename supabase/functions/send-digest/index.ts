@@ -9,6 +9,7 @@
 // ────────────────────────────────────────────────────────────
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { gridKey } from "../_shared/weatherEngine.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -61,10 +62,13 @@ function shouldSendNow(
   }
 
   if (localHour !== digestHour) return false;
-  if (digestFrequency === "weekly" && localIsoWeekday !== digestDayOfWeek) return false;
+  if (digestFrequency === "weekly" && localIsoWeekday !== digestDayOfWeek) {
+    return false;
+  }
 
   if (lastSentAt) {
-    const hoursSince = (nowUtc.getTime() - new Date(lastSentAt).getTime()) / (1000 * 60 * 60);
+    const hoursSince =
+      (nowUtc.getTime() - new Date(lastSentAt).getTime()) / (1000 * 60 * 60);
     if (hoursSince < MIN_RESEND_HOURS) return false;
   }
 
@@ -73,13 +77,15 @@ function shouldSendNow(
 
 // ── Forecast retrieval ─────────────────────────────────────
 // Checks the forecast_cache table first (written by poll-weather hourly).
-// Falls back to a direct Open-Meteo call only if the cache is missing or stale.
+// gridKey is imported from weatherEngine.ts — identical rounding logic to
+// poll-weather ensures cache hits. Falls back to direct Open-Meteo only if
+// cache is missing or stale.
 
-function gridKey(lat: number, lon: number): string {
-  return `${Math.round(lat * 10) / 10},${Math.round(lon * 10) / 10}`;
-}
-
-async function getForecast(lat: number, lon: number, nowUtc: Date): Promise<ForecastResponse> {
+async function getForecast(
+  lat: number,
+  lon: number,
+  nowUtc: Date
+): Promise<ForecastResponse> {
   const key = gridKey(lat, lon);
   const { data: cached } = await supabase
     .from("forecast_cache")
@@ -127,6 +133,13 @@ function formatTemp(fahrenheit: number, unit: string): string {
     : `${Math.round(fahrenheit)}°F`;
 }
 
+// Open-Meteo always returns wind in mph. Convert per-user preference.
+function convertWind(mph: number, unit: string): { value: number; label: string } {
+  if (unit === "kmh") return { value: Math.round(mph * 1.60934), label: "km/h" };
+  if (unit === "knots") return { value: Math.round(mph * 0.868976), label: "kts" };
+  return { value: Math.round(mph), label: "mph" };
+}
+
 interface ForecastResponse {
   daily: {
     time: string[];
@@ -141,7 +154,8 @@ function formatDigest(
   forecast: ForecastResponse,
   locationName: string,
   frequency: string,
-  temperatureUnit: string
+  temperatureUnit: string,
+  windSpeedUnit: string
 ): { title: string; body: string } {
   const { daily } = forecast;
   if (!daily?.time?.length) throw new Error("Empty forecast data");
@@ -150,17 +164,21 @@ function formatDigest(
     const high = formatTemp(daily.temperature_2m_max[0], temperatureUnit);
     const low = formatTemp(daily.temperature_2m_min[0], temperatureUnit);
     const rain = daily.precipitation_probability_max[0];
-    const wind = Math.round(daily.wind_speed_10m_max[0]);
+    const wind = convertWind(daily.wind_speed_10m_max[0], windSpeedUnit);
     return {
       title: `Today's forecast — ${locationName}`,
-      body: `High ${high}, Low ${low} · ${rain}% rain · ${wind} mph wind`,
+      body: `High ${high}, Low ${low} · ${rain}% rain · ${wind.value} ${wind.label} wind`,
     };
   }
 
   const maxRain = Math.max(...daily.precipitation_probability_max);
-  const dayLines = daily.time.slice(0, 7).map((_: string, i: number) =>
-    `${formatTemp(daily.temperature_2m_max[i], temperatureUnit)}/${formatTemp(daily.temperature_2m_min[i], temperatureUnit)}`
-  ).join(", ");
+  const dayLines = daily.time
+    .slice(0, 7)
+    .map(
+      (_: string, i: number) =>
+        `${formatTemp(daily.temperature_2m_max[i], temperatureUnit)}/${formatTemp(daily.temperature_2m_min[i], temperatureUnit)}`
+    )
+    .join(", ");
 
   return {
     title: `7-day forecast — ${locationName}`,
@@ -170,19 +188,63 @@ function formatDigest(
 
 // ── Push send ──────────────────────────────────────────────
 
-async function sendPush(pushToken: string, title: string, body: string) {
+async function sendPush(
+  pushToken: string,
+  title: string,
+  body: string
+): Promise<boolean> {
   const res = await fetch("https://exp.host/--/api/v2/push/send", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ to: pushToken, sound: "default", title, body, channelId: "forecast-digest" }),
+    body: JSON.stringify({
+      to: pushToken,
+      sound: "default",
+      title,
+      body,
+      channelId: "forecast-digest",
+    }),
   });
+
+  if (!res.ok) {
+    console.error(
+      `sendPush failed for token ${pushToken.slice(0, 20)}…: ${res.status}`,
+      await res.text()
+    );
+  }
+
   return res.ok;
 }
 
 // ── Main handler ───────────────────────────────────────────
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      { status: 405, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const digestSecret = Deno.env.get("SEND_DIGEST_SECRET") ?? "";
+  const validTokens = [
+    `Bearer ${serviceRoleKey}`,
+    ...(digestSecret ? [`Bearer ${digestSecret}`] : []),
+  ];
+  if (!validTokens.includes(authHeader)) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   try {
+    const body = await req.json().catch(() => ({}));
+    // notifyNow: bypass the shouldSendNow time gate — sends immediately
+    // userId: scope to a single profile (omit to run for all digest users)
+    const notifyNow: boolean = body?.notifyNow === true;
+    const filterUserId: string | null = body?.userId ?? null;
+
     const nowUtc = new Date();
 
     // Fetch all profiles with digest enabled + their digest location
@@ -198,6 +260,7 @@ Deno.serve(async () => {
         digest_last_sent_at,
         digest_location_id,
         temperature_unit,
+        wind_speed_unit,
         locations!digest_location_id (
           id,
           name,
@@ -221,10 +284,17 @@ Deno.serve(async () => {
     let skipped = 0;
 
     for (const profile of profiles) {
-      const loc = Array.isArray(profile.locations) ? profile.locations[0] : profile.locations;
-      if (!loc?.timezone) { skipped++; continue; }
+      if (filterUserId && profile.id !== filterUserId) continue;
 
-      const due = shouldSendNow(
+      const loc = Array.isArray(profile.locations)
+        ? profile.locations[0]
+        : profile.locations;
+      if (!loc?.timezone) {
+        skipped++;
+        continue;
+      }
+
+      const due = notifyNow || shouldSendNow(
         profile.digest_hour,
         profile.digest_frequency,
         profile.digest_day_of_week,
@@ -233,11 +303,20 @@ Deno.serve(async () => {
         nowUtc
       );
 
-      if (!due) { skipped++; continue; }
+      if (!due) {
+        skipped++;
+        continue;
+      }
 
       try {
         const forecast = await getForecast(loc.latitude, loc.longitude, nowUtc);
-        const { title, body } = formatDigest(forecast, loc.name, profile.digest_frequency, profile.temperature_unit ?? "fahrenheit");
+        const { title, body } = formatDigest(
+          forecast,
+          loc.name,
+          profile.digest_frequency,
+          profile.temperature_unit ?? "fahrenheit",
+          profile.wind_speed_unit ?? "mph"
+        );
         const ok = await sendPush(profile.push_token!, title, body);
 
         if (ok) {
@@ -260,9 +339,9 @@ Deno.serve(async () => {
     });
   } catch (err) {
     console.error("send-digest error:", err);
-    return new Response(JSON.stringify({ error: "Digest send failed" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Digest send failed" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 });

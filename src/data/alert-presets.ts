@@ -1,7 +1,6 @@
 // ────────────────────────────────────────────────────────────
 // Alert Presets — Quick-start templates for common use cases
-// Categories are neutral/general-purpose. Sportsman-specific
-// presets (hunting, fishing) will live in a future extension.
+// Categories are neutral/general-purpose.
 // ────────────────────────────────────────────────────────────
 
 import type { AlertPreset } from '../types';
@@ -25,7 +24,7 @@ export const ALERT_PRESETS: AlertPreset[] = [
   {
     id: 'hard-freeze',
     name: 'Hard Freeze',
-    description: 'Alert when temperature drops below 20°F. Serious risk to pipes, livestock, and equipment.',
+    description: 'Alert when temperature drops below 20°F. Serious risk to pipes, plants, and equipment.',
     icon: '❄️',
     category: 'temperature',
     conditions: [

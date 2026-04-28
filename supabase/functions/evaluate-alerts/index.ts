@@ -5,262 +5,41 @@
 // Evaluates all active alert rules for a given location against forecast data.
 // Returns which rules triggered and the human-readable summary.
 //
+// Auth: Bearer ${SUPABASE_SERVICE_ROLE_KEY} — called only by poll-weather
+// (which uses a service_role supabase client). verify_jwt = false in
+// config.toml; the bearer check below is the access control.
+//
 // This is the core IP of PingWeather.
 // ────────────────────────────────────────────────────────────
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  isInCooldown,
+  evaluateRule,
+} from "../_shared/weatherEngine.ts";
+import type {
+  AlertRule,
+  ForecastData,
+} from "../_shared/weatherEngine.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-interface AlertCondition {
-  metric: string;
-  operator: string;
-  value: number;
-  unit?: string;
-}
-
-interface AlertRule {
-  id: string;
-  user_id: string;
-  location_id: string;
-  name: string;
-  conditions: AlertCondition[];
-  logical_operator: "AND" | "OR";
-  lookahead_hours: number;
-  polling_interval_hours: number;
-  cooldown_hours: number;
-  is_active: boolean;
-  last_triggered_at: string | null;
-}
-
-interface HourlyForecast {
-  time: string[];
-  temperature_2m: number[];
-  relative_humidity_2m: number[];
-  precipitation_probability: number[];
-  wind_speed_10m: number[];
-  apparent_temperature: number[];
-  uv_index: number[];
-}
-
-interface DailyForecast {
-  time: string[];
-  temperature_2m_max: number[];
-  temperature_2m_min: number[];
-  precipitation_probability_max: number[];
-  wind_speed_10m_max: number[];
-  uv_index_max: number[];
-}
-
-interface ForecastData {
-  hourly: HourlyForecast;
-  daily: DailyForecast;
-}
-
-// ── Metric extractors ──────────────────────────────────────
-// Each metric extractor returns all relevant values from the forecast
-// within the rule's lookahead window.
-
-function getMetricValues(
-  metric: string,
-  forecast: ForecastData,
-  lookaheadHours: number
-): number[] {
-  const now = new Date();
-  const cutoff = new Date(now.getTime() + lookaheadHours * 60 * 60 * 1000);
-
-  switch (metric) {
-    case "temperature_high": {
-      return forecast.daily.temperature_2m_max.filter((_, i) => {
-        const date = new Date(forecast.daily.time[i]);
-        return date >= now && date <= cutoff;
-      });
-    }
-    case "temperature_low": {
-      return forecast.daily.temperature_2m_min.filter((_, i) => {
-        const date = new Date(forecast.daily.time[i]);
-        return date >= now && date <= cutoff;
-      });
-    }
-    case "temperature_current": {
-      return forecast.hourly.temperature_2m.filter((_, i) => {
-        const time = new Date(forecast.hourly.time[i]);
-        return time >= now && time <= cutoff;
-      });
-    }
-    case "precipitation_probability": {
-      // Use hourly for short windows, daily max for longer
-      if (lookaheadHours <= 24) {
-        return forecast.hourly.precipitation_probability.filter((_, i) => {
-          const time = new Date(forecast.hourly.time[i]);
-          return time >= now && time <= cutoff;
-        });
-      }
-      return forecast.daily.precipitation_probability_max.filter((_, i) => {
-        const date = new Date(forecast.daily.time[i]);
-        return date >= now && date <= cutoff;
-      });
-    }
-    case "wind_speed": {
-      if (lookaheadHours <= 24) {
-        return forecast.hourly.wind_speed_10m.filter((_, i) => {
-          const time = new Date(forecast.hourly.time[i]);
-          return time >= now && time <= cutoff;
-        });
-      }
-      return forecast.daily.wind_speed_10m_max.filter((_, i) => {
-        const date = new Date(forecast.daily.time[i]);
-        return date >= now && date <= cutoff;
-      });
-    }
-    case "humidity": {
-      return forecast.hourly.relative_humidity_2m.filter((_, i) => {
-        const time = new Date(forecast.hourly.time[i]);
-        return time >= now && time <= cutoff;
-      });
-    }
-    case "feels_like": {
-      return forecast.hourly.apparent_temperature.filter((_, i) => {
-        const time = new Date(forecast.hourly.time[i]);
-        return time >= now && time <= cutoff;
-      });
-    }
-    case "uv_index": {
-      return forecast.daily.uv_index_max.filter((_, i) => {
-        const date = new Date(forecast.daily.time[i]);
-        return date >= now && date <= cutoff;
-      });
-    }
-    default:
-      return [];
-  }
-}
-
-// ── Comparison ─────────────────────────────────────────────
-
-function compare(actual: number, operator: string, threshold: number): boolean {
-  switch (operator) {
-    case "gt":  return actual > threshold;
-    case "gte": return actual >= threshold;
-    case "lt":  return actual < threshold;
-    case "lte": return actual <= threshold;
-    case "eq":  return actual === threshold;
-    default:    return false;
-  }
-}
-
-// ── Condition evaluation ───────────────────────────────────
-// A condition is met if ANY value within the lookahead window matches.
-
-function evaluateCondition(
-  condition: AlertCondition,
-  forecast: ForecastData,
-  lookaheadHours: number
-): { met: boolean; matchedValue: number | null; matchedTime: string | null } {
-  const values = getMetricValues(condition.metric, forecast, lookaheadHours);
-
-  for (let i = 0; i < values.length; i++) {
-    if (compare(values[i], condition.operator, condition.value)) {
-      return { met: true, matchedValue: values[i], matchedTime: null };
-    }
-  }
-
-  return { met: false, matchedValue: null, matchedTime: null };
-}
-
-// ── Rule evaluation ────────────────────────────────────────
-
-interface EvaluationResult {
-  rule: AlertRule;
-  triggered: boolean;
-  summary: string;
-  matchDetails: Array<{
-    metric: string;
-    operator: string;
-    threshold: number;
-    matchedValue: number | null;
-    met: boolean;
-  }>;
-}
-
-function evaluateRule(rule: AlertRule, forecast: ForecastData): EvaluationResult {
-  const details = rule.conditions.map((condition) => {
-    const result = evaluateCondition(condition, forecast, rule.lookahead_hours);
-    return {
-      metric: condition.metric,
-      operator: condition.operator,
-      threshold: condition.value,
-      matchedValue: result.matchedValue,
-      met: result.met,
-    };
-  });
-
-  const triggered =
-    rule.logical_operator === "AND"
-      ? details.every((d) => d.met)
-      : details.some((d) => d.met);
-
-  // Build human-readable summary
-  const metConditions = details.filter((d) => d.met);
-  const summary = triggered
-    ? metConditions
-        .map((d) => formatConditionSummary(d.metric, d.operator, d.threshold, d.matchedValue))
-        .join(rule.logical_operator === "AND" ? " and " : " or ")
-    : "No conditions met";
-
-  return { rule, triggered, summary, matchDetails: details };
-}
-
-function formatConditionSummary(
-  metric: string,
-  operator: string,
-  threshold: number,
-  matchedValue: number | null
-): string {
-  const metricLabels: Record<string, string> = {
-    temperature_high: "High temp",
-    temperature_low: "Low temp",
-    temperature_current: "Temperature",
-    precipitation_probability: "Rain chance",
-    wind_speed: "Wind speed",
-    humidity: "Humidity",
-    feels_like: "Feels like",
-    uv_index: "UV index",
-  };
-
-  const operatorLabels: Record<string, string> = {
-    gt: "above",
-    gte: "at or above",
-    lt: "below",
-    lte: "at or below",
-    eq: "exactly",
-  };
-
-  const label = metricLabels[metric] || metric;
-  const op = operatorLabels[operator] || operator;
-  const actual = matchedValue !== null ? ` (forecast: ${matchedValue})` : "";
-
-  return `${label} ${op} ${threshold}${actual}`;
-}
-
-// ── Cooldown check ─────────────────────────────────────────
-// Simple one-fire-per-cooldown-window semantic. A rule is in cooldown if
-// last_triggered_at was set less than cooldown_hours ago.
-
-function isInCooldown(rule: AlertRule, now: Date): boolean {
-  if (!rule.last_triggered_at) return false;
-  const lastTriggered = new Date(rule.last_triggered_at).getTime();
-  const cooldownEnd = lastTriggered + rule.cooldown_hours * 60 * 60 * 1000;
-  return now.getTime() < cooldownEnd;
-}
-
 // ── Main handler ───────────────────────────────────────────
 
 Deno.serve(async (req) => {
+  // Bearer auth — only poll-weather (service_role client) should call this.
+  const authHeader = req.headers.get("Authorization") ?? "";
+  if (authHeader !== `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   try {
-    const { rules, forecast, location_name } = await req.json() as {
+    const { rules, forecast, location_name } = (await req.json()) as {
       rules: AlertRule[];
       forecast: ForecastData;
       location_name: string;
@@ -269,7 +48,9 @@ Deno.serve(async (req) => {
     const evalNow = new Date();
 
     // Evaluate all rules (pure computation — no DB calls yet).
-    const results: EvaluationResult[] = rules
+    // evaluateRule is imported from weatherEngine.ts so Jest can test it
+    // without running Deno.
+    const results = rules
       .filter((rule) => rule.is_active && !isInCooldown(rule, evalNow))
       .map((rule) => evaluateRule(rule, forecast));
 
@@ -277,6 +58,12 @@ Deno.serve(async (req) => {
 
     // Parallel-insert alert_history for all triggered rules, then batch-update
     // last_triggered_at in one query. N+1 DB round trips → N parallel + 1 batch.
+    //
+    // Dedup: migration 00015 adds a unique index on (rule_id, date_trunc('hour',
+    // triggered_at)). If two poll cycles fire within the same UTC hour (e.g.,
+    // manual trigger + scheduled), the second insert returns error code 23505
+    // (unique_violation). We treat that as "already fired this hour" — skip
+    // adding to historyIdByRule so no duplicate push notification is sent.
     const historyIdByRule = new Map<string, string>();
 
     await Promise.all(
@@ -299,7 +86,15 @@ Deno.serve(async (req) => {
           .single();
 
         if (historyErr) {
-          console.error("alert_history insert error:", historyErr);
+          // 23505 = unique_violation — dedup index fired, already alerted
+          // this hour. Not an error — just skip the push for this cycle.
+          if ((historyErr as { code?: string }).code === "23505") {
+            console.log(
+              `alert_history dedup: rule ${result.rule.id} already fired this hour — skipping`
+            );
+          } else {
+            console.error("alert_history insert error:", historyErr);
+          }
         } else if (historyRow?.id) {
           historyIdByRule.set(result.rule.id, historyRow.id);
         }
@@ -310,7 +105,10 @@ Deno.serve(async (req) => {
       await supabase
         .from("alert_rules")
         .update({ last_triggered_at: evalNow.toISOString() })
-        .in("id", triggered.map((r) => r.rule.id));
+        .in(
+          "id",
+          triggered.map((r) => r.rule.id)
+        );
     }
 
     return new Response(
@@ -324,6 +122,7 @@ Deno.serve(async (req) => {
           summary: r.summary,
           details: r.matchDetails,
           // Dedicated id so poll-weather can surgically UPDATE one row.
+          // Null when dedup prevented the insert (already alerted this hour).
           alert_history_id: historyIdByRule.get(r.rule.id) ?? null,
         })),
       }),

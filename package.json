@@ -62,7 +62,9 @@
         "displayName": "components",
         "testEnvironment": "jsdom",
         "testMatch": [
-          "<rootDir>/__tests__/screens/**/*.test.tsx"
+          "<rootDir>/__tests__/screens/**/*.test.tsx",
+          "<rootDir>/__tests__/hooks/**/*.test.tsx",
+          "<rootDir>/__tests__/components/**/*.test.tsx"
         ],
         "setupFiles": [
           "<rootDir>/jest.setup.ts"

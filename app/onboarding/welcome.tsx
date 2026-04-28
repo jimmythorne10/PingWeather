@@ -17,9 +17,9 @@ export default function WelcomeScreen() {
 
         <View style={styles.features}>
           {[
-            ['🧊', 'Freeze alerts for livestock and pipes'],
-            ['🌧️', 'Rain notifications for outdoor work'],
-            ['🦌', 'Cold front tracking for hunting'],
+            ['🧊', 'Freeze and temperature alerts'],
+            ['🌧️', 'Rain and storm notifications'],
+            ['🌬️', 'Wind, cold fronts, and UV tracking'],
             ['🔔', 'Custom conditions, your schedule'],
           ].map(([icon, text]) => (
             <View key={text} style={styles.featureRow}>

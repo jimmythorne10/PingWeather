@@ -14,7 +14,16 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.truthcenteredtech.pingweather"
+      "bundleIdentifier": "com.truthcenteredtech.pingweather",
+      "buildNumber": "1",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"],
+        "NSLocationWhenInUseUsageDescription": "PingWeather uses your location to monitor weather conditions at sites you care about and alert you when they match your rules.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "PingWeather uses your location to monitor weather conditions at sites you care about and alert you when they match your rules."
+      },
+      "entitlements": {
+        "aps-environment": "production"
+      }
     },
     "android": {
       "package": "com.truthcenteredtech.pingweather",
@@ -63,7 +72,8 @@
       "eas": {
         "projectId": "6456b66e-6e5a-4881-984f-20e2f3b477f4"
       },
-      "revenueCatAndroidApiKey": "goog_XykDmtoZwUNDfBgswNJaIkDLjNC"
+      "revenueCatAndroidApiKey": "goog_XykDmtoZwUNDfBgswNJaIkDLjNC",
+      "revenueCatIosApiKey": ""
     },
     "runtimeVersion": {
       "policy": "sdkVersion"

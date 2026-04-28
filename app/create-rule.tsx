@@ -54,7 +54,7 @@ export default function CreateRuleScreen() {
 
   const profile = useAuthStore((s) => s.profile);
   const { locations, loadLocations } = useLocationsStore();
-  const { rules, createRule, updateRule } = useAlertRulesStore();
+  const { rules, createRule, updateRule, loadRules } = useAlertRulesStore();
 
   const tier = profile?.subscription_tier ?? 'free';
   const limits = TIER_LIMITS[tier];
@@ -92,7 +92,13 @@ export default function CreateRuleScreen() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    // FIX 12: Load both locations and rules on mount. On a cold-start deep
+    // link into this screen (e.g., tapping "edit" from a notification), the
+    // Zustand store may be empty. Without loadRules() here, sourceRule is
+    // undefined, all useState initialisers get their default values, and the
+    // form opens blank instead of pre-populated.
     loadLocations();
+    loadRules();
   }, []);
 
   useEffect(() => {

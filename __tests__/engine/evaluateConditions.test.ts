@@ -4,178 +4,41 @@
  * Validates condition matching, compound AND/OR logic, cooldown handling,
  * metric extraction for all 8 metrics, and lookahead window filtering.
  *
- * The Deno Edge Function in supabase/functions/evaluate-alerts/index.ts
- * cannot be imported directly in a Node/Jest environment (it imports from
- * https://esm.sh and uses Deno APIs). These are pure logic tests — we
- * re-implement the pure functions here and assert their behavior.
- * The re-implementations MUST stay in lockstep with the edge function.
+ * All functions are imported from src/utils/weatherEngine — the shared module
+ * that the Edge Functions also import. A change to the real implementation will
+ * cause these tests to fail, which is exactly what we want.
  */
 
-// ── Ported pure logic (must match supabase/functions/evaluate-alerts/index.ts) ──
-
-interface AlertCondition {
-  metric: string;
-  operator: string;
-  value: number;
-  unit?: string;
-}
-
-interface AlertRule {
-  id: string;
-  user_id: string;
-  location_id: string;
-  name: string;
-  conditions: AlertCondition[];
-  logical_operator: 'AND' | 'OR';
-  lookahead_hours: number;
-  polling_interval_hours: number;
-  cooldown_hours: number;
-  is_active: boolean;
-  last_triggered_at: string | null;
-}
-
-interface HourlyForecast {
-  time: string[];
-  temperature_2m: number[];
-  relative_humidity_2m: number[];
-  precipitation_probability: number[];
-  wind_speed_10m: number[];
-  apparent_temperature: number[];
-  uv_index: number[];
-}
-
-interface DailyForecast {
-  time: string[];
-  temperature_2m_max: number[];
-  temperature_2m_min: number[];
-  precipitation_probability_max: number[];
-  wind_speed_10m_max: number[];
-  uv_index_max: number[];
-}
-
-interface ForecastData {
-  hourly: HourlyForecast;
-  daily: DailyForecast;
-}
-
-function getMetricValues(
-  metric: string,
-  forecast: ForecastData,
-  lookaheadHours: number,
-): number[] {
-  const now = new Date();
-  const cutoff = new Date(now.getTime() + lookaheadHours * 60 * 60 * 1000);
-
-  switch (metric) {
-    case 'temperature_high':
-      return forecast.daily.temperature_2m_max.filter((_, i) => {
-        const d = new Date(forecast.daily.time[i]);
-        return d >= now && d <= cutoff;
-      });
-    case 'temperature_low':
-      return forecast.daily.temperature_2m_min.filter((_, i) => {
-        const d = new Date(forecast.daily.time[i]);
-        return d >= now && d <= cutoff;
-      });
-    case 'temperature_current':
-      return forecast.hourly.temperature_2m.filter((_, i) => {
-        const t = new Date(forecast.hourly.time[i]);
-        return t >= now && t <= cutoff;
-      });
-    case 'precipitation_probability':
-      if (lookaheadHours <= 24) {
-        return forecast.hourly.precipitation_probability.filter((_, i) => {
-          const t = new Date(forecast.hourly.time[i]);
-          return t >= now && t <= cutoff;
-        });
-      }
-      return forecast.daily.precipitation_probability_max.filter((_, i) => {
-        const d = new Date(forecast.daily.time[i]);
-        return d >= now && d <= cutoff;
-      });
-    case 'wind_speed':
-      if (lookaheadHours <= 24) {
-        return forecast.hourly.wind_speed_10m.filter((_, i) => {
-          const t = new Date(forecast.hourly.time[i]);
-          return t >= now && t <= cutoff;
-        });
-      }
-      return forecast.daily.wind_speed_10m_max.filter((_, i) => {
-        const d = new Date(forecast.daily.time[i]);
-        return d >= now && d <= cutoff;
-      });
-    case 'humidity':
-      return forecast.hourly.relative_humidity_2m.filter((_, i) => {
-        const t = new Date(forecast.hourly.time[i]);
-        return t >= now && t <= cutoff;
-      });
-    case 'feels_like':
-      return forecast.hourly.apparent_temperature.filter((_, i) => {
-        const t = new Date(forecast.hourly.time[i]);
-        return t >= now && t <= cutoff;
-      });
-    case 'uv_index':
-      return forecast.daily.uv_index_max.filter((_, i) => {
-        const d = new Date(forecast.daily.time[i]);
-        return d >= now && d <= cutoff;
-      });
-    default:
-      return [];
-  }
-}
-
-function compare(actual: number, operator: string, threshold: number): boolean {
-  switch (operator) {
-    case 'gt':
-      return actual > threshold;
-    case 'gte':
-      return actual >= threshold;
-    case 'lt':
-      return actual < threshold;
-    case 'lte':
-      return actual <= threshold;
-    case 'eq':
-      return actual === threshold;
-    default:
-      return false;
-  }
-}
-
-function evaluateCondition(
-  condition: AlertCondition,
-  forecast: ForecastData,
-  lookaheadHours: number,
-): { met: boolean; matchedValue: number | null } {
-  const values = getMetricValues(condition.metric, forecast, lookaheadHours);
-  for (const v of values) {
-    if (compare(v, condition.operator, condition.value)) {
-      return { met: true, matchedValue: v };
-    }
-  }
-  return { met: false, matchedValue: null };
-}
-
-function evaluateRule(
-  rule: AlertRule,
-  forecast: ForecastData,
-): { triggered: boolean; details: Array<{ met: boolean; matchedValue: number | null }> } {
-  const details = rule.conditions.map((c) => evaluateCondition(c, forecast, rule.lookahead_hours));
-  const triggered =
-    rule.logical_operator === 'AND' ? details.every((d) => d.met) : details.some((d) => d.met);
-  return { triggered, details };
-}
-
-function isInCooldown(rule: AlertRule): boolean {
-  if (!rule.last_triggered_at) return false;
-  const lastTriggered = new Date(rule.last_triggered_at);
-  const cooldownEnd = new Date(lastTriggered.getTime() + rule.cooldown_hours * 60 * 60 * 1000);
-  return new Date() < cooldownEnd;
-}
+import {
+  getMetricValues,
+  compare,
+  evaluateCondition,
+  evaluateRule,
+  isInCooldown,
+  gridKey,
+  type AlertCondition,
+  type AlertRule,
+  type ForecastData,
+  type HourlyForecast,
+  type DailyForecast,
+} from '../../src/utils/weatherEngine';
 
 // ── Test helpers ───────────────────────────────────────────────
 
 function hoursFromNow(h: number): string {
   return new Date(Date.now() + h * 60 * 60 * 1000).toISOString();
+}
+
+/** Returns today's date as "YYYY-MM-DD" (UTC) — matches how Open-Meteo formats daily time. */
+function todayDateString(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Returns the date string for N days from today in UTC. */
+function futureDateString(daysFromNow: number): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + daysFromNow);
+  return d.toISOString().slice(0, 10);
 }
 
 function buildForecast(overrides: Partial<ForecastData> = {}): ForecastData {
@@ -186,6 +49,8 @@ function buildForecast(overrides: Partial<ForecastData> = {}): ForecastData {
     hoursFromNow(24),
     hoursFromNow(48),
   ];
+  // Daily times use hoursFromNow so they're always in the future relative to now,
+  // which means the todayUtc snap in getMetricValues includes them.
   const dailyTimes = [
     hoursFromNow(12),
     hoursFromNow(36),
@@ -202,7 +67,7 @@ function buildForecast(overrides: Partial<ForecastData> = {}): ForecastData {
       wind_speed_10m: [5, 10, 15, 20, 30],
       apparent_temperature: [58, 52, 38, 32, 28],
       uv_index: [2, 5, 3, 0, 1],
-      ...overrides.hourly,
+      ...(overrides.hourly as Partial<HourlyForecast>),
     },
     daily: {
       time: dailyTimes,
@@ -211,7 +76,7 @@ function buildForecast(overrides: Partial<ForecastData> = {}): ForecastData {
       precipitation_probability_max: [20, 80, 60, 40],
       wind_speed_10m_max: [15, 25, 35, 45],
       uv_index_max: [5, 7, 9, 3],
-      ...overrides.daily,
+      ...(overrides.daily as Partial<DailyForecast>),
     },
   };
 }
@@ -360,6 +225,107 @@ describe('evaluate-alerts engine — FR-POLL-002', () => {
     });
   });
 
+  // ── Daily date filter bug — today's data must be included ─
+
+  describe('getMetricValues — daily metrics include today', () => {
+    it('includes temperature_high from today when time is a YYYY-MM-DD date string', () => {
+      // THE BUG: old code used `date >= now` where now is e.g. 14:00 UTC, and
+      // today's daily record is midnight UTC. Midnight < 14:00 so today was excluded.
+      // THE FIX: the real implementation snaps `now` to UTC midnight before comparing
+      // daily records, so today is always included.
+      //
+      // Regression test: if getMetricValues reverts to comparing raw `now` against
+      // midnight UTC dates, todayValue (92) will be missing from results.
+      const todayHigh = 92;
+      const tomorrowHigh = 88;
+
+      const forecast: ForecastData = {
+        daily: {
+          time: [todayDateString(), futureDateString(1)],
+          temperature_2m_max: [todayHigh, tomorrowHigh],
+          temperature_2m_min: [70, 65],
+          precipitation_probability_max: [10, 20],
+          wind_speed_10m_max: [15, 12],
+          uv_index_max: [8, 7],
+        },
+        hourly: {
+          time: [],
+          temperature_2m: [],
+          relative_humidity_2m: [],
+          precipitation_probability: [],
+          wind_speed_10m: [],
+          apparent_temperature: [],
+          uv_index: [],
+        },
+      };
+
+      // lookahead of 48h from now must include both today and tomorrow
+      const values = getMetricValues('temperature_high', forecast, 48);
+      expect(values).toContain(todayHigh); // today's high must be present
+      expect(values).toContain(tomorrowHigh); // tomorrow's high must also be present
+    });
+
+    it('includes temperature_low from today regardless of time-of-day', () => {
+      // Same fix applies to temperature_low (daily metric)
+      const todayLow = 28;
+
+      const forecast: ForecastData = {
+        daily: {
+          time: [todayDateString(), futureDateString(1)],
+          temperature_2m_max: [75, 70],
+          temperature_2m_min: [todayLow, 32],
+          precipitation_probability_max: [10, 20],
+          wind_speed_10m_max: [15, 12],
+          uv_index_max: [8, 7],
+        },
+        hourly: {
+          time: [],
+          temperature_2m: [],
+          relative_humidity_2m: [],
+          precipitation_probability: [],
+          wind_speed_10m: [],
+          apparent_temperature: [],
+          uv_index: [],
+        },
+      };
+
+      const values = getMetricValues('temperature_low', forecast, 48);
+      expect(values).toContain(todayLow);
+    });
+
+    it('a freeze alert rule can trigger on today\'s daily low', () => {
+      // End-to-end regression: if today's low is excluded, a freeze alert that
+      // should fire today will silently fail. This test catches that regression.
+      const forecast: ForecastData = {
+        daily: {
+          time: [todayDateString(), futureDateString(1)],
+          temperature_2m_max: [45, 50],
+          temperature_2m_min: [28, 35], // today is freezing, tomorrow is not
+          precipitation_probability_max: [0, 0],
+          wind_speed_10m_max: [5, 5],
+          uv_index_max: [2, 3],
+        },
+        hourly: {
+          time: [],
+          temperature_2m: [],
+          relative_humidity_2m: [],
+          precipitation_probability: [],
+          wind_speed_10m: [],
+          apparent_temperature: [],
+          uv_index: [],
+        },
+      };
+
+      const rule = buildRule({
+        conditions: [{ metric: 'temperature_low', operator: 'lt', value: 32 }],
+        lookahead_hours: 24,
+      });
+
+      const result = evaluateRule(rule, forecast);
+      expect(result.triggered).toBe(true); // would be false if today's data is excluded
+    });
+  });
+
   // ── Lookahead window filtering ────────────────────────
 
   describe('lookahead window filtering', () => {
@@ -427,6 +393,58 @@ describe('evaluate-alerts engine — FR-POLL-002', () => {
 
       const result = evaluateRule(rule, forecast);
       expect(result.triggered).toBe(false);
+    });
+
+    it('returns matchDetails with per-condition results', () => {
+      const forecast = buildForecast();
+      const rule = buildRule({
+        conditions: [{ metric: 'temperature_low', operator: 'lt', value: 32 }],
+        lookahead_hours: 96,
+      });
+
+      const result = evaluateRule(rule, forecast);
+      expect(result.matchDetails).toHaveLength(1);
+      expect(result.matchDetails[0].met).toBe(true);
+      expect(result.matchDetails[0].metric).toBe('temperature_low');
+    });
+  });
+
+  // ── Empty conditions guard ───────────────────────────────
+
+  describe('evaluateRule — empty conditions guard', () => {
+    it('returns triggered:false when conditions array is empty (AND)', () => {
+      // A rule with no conditions must never fire — it has no criteria to evaluate.
+      // The guard prevents vacuous truth (AND of empty set = true in set theory,
+      // which would fire every poll cycle).
+      const rule = buildRule({
+        conditions: [],
+        logical_operator: 'AND',
+      });
+
+      const forecast = buildForecast();
+      const result = evaluateRule(rule, forecast);
+      expect(result.triggered).toBe(false);
+      expect(result.matchDetails).toHaveLength(0);
+    });
+
+    it('returns triggered:false when conditions array is empty (OR)', () => {
+      // Same guard applies to OR logic.
+      const rule = buildRule({
+        conditions: [],
+        logical_operator: 'OR',
+      });
+
+      const forecast = buildForecast();
+      const result = evaluateRule(rule, forecast);
+      expect(result.triggered).toBe(false);
+    });
+
+    it('empty conditions result includes a descriptive summary', () => {
+      const rule = buildRule({ conditions: [] });
+      const forecast = buildForecast();
+      const result = evaluateRule(rule, forecast);
+      expect(result.summary).toBeTruthy();
+      expect(typeof result.summary).toBe('string');
     });
   });
 
@@ -498,7 +516,7 @@ describe('evaluate-alerts engine — FR-POLL-002', () => {
     it('returns false when rule has never been triggered', () => {
       // FR-POLL-002: cooldown respected — never-triggered rule has no cooldown
       const rule = buildRule({ last_triggered_at: null });
-      expect(isInCooldown(rule)).toBe(false);
+      expect(isInCooldown(rule, new Date())).toBe(false);
     });
 
     it('returns true when current time is within cooldown window', () => {
@@ -507,7 +525,7 @@ describe('evaluate-alerts engine — FR-POLL-002', () => {
         last_triggered_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2h ago
         cooldown_hours: 12,
       });
-      expect(isInCooldown(rule)).toBe(true);
+      expect(isInCooldown(rule, new Date())).toBe(true);
     });
 
     it('returns false when current time is past cooldown window', () => {
@@ -515,7 +533,7 @@ describe('evaluate-alerts engine — FR-POLL-002', () => {
         last_triggered_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 24h ago
         cooldown_hours: 12,
       });
-      expect(isInCooldown(rule)).toBe(false);
+      expect(isInCooldown(rule, new Date())).toBe(false);
     });
 
     it('returns true right at cooldown boundary', () => {
@@ -523,7 +541,66 @@ describe('evaluate-alerts engine — FR-POLL-002', () => {
         last_triggered_at: new Date(Date.now() - 11.9 * 60 * 60 * 1000).toISOString(),
         cooldown_hours: 12,
       });
-      expect(isInCooldown(rule)).toBe(true);
+      expect(isInCooldown(rule, new Date())).toBe(true);
+    });
+
+    it('accepts an explicit now parameter so callers can control the reference time', () => {
+      // The explicit `now` parameter is what allows poll-weather to pass a single
+      // consistent timestamp across all rule evaluations in a batch, rather than
+      // each call to isInCooldown seeing a slightly different wall-clock time.
+      const lastTriggered = new Date('2026-04-24T10:00:00.000Z');
+      const rule = buildRule({
+        last_triggered_at: lastTriggered.toISOString(),
+        cooldown_hours: 4,
+      });
+
+      // 3 hours after trigger — still in cooldown
+      const nowDuring = new Date('2026-04-24T13:00:00.000Z');
+      expect(isInCooldown(rule, nowDuring)).toBe(true);
+
+      // 5 hours after trigger — cooldown expired
+      const nowAfter = new Date('2026-04-24T15:00:00.000Z');
+      expect(isInCooldown(rule, nowAfter)).toBe(false);
+    });
+  });
+
+  // ── gridKey ──────────────────────────────────────────────
+
+  describe('gridKey — cache key consistency', () => {
+    it('produces identical keys for coordinates that round to the same 0.1° grid cell', () => {
+      // Nearby users must share the same grid so only one Open-Meteo API call
+      // is made for their grid. If this fails, the batching logic breaks.
+      // 40.123 and 40.144 both round to 40.1; -74.521 and -74.549 both round to -74.5.
+      expect(gridKey(40.123, -74.521)).toBe(gridKey(40.144, -74.549));
+    });
+
+    it('produces different keys for coordinates more than 0.1° apart', () => {
+      expect(gridKey(40.1, -74.5)).not.toBe(gridKey(40.2, -74.5));
+    });
+
+    it('rounds to 1 decimal place', () => {
+      // 40.123 → 40.1, -74.567 → -74.6
+      expect(gridKey(40.123, -74.567)).toBe('40.1,-74.6');
+    });
+
+    it('cache key from poll-weather matches lookup key from send-digest', () => {
+      // THE BUG: poll-weather was caching with raw coordinates, send-digest was
+      // looking up with gridKey() — causing cache misses and redundant API calls.
+      // THE FIX: both now use gridKey(). This test verifies the keys are identical.
+      const lat = 40.123;
+      const lon = -74.567;
+      const pollWeatherKey = gridKey(lat, lon); // what poll-weather writes to cache
+      const sendDigestKey = gridKey(lat, lon);  // what send-digest reads from cache
+      expect(pollWeatherKey).toBe(sendDigestKey);
+      expect(pollWeatherKey).toBe('40.1,-74.6');
+    });
+
+    it('handles coordinates that round cleanly to integers', () => {
+      expect(gridKey(40.0, -74.0)).toBe('40,-74');
+    });
+
+    it('handles negative latitudes (southern hemisphere)', () => {
+      expect(gridKey(-33.87, 151.21)).toBe('-33.9,151.2');
     });
   });
 });

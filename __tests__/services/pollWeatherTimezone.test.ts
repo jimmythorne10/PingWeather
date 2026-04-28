@@ -1,15 +1,7 @@
-// Tests for extractTimezone pure helper extracted from poll-weather Edge Function.
-//
-// Convention (see processInBatches.test.ts): the logic is copied verbatim from
-// the source in supabase/functions/poll-weather/index.ts. If the two diverge,
-// these tests stop being meaningful regression coverage.
+// Tests for extractTimezone pure helper — imported from the shared weatherEngine
+// module so that changes to the real function are caught by these tests.
 
-function extractTimezone(forecast: Record<string, unknown> | null): string | null {
-  if (!forecast) return null;
-  const tz = forecast.timezone;
-  if (typeof tz !== "string" || !tz) return null;
-  return tz;
-}
+import { extractTimezone } from '../../src/utils/weatherEngine';
 
 describe("extractTimezone", () => {
   it("returns the IANA timezone string from a valid Open-Meteo response", () => {

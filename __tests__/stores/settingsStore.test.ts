@@ -1,7 +1,10 @@
 /**
- * Tests for settingsStore — FR-SET-002 through FR-SET-004
+ * Tests for settingsStore — FR-SET-002, FR-SET-004
+ * Tests for themeStore    — FR-SET-003
  *
- * Validates unit preferences, theme selection, and notification toggle persistence.
+ * NOTE: themeName was removed from settingsStore (FIX 5). It was a duplicate
+ * of themeStore.themeName that caused drift when either store was updated
+ * independently. All theme state now lives exclusively in themeStore.
  */
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -16,19 +19,28 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { useThemeStore } from '../../src/stores/themeStore';
+import { THEMES } from '../../src/theme/tokens';
 
-function resetStore() {
+function resetSettingsStore() {
   useSettingsStore.setState({
     temperatureUnit: 'fahrenheit',
     windSpeedUnit: 'mph',
-    themeName: 'classic',
     notificationsEnabled: true,
+  });
+}
+
+function resetThemeStore() {
+  useThemeStore.setState({
+    themeName: 'classic',
+    tokens: THEMES.classic,
   });
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
-  resetStore();
+  resetSettingsStore();
+  resetThemeStore();
 });
 
 describe('settingsStore', () => {
@@ -83,28 +95,34 @@ describe('settingsStore', () => {
     });
   });
 
-  // ── FR-SET-003: Theme Selection ───────────────────────────
+  // ── FR-SET-003: Theme Selection (via themeStore — single source of truth) ──
 
   describe('FR-SET-003: theme selection', () => {
     it('defaults to classic theme', () => {
-      expect(useSettingsStore.getState().themeName).toBe('classic');
+      expect(useThemeStore.getState().themeName).toBe('classic');
     });
 
-    it('updates to dark theme', () => {
+    it('updates to dark theme and sets correct tokens', () => {
       // FR-SET-003: three options classic, dark, storm
-      useSettingsStore.getState().setThemeName('dark');
-      expect(useSettingsStore.getState().themeName).toBe('dark');
+      useThemeStore.getState().setTheme('dark');
+      const state = useThemeStore.getState();
+      expect(state.themeName).toBe('dark');
+      expect(state.tokens).toEqual(THEMES.dark);
     });
 
-    it('updates to storm theme', () => {
-      useSettingsStore.getState().setThemeName('storm');
-      expect(useSettingsStore.getState().themeName).toBe('storm');
+    it('updates to storm theme and sets correct tokens', () => {
+      useThemeStore.getState().setTheme('storm');
+      const state = useThemeStore.getState();
+      expect(state.themeName).toBe('storm');
+      expect(state.tokens).toEqual(THEMES.storm);
     });
 
-    it('updates to classic theme', () => {
-      useSettingsStore.setState({ themeName: 'dark' });
-      useSettingsStore.getState().setThemeName('classic');
-      expect(useSettingsStore.getState().themeName).toBe('classic');
+    it('updates to classic theme and sets correct tokens', () => {
+      useThemeStore.setState({ themeName: 'dark', tokens: THEMES.dark });
+      useThemeStore.getState().setTheme('classic');
+      const state = useThemeStore.getState();
+      expect(state.themeName).toBe('classic');
+      expect(state.tokens).toEqual(THEMES.classic);
     });
   });
 

@@ -43,3 +43,17 @@ verify_jwt = false
 # Called from the app with the user's JWT. JWT verification must be ON
 # so only the authenticated user can delete their own account.
 verify_jwt = true
+
+[functions.send-digest]
+# Called by pg_cron with the service_role key (which is a valid JWT).
+# The function handles no per-user auth — it reads all profiles internally.
+verify_jwt = false
+
+[functions.fcm-keepalive]
+# Called by pg_cron. No user-level auth needed.
+verify_jwt = false
+
+[functions.get-forecast]
+# Called by the mobile app with the authenticated user's JWT.
+# Supabase gateway validates the JWT before the function runs.
+verify_jwt = true

@@ -101,6 +101,13 @@ export default function AlertsScreen() {
       cooldown_hours: preset.cooldown_hours,
     });
 
+    // FIX 10: Check whether the store recorded an error after the call.
+    // createRule sets store.error on failure; if it's set, keep the modal open
+    // so the user sees the error message (rendered elsewhere from the store)
+    // rather than silently dismissing as if the rule was created.
+    const storeError = useAlertRulesStore.getState().error;
+    if (storeError) return;
+
     setPresetConfirmState(null);
   };
 
@@ -231,12 +238,17 @@ export default function AlertsScreen() {
             >
               <View style={styles.ruleHeader}>
                 <Text style={styles.ruleName}>{rule.name}</Text>
-                <Switch
-                  value={rule.is_active}
-                  onValueChange={(val) => toggleRule(rule.id, val)}
-                  trackColor={{ false: tokens.border, true: tokens.primaryLight }}
-                  thumbColor={rule.is_active ? tokens.primary : tokens.textTertiary}
-                />
+                {/* FIX 9: Wrap Switch in a Pressable that stops event propagation.
+                    Without this, touching the Switch bubbles up to the parent
+                    Pressable's onPress and navigates to the edit screen. */}
+                <Pressable onPress={(e) => { e.stopPropagation?.(); }}>
+                  <Switch
+                    value={rule.is_active}
+                    onValueChange={(val) => toggleRule(rule.id, val)}
+                    trackColor={{ false: tokens.border, true: tokens.primaryLight }}
+                    thumbColor={rule.is_active ? tokens.primary : tokens.textTertiary}
+                  />
+                </Pressable>
               </View>
               <Text style={styles.ruleLocation}>
                 {findLocationName(locations, rule.location_id)}

@@ -1,42 +1,50 @@
 /**
  * Tests for weatherApi — FR-HOME-001, FR-FORECAST-002
  *
- * Validates Open-Meteo API client: URL construction, error handling,
- * unit options, and requested hourly/daily fields.
+ * Validates the get-forecast Edge Function proxy client: body construction,
+ * error handling, unit options, and requested hourly/daily fields.
+ *
+ * fetchForecast now calls supabase.functions.invoke('get-forecast', { body })
+ * instead of fetch() directly. Mocks target supabase.functions.invoke via the
+ * singleton set up in jest.setup.ts.
  */
 
 import { fetchForecast } from '../../src/services/weatherApi';
-
-const originalFetch = global.fetch;
+import { supabase } from '../../src/utils/supabase';
 
 afterEach(() => {
-  global.fetch = originalFetch;
   jest.clearAllMocks();
 });
 
-function mockFetchSuccess(body: unknown) {
-  global.fetch = jest.fn().mockResolvedValue({
-    ok: true,
-    status: 200,
-    json: async () => body,
-  } as any);
+// ── Mock helpers ──────────────────────────────────────────────────────────────
+
+function mockInvokeSuccess(body: unknown) {
+  (supabase.functions.invoke as jest.Mock).mockResolvedValueOnce({
+    data: body,
+    error: null,
+  });
 }
 
-function mockFetchError(status: number, statusText: string) {
-  global.fetch = jest.fn().mockResolvedValue({
-    ok: false,
-    status,
-    statusText,
-    json: async () => ({}),
-  } as any);
+function mockInvokeError(message: string) {
+  (supabase.functions.invoke as jest.Mock).mockResolvedValueOnce({
+    data: null,
+    error: { message },
+  });
 }
 
-function getLastCallUrl(): string {
-  const mockFn = global.fetch as unknown as jest.Mock;
+/** Returns the body argument passed to the most recent supabase.functions.invoke call. */
+function getLastInvokeBody(): Record<string, unknown> {
+  const mockFn = supabase.functions.invoke as jest.Mock;
+  return mockFn.mock.calls[0][1].body as Record<string, unknown>;
+}
+
+/** Returns the function name passed to the most recent supabase.functions.invoke call. */
+function getLastInvokeFunctionName(): string {
+  const mockFn = supabase.functions.invoke as jest.Mock;
   return mockFn.mock.calls[0][0] as string;
 }
 
-const mockResponse = {
+const mockForecastData = {
   latitude: 33.4,
   longitude: -112,
   hourly: {
@@ -59,102 +67,97 @@ const mockResponse = {
 };
 
 describe('weatherApi — fetchForecast', () => {
-  // ── URL construction ──────────────────────────────────────
+  // ── Edge Function routing ─────────────────────────────────
 
-  describe('URL parameters', () => {
-    it('constructs URL with latitude and longitude', async () => {
-      // FR-HOME-001: fetches from Open-Meteo with location
-      mockFetchSuccess(mockResponse);
+  describe('Edge Function routing', () => {
+    it('invokes the get-forecast Edge Function', async () => {
+      // FR-HOME-001: proxies through get-forecast, not Open-Meteo directly
+      mockInvokeSuccess(mockForecastData);
 
       await fetchForecast({ latitude: 33.4484, longitude: -112.074 });
 
-      const url = getLastCallUrl();
-      expect(url).toContain('latitude=33.4484');
-      expect(url).toContain('longitude=-112.074');
+      expect(supabase.functions.invoke).toHaveBeenCalledTimes(1);
+      expect(getLastInvokeFunctionName()).toBe('get-forecast');
     });
+  });
 
-    it('uses the Open-Meteo forecast endpoint', async () => {
-      mockFetchSuccess(mockResponse);
+  // ── Body parameters ───────────────────────────────────────
 
-      await fetchForecast({ latitude: 0, longitude: 0 });
+  describe('body parameters', () => {
+    it('sends latitude and longitude in the request body', async () => {
+      // FR-HOME-001: fetches forecast for a given location
+      mockInvokeSuccess(mockForecastData);
 
-      expect(getLastCallUrl()).toContain('api.open-meteo.com/v1/forecast');
+      await fetchForecast({ latitude: 33.4484, longitude: -112.074 });
+
+      const body = getLastInvokeBody();
+      expect(body.latitude).toBe(33.4484);
+      expect(body.longitude).toBe(-112.074);
     });
 
     it('defaults to 7 forecast days', async () => {
-      mockFetchSuccess(mockResponse);
+      mockInvokeSuccess(mockForecastData);
 
       await fetchForecast({ latitude: 0, longitude: 0 });
 
-      expect(getLastCallUrl()).toContain('forecast_days=7');
+      expect(getLastInvokeBody().forecast_days).toBe(7);
     });
 
     it('supports custom forecast days (14 for FR-HOME-002/FR-FORECAST-002)', async () => {
       // FR-HOME-002: 14-day forecast
-      mockFetchSuccess(mockResponse);
+      mockInvokeSuccess(mockForecastData);
 
       await fetchForecast({ latitude: 0, longitude: 0, forecastDays: 14 });
 
-      expect(getLastCallUrl()).toContain('forecast_days=14');
+      expect(getLastInvokeBody().forecast_days).toBe(14);
     });
 
     it('defaults to Fahrenheit temperature unit', async () => {
-      mockFetchSuccess(mockResponse);
+      mockInvokeSuccess(mockForecastData);
 
       await fetchForecast({ latitude: 0, longitude: 0 });
 
-      expect(getLastCallUrl()).toContain('temperature_unit=fahrenheit');
+      expect(getLastInvokeBody().temperature_unit).toBe('fahrenheit');
     });
 
     it('supports Celsius temperature unit', async () => {
-      // FR-FORECAST-002: respects user's unit preferences
-      mockFetchSuccess(mockResponse);
+      // FR-FORECAST-002: respects user unit preferences
+      mockInvokeSuccess(mockForecastData);
 
       await fetchForecast({ latitude: 0, longitude: 0, temperatureUnit: 'celsius' });
 
-      expect(getLastCallUrl()).toContain('temperature_unit=celsius');
+      expect(getLastInvokeBody().temperature_unit).toBe('celsius');
     });
 
     it('defaults to mph wind speed unit', async () => {
-      mockFetchSuccess(mockResponse);
+      mockInvokeSuccess(mockForecastData);
 
       await fetchForecast({ latitude: 0, longitude: 0 });
 
-      expect(getLastCallUrl()).toContain('wind_speed_unit=mph');
+      expect(getLastInvokeBody().wind_speed_unit).toBe('mph');
     });
 
     it('supports km/h wind speed unit', async () => {
       // FR-FORECAST-002: supports mph/kmh/knots
-      mockFetchSuccess(mockResponse);
+      mockInvokeSuccess(mockForecastData);
 
       await fetchForecast({ latitude: 0, longitude: 0, windSpeedUnit: 'kmh' });
 
-      expect(getLastCallUrl()).toContain('wind_speed_unit=kmh');
+      expect(getLastInvokeBody().wind_speed_unit).toBe('kmh');
     });
 
     it('supports knots wind speed unit', async () => {
-      mockFetchSuccess(mockResponse);
+      mockInvokeSuccess(mockForecastData);
 
       await fetchForecast({ latitude: 0, longitude: 0, windSpeedUnit: 'knots' });
 
-      expect(getLastCallUrl()).toContain('wind_speed_unit=knots');
-    });
-
-    it('uses timezone=auto for location-aware times', async () => {
-      // FR-LOC-007: timezone auto-detected from coordinates
-      mockFetchSuccess(mockResponse);
-
-      await fetchForecast({ latitude: 0, longitude: 0 });
-
-      expect(getLastCallUrl()).toContain('timezone=auto');
+      expect(getLastInvokeBody().wind_speed_unit).toBe('knots');
     });
   });
 
   // ── Requested fields ──────────────────────────────────────
 
   describe('requested hourly fields', () => {
-    beforeEach(() => mockFetchSuccess(mockResponse));
-
     const hourlyFields = [
       'temperature_2m',
       'relative_humidity_2m',
@@ -167,16 +170,15 @@ describe('weatherApi — fetchForecast', () => {
     hourlyFields.forEach((field) => {
       it(`requests hourly ${field}`, async () => {
         // FR-POLL-002: all 8 metrics need backing hourly fields
+        mockInvokeSuccess(mockForecastData);
         await fetchForecast({ latitude: 0, longitude: 0 });
-        const url = decodeURIComponent(getLastCallUrl());
-        expect(url).toContain(field);
+        const body = getLastInvokeBody();
+        expect(body.hourly).toEqual(expect.arrayContaining([field]));
       });
     });
   });
 
   describe('requested daily fields', () => {
-    beforeEach(() => mockFetchSuccess(mockResponse));
-
     const dailyFields = [
       'temperature_2m_max',
       'temperature_2m_min',
@@ -188,9 +190,10 @@ describe('weatherApi — fetchForecast', () => {
     dailyFields.forEach((field) => {
       it(`requests daily ${field}`, async () => {
         // FR-HOME-001: 3-day forecast with high/low/rain%
+        mockInvokeSuccess(mockForecastData);
         await fetchForecast({ latitude: 0, longitude: 0 });
-        const url = decodeURIComponent(getLastCallUrl());
-        expect(url).toContain(field);
+        const body = getLastInvokeBody();
+        expect(body.daily).toEqual(expect.arrayContaining([field]));
       });
     });
   });
@@ -198,37 +201,42 @@ describe('weatherApi — fetchForecast', () => {
   // ── Error handling ────────────────────────────────────────
 
   describe('error handling', () => {
-    it('throws on non-OK HTTP response', async () => {
-      // FR-HOME-001: error state if API call fails
-      mockFetchError(500, 'Internal Server Error');
+    it('throws when invoke returns an error object', async () => {
+      // FR-HOME-001: surfaces API error to the caller
+      mockInvokeError('Failed to fetch forecast');
 
       await expect(fetchForecast({ latitude: 0, longitude: 0 })).rejects.toThrow(
         /Weather API error/,
       );
     });
 
-    it('throws on 404 not found', async () => {
-      mockFetchError(404, 'Not Found');
+    it('includes the upstream error message in the thrown error', async () => {
+      mockInvokeError('Service Unavailable');
 
-      await expect(fetchForecast({ latitude: 0, longitude: 0 })).rejects.toThrow(/404/);
+      await expect(fetchForecast({ latitude: 0, longitude: 0 })).rejects.toThrow(
+        'Weather API error: Service Unavailable',
+      );
     });
 
-    it('includes status code in error message', async () => {
-      mockFetchError(503, 'Service Unavailable');
+    it('throws on a network-level edge function error', async () => {
+      mockInvokeError('Network request failed');
 
-      await expect(fetchForecast({ latitude: 0, longitude: 0 })).rejects.toThrow(/503/);
+      await expect(fetchForecast({ latitude: 0, longitude: 0 })).rejects.toThrow(
+        /Weather API error/,
+      );
     });
   });
 
-  // ── Response parsing ──────────────────────────────────────
+  // ── Response passthrough ──────────────────────────────────
 
-  describe('response parsing', () => {
-    it('returns parsed JSON response', async () => {
-      mockFetchSuccess(mockResponse);
+  describe('response passthrough', () => {
+    it('returns the data object from invoke as-is', async () => {
+      // The client is a thin proxy — it must not mutate the response shape.
+      mockInvokeSuccess(mockForecastData);
 
       const result = await fetchForecast({ latitude: 33.4, longitude: -112 });
 
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual(mockForecastData);
       expect(result.latitude).toBe(33.4);
       expect(result.longitude).toBe(-112);
     });

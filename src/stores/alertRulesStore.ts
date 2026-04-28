@@ -44,8 +44,10 @@ export const useAlertRulesStore = create<AlertRulesState>()(
             .order('created_at', { ascending: false });
           if (error) throw error;
           set({ rules: data as AlertRule[], loading: false });
-        } catch {
-          set({ loading: false, error: 'Failed to load alert rules' });
+        } catch (err) {
+          // FIX 4: Surface the real error message, not a generic fallback.
+          const message = err instanceof Error ? err.message : 'Failed to load alert rules';
+          set({ loading: false, error: message });
         }
       },
 
@@ -78,8 +80,10 @@ export const useAlertRulesStore = create<AlertRulesState>()(
             .single();
           if (error) throw error;
           set({ rules: [data as AlertRule, ...get().rules], loading: false });
-        } catch {
-          set({ loading: false, error: 'Failed to create alert rule' });
+        } catch (err) {
+          // FIX 4: Real error message instead of hardcoded string.
+          const message = err instanceof Error ? err.message : 'Failed to create alert rule';
+          set({ loading: false, error: message });
         }
       },
 
@@ -95,8 +99,10 @@ export const useAlertRulesStore = create<AlertRulesState>()(
           set({
             rules: get().rules.map((r) => (r.id === id ? (data as AlertRule) : r)),
           });
-        } catch {
-          set({ error: 'Failed to update alert rule' });
+        } catch (err) {
+          // FIX 4: Real error message instead of hardcoded string.
+          const message = err instanceof Error ? err.message : 'Failed to update alert rule';
+          set({ error: message });
         }
       },
 
@@ -105,8 +111,10 @@ export const useAlertRulesStore = create<AlertRulesState>()(
           const { error } = await supabase.from('alert_rules').delete().eq('id', id);
           if (error) throw error;
           set({ rules: get().rules.filter((r) => r.id !== id) });
-        } catch {
-          set({ error: 'Failed to delete alert rule' });
+        } catch (err) {
+          // FIX 4: Real error message instead of hardcoded string.
+          const message = err instanceof Error ? err.message : 'Failed to delete alert rule';
+          set({ error: message });
         }
       },
 
@@ -122,8 +130,10 @@ export const useAlertRulesStore = create<AlertRulesState>()(
               r.id === id ? { ...r, is_active: isActive } : r
             ),
           });
-        } catch {
-          set({ error: 'Failed to toggle alert rule' });
+        } catch (err) {
+          // FIX 4: Real error message instead of hardcoded string.
+          const message = err instanceof Error ? err.message : 'Failed to toggle alert rule';
+          set({ error: message });
         }
       },
 
@@ -141,6 +151,17 @@ export const useAlertRulesStore = create<AlertRulesState>()(
           if (toActivate.length === 0) return;
 
           const activateIds = new Set(toActivate.map((r) => r.id));
+
+          // FIX 3: Persist activation to Supabase so the next loadRules()
+          // doesn't overwrite local state with stale server data.
+          const { error } = await supabase
+            .from('alert_rules')
+            .update({ is_active: true })
+            .in('id', [...activateIds]);
+          if (error) {
+            console.error('[alertRulesStore] enforceTierLimits activate error:', error);
+          }
+
           set({
             rules: rules.map((r) =>
               activateIds.has(r.id) ? { ...r, is_active: true } : r
@@ -149,6 +170,21 @@ export const useAlertRulesStore = create<AlertRulesState>()(
         } else {
           // Over limit — deactivate excess (keep first `limit` active ones)
           const toKeep = new Set(active.slice(0, limit).map((r) => r.id));
+          const toDeactivateIds = active
+            .filter((r) => !toKeep.has(r.id))
+            .map((r) => r.id);
+
+          // FIX 3: Batch-deactivate on the server so enforcement survives reload.
+          if (toDeactivateIds.length > 0) {
+            const { error } = await supabase
+              .from('alert_rules')
+              .update({ is_active: false })
+              .in('id', toDeactivateIds);
+            if (error) {
+              console.error('[alertRulesStore] enforceTierLimits deactivate error:', error);
+            }
+          }
+
           set({
             rules: rules.map((r) =>
               toKeep.has(r.id) ? r : { ...r, is_active: false }

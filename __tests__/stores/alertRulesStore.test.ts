@@ -62,6 +62,7 @@ function setLoggedInUser(tier: 'free' | 'pro' | 'premium' = 'free') {
       digest_location_id: null,
       digest_last_sent_at: null,
       temperature_unit: 'fahrenheit' as const,
+      wind_speed_unit: 'mph' as const,
       created_at: '2026-01-01',
       updated_at: '2026-01-01',
     },
@@ -106,12 +107,14 @@ describe('alertRulesStore', () => {
       expect(useAlertRulesStore.getState().rules).toEqual([sampleRule]);
     });
 
-    it('handles load error', async () => {
+    it('handles load error — surfaces real error message', async () => {
+      // FIX 4: The store now passes the real error message through rather than
+      // masking it with a generic string. This makes it actionable for debugging.
       mockSupabaseChain({ data: null, error: new Error('DB error') });
 
       await useAlertRulesStore.getState().loadRules();
 
-      expect(useAlertRulesStore.getState().error).toBe('Failed to load alert rules');
+      expect(useAlertRulesStore.getState().error).toBe('DB error');
     });
   });
 
@@ -150,13 +153,15 @@ describe('alertRulesStore', () => {
       expect(useAlertRulesStore.getState().rules).toHaveLength(2);
     });
 
-    it('fails if not authenticated', async () => {
+    it('fails if not authenticated — surfaces real error message', async () => {
+      // FIX 4: The store now surfaces the real thrown error message so the
+      // caller gets "Not authenticated" rather than the generic fallback.
       useAuthStore.setState({ user: null });
       mockSupabaseChain({ data: null, error: null });
 
       await useAlertRulesStore.getState().createRule(baseRuleInput);
 
-      expect(useAlertRulesStore.getState().error).toBe('Failed to create alert rule');
+      expect(useAlertRulesStore.getState().error).toBe('Not authenticated');
     });
   });
 

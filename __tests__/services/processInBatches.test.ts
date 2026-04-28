@@ -1,23 +1,8 @@
-// Tests for the processInBatches concurrency helper extracted from poll-weather.
-//
-// This function is pure TypeScript (no Deno APIs) so it runs cleanly under Jest.
-// The copy here is intentionally kept identical to the source in
-// supabase/functions/poll-weather/index.ts — if the two diverge, these tests
-// stop being meaningful regression coverage.
+// Tests for the processInBatches concurrency helper — imported from the shared
+// weatherEngine module. Using the real export means changes to the function are
+// caught by these tests (unlike the previous inline copy which was a dead clone).
 
-async function processInBatches<T, R>(
-  items: T[],
-  batchSize: number,
-  fn: (item: T) => Promise<R>
-): Promise<PromiseSettledResult<R>[]> {
-  const results: PromiseSettledResult<R>[] = [];
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    const batchResults = await Promise.allSettled(batch.map(fn));
-    results.push(...batchResults);
-  }
-  return results;
-}
+import { processInBatches } from '../../src/utils/weatherEngine';
 
 describe("processInBatches", () => {
   it("returns all results when all items succeed", async () => {
@@ -92,18 +77,7 @@ describe("processInBatches", () => {
   });
 
   it("respects batchSize — items are processed in correct batch groupings", async () => {
-    const batchSnapshots: number[][] = [];
     const items = [1, 2, 3, 4, 5];
-
-    let currentBatch: number[] = [];
-    await processInBatches(items, 2, async (n) => {
-      currentBatch.push(n);
-      // Each batch runs concurrently then waits, so we can snapshot per batch
-      // by checking after each Promise.allSettled resolves (approximated here
-      // by recording which items enter together). We verify by checking total
-      // result count and order instead.
-      return n;
-    });
 
     // With batchSize=2 on 5 items: batches are [1,2], [3,4], [5]
     const results = await processInBatches(items, 2, async (n) => n);

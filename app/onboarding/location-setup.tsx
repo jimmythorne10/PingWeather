@@ -28,8 +28,13 @@ export default function LocationSetupScreen() {
   const handleNext = async () => {
     if (coords && locationName) {
       setSaving(true);
-      await addLocation(locationName.trim(), coords.latitude, coords.longitude, timezone);
+      const ok = await addLocation(locationName.trim(), coords.latitude, coords.longitude, timezone);
       setSaving(false);
+      // FIX 7: Don't advance if the Supabase insert failed. The store already
+      // set its `error` field — the error display in the UI will surface it.
+      // Without this guard the user advances through onboarding with no
+      // location saved and hits the app in a broken state.
+      if (!ok) return;
     }
     router.push('/onboarding/notification-setup');
   };

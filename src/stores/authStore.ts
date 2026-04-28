@@ -4,6 +4,10 @@ import { supabase } from '../utils/supabase';
 import type { Profile } from '../types';
 import type { Session, User } from '@supabase/supabase-js';
 
+// Module-level subscription handle. Kept outside the store so it survives
+// Zustand re-instantiation and is never leaked across initialize() calls.
+let _authSubscription: { unsubscribe: () => void } | null = null;
+
 interface AuthState {
   session: Session | null;
   user: User | null;
@@ -33,6 +37,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   initialize: async () => {
     try {
+      // Tear down any existing listener before registering a new one.
+      // Without this guard, every hot-reload in dev (or any double-call to
+      // initialize()) stacks another listener on the Supabase auth bus.
+      _authSubscription?.unsubscribe();
+
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         set({ session, user: session.user });
@@ -40,14 +49,22 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       }
       set({ initialized: true });
 
-      supabase.auth.onAuthStateChange((_event, session) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         set({ session, user: session?.user ?? null });
         if (session) {
-          get().fetchProfile();
+          // fetchProfile is async; handle failures so a bad network on cold
+          // start doesn't leave profile null and strand the auth guard in a
+          // blank-screen limbo (neither onboarding nor tabs branch is true).
+          get().fetchProfile().catch((err) => {
+            console.error('[authStore] fetchProfile failed:', err);
+            set({ error: 'Failed to load profile. Please restart the app.' });
+          });
         } else {
           set({ profile: null });
         }
       });
+
+      _authSubscription = subscription;
     } catch {
       set({ initialized: true, error: 'Failed to initialize auth' });
     }
@@ -110,8 +127,13 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   signOut: async () => {
     set({ loading: true });
-    await supabase.auth.signOut();
-    set({ session: null, user: null, profile: null, loading: false });
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('[authStore] signOut error:', err);
+    } finally {
+      set({ session: null, user: null, profile: null, loading: false });
+    }
   },
 
   fetchProfile: async () => {
@@ -125,8 +147,25 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         .single();
       if (error) throw error;
       set({ profile: data as Profile });
-    } catch {
-      set({ error: 'Failed to load profile' });
+
+      // FIX 6: Seed unit preferences from the server profile on every
+      // successful fetch. On a new install, AsyncStorage is empty and the
+      // settingsStore defaults to fahrenheit/mph regardless of what the
+      // user set previously. Seeding here ensures the stored preference
+      // wins on first load without a circular import (settings → auth
+      // would create a cycle; auth → settings is safe).
+      if (data) {
+        // Lazy-import to avoid module-level circular dependency.
+        const { useSettingsStore } = await import('./settingsStore');
+        const { setTemperatureUnit } = useSettingsStore.getState();
+        if (data.temperature_unit) {
+          setTemperatureUnit(data.temperature_unit as 'fahrenheit' | 'celsius');
+        }
+      }
+    } catch (err) {
+      // Re-throw so callers (initialize, onAuthStateChange callback) can
+      // catch and set a user-visible error rather than silently swallowing.
+      throw err;
     }
   },
 

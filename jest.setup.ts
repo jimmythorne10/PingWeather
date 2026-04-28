@@ -226,6 +226,8 @@ jest.mock('@supabase/supabase-js', () => {
   eula_accepted_version: '1.0.0',
   eula_accepted_at: '2026-01-01T00:00:00Z',
   push_token: null,
+  temperature_unit: 'fahrenheit',
+  wind_speed_unit: 'mph',
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
   ...overrides,

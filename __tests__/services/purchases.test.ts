@@ -33,14 +33,60 @@ describe('mapProductToTier', () => {
     expect(mapProductToTier('')).toBeNull();
   });
 
-  it('PRODUCT_TIER_MAP has exactly 4 entries', () => {
-    expect(Object.keys(PRODUCT_TIER_MAP)).toHaveLength(4);
+  // FIX 14: RevenueCat restore returns colon-format product IDs on some SDK
+  // versions. Without these entries the user appears free after restore.
+  it('maps pro_monthly:monthly to pro', () => {
+    expect(mapProductToTier('pro_monthly:monthly')).toBe('pro');
+  });
+
+  it('maps premium_monthly:monthly to premium', () => {
+    expect(mapProductToTier('premium_monthly:monthly')).toBe('premium');
+  });
+
+  it('PRODUCT_TIER_MAP has exactly 6 entries (including RevenueCat colon-format variants)', () => {
+    // FIX 14: Two colon-format entries were added (pro_monthly:monthly,
+    // premium_monthly:monthly) to handle the product ID format RevenueCat
+    // returns on restorePurchases() on some SDK versions.
+    expect(Object.keys(PRODUCT_TIER_MAP)).toHaveLength(6);
   });
 
   it('every PRODUCT_TIER_MAP value is either pro or premium', () => {
     for (const tier of Object.values(PRODUCT_TIER_MAP)) {
       expect(['pro', 'premium']).toContain(tier);
     }
+  });
+});
+
+// ── Regression guard: syncTierToSupabase removal ─────────────
+// Migration 00013 WITH CHECK prevents any user-JWT UPDATE that changes
+// subscription_tier. The old syncTierToSupabase call silently failed every
+// time. Removing it prevents false "belt-and-suspenders" confidence.
+// If this test fails, someone re-introduced the broken client-side sync.
+describe('syncTierToSupabase — removed', () => {
+  it('purchases.ts does not contain syncTierToSupabase', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require('fs');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require('path');
+    const source = fs.readFileSync(
+      path.resolve(__dirname, '../../src/services/purchases.ts'),
+      'utf8'
+    );
+    expect(source).not.toContain('syncTierToSupabase');
+  });
+
+  it('purchases.ts does not write subscription_tier to Supabase', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require('fs');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require('path');
+    const source = fs.readFileSync(
+      path.resolve(__dirname, '../../src/services/purchases.ts'),
+      'utf8'
+    );
+    // The only permissible mention of subscription_tier in this file would be
+    // a read (never a write). The column name in an update payload is the tell.
+    expect(source).not.toContain('subscription_tier:');
   });
 });
 
