@@ -16,6 +16,7 @@ import {
   evaluateRule,
   isInCooldown,
   gridKey,
+  formatMatchedDate,
   type AlertCondition,
   type AlertRule,
   type ForecastData,
@@ -561,6 +562,184 @@ describe('evaluate-alerts engine — FR-POLL-002', () => {
       // 5 hours after trigger — cooldown expired
       const nowAfter = new Date('2026-04-24T15:00:00.000Z');
       expect(isInCooldown(rule, nowAfter)).toBe(false);
+    });
+  });
+
+  // ── matchedTime propagation ──────────────────────────────
+
+  describe('evaluateCondition — matchedTime propagation', () => {
+    it('populates matchedTime with YYYY-MM-DD string for daily metrics', () => {
+      // Daily metrics (temperature_high/low, uv_index, precipitation_probability >24h)
+      // get their time from forecast.daily.time, which holds "YYYY-MM-DD" strings.
+      // If matchedTime is null here, the notification body will never have a day label.
+      const forecast: ForecastData = {
+        daily: {
+          time: [futureDateString(1), futureDateString(2)],
+          temperature_2m_max: [75, 65],
+          temperature_2m_min: [28, 35], // day 1 is below 32
+          precipitation_probability_max: [20, 40],
+          wind_speed_10m_max: [10, 15],
+          uv_index_max: [5, 7],
+        },
+        hourly: {
+          time: [],
+          temperature_2m: [],
+          relative_humidity_2m: [],
+          precipitation_probability: [],
+          wind_speed_10m: [],
+          apparent_temperature: [],
+          uv_index: [],
+        },
+      };
+
+      const condition: AlertCondition = { metric: 'temperature_low', operator: 'lt', value: 32 };
+      const result = evaluateCondition(condition, forecast, 72);
+
+      expect(result.met).toBe(true);
+      // matchedTime MUST be a "YYYY-MM-DD" string — not null
+      expect(result.matchedTime).not.toBeNull();
+      expect(result.matchedTime).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      // Must correspond to the first matching day
+      expect(result.matchedTime).toBe(futureDateString(1));
+    });
+
+    it('populates matchedTime with ISO timestamp for hourly metrics', () => {
+      // Hourly metrics get their time from forecast.hourly.time, which holds ISO
+      // timestamp strings. If matchedTime is null, we lose the time-of-day info.
+      const matchingTime = hoursFromNow(3);
+      const forecast: ForecastData = {
+        hourly: {
+          time: [hoursFromNow(1), matchingTime, hoursFromNow(6)],
+          temperature_2m: [60, 55, 40],
+          relative_humidity_2m: [50, 90, 70], // index 1 (matchingTime) hits >= 85
+          precipitation_probability: [10, 30, 60],
+          wind_speed_10m: [5, 10, 15],
+          apparent_temperature: [58, 52, 38],
+          uv_index: [2, 5, 3],
+        },
+        daily: {
+          time: [],
+          temperature_2m_max: [],
+          temperature_2m_min: [],
+          precipitation_probability_max: [],
+          wind_speed_10m_max: [],
+          uv_index_max: [],
+        },
+      };
+
+      const condition: AlertCondition = { metric: 'humidity', operator: 'gte', value: 85 };
+      const result = evaluateCondition(condition, forecast, 24);
+
+      expect(result.met).toBe(true);
+      // matchedTime MUST be an ISO timestamp string — not null
+      expect(result.matchedTime).not.toBeNull();
+      // Must be the ISO string for the matching hourly slot
+      expect(result.matchedTime).toBe(matchingTime);
+    });
+
+    it('matchedTime is null when condition is not met', () => {
+      // When no value satisfies the condition, matchedTime should be null — there
+      // is no matched entry to report a time for.
+      const forecast: ForecastData = {
+        daily: {
+          time: [futureDateString(1)],
+          temperature_2m_max: [75],
+          temperature_2m_min: [50], // well above 32 — condition will NOT trigger
+          precipitation_probability_max: [10],
+          wind_speed_10m_max: [5],
+          uv_index_max: [3],
+        },
+        hourly: {
+          time: [],
+          temperature_2m: [],
+          relative_humidity_2m: [],
+          precipitation_probability: [],
+          wind_speed_10m: [],
+          apparent_temperature: [],
+          uv_index: [],
+        },
+      };
+
+      const condition: AlertCondition = { metric: 'temperature_low', operator: 'lt', value: 32 };
+      const result = evaluateCondition(condition, forecast, 48);
+
+      expect(result.met).toBe(false);
+      expect(result.matchedTime).toBeNull();
+    });
+
+    it('matchDetails in evaluateRule includes matchedTime for triggered conditions', () => {
+      // End-to-end: evaluateRule must surface matchedTime in matchDetails so that
+      // poll-weather can read it when building the notification body.
+      const forecast: ForecastData = {
+        daily: {
+          time: [futureDateString(1), futureDateString(2)],
+          temperature_2m_max: [75, 65],
+          temperature_2m_min: [28, 35],
+          precipitation_probability_max: [20, 40],
+          wind_speed_10m_max: [10, 15],
+          uv_index_max: [5, 7],
+        },
+        hourly: {
+          time: [],
+          temperature_2m: [],
+          relative_humidity_2m: [],
+          precipitation_probability: [],
+          wind_speed_10m: [],
+          apparent_temperature: [],
+          uv_index: [],
+        },
+      };
+
+      const rule = buildRule({
+        conditions: [{ metric: 'temperature_low', operator: 'lt', value: 32 }],
+        lookahead_hours: 72,
+      });
+
+      const result = evaluateRule(rule, forecast);
+      expect(result.triggered).toBe(true);
+      expect(result.matchDetails[0].met).toBe(true);
+      // matchedTime MUST be present and non-null — this is what poll-weather reads
+      expect(result.matchDetails[0].matchedTime).not.toBeNull();
+      expect(result.matchDetails[0].matchedTime).toBe(futureDateString(1));
+    });
+  });
+
+  // ── formatMatchedDate ─────────────────────────────────────
+
+  describe('formatMatchedDate', () => {
+    it('returns "Today" for today YYYY-MM-DD string', () => {
+      // todayDateString() returns the current UTC date as "YYYY-MM-DD"
+      expect(formatMatchedDate(todayDateString())).toBe('Today');
+    });
+
+    it('returns "Tomorrow" for tomorrow YYYY-MM-DD string', () => {
+      expect(formatMatchedDate(futureDateString(1))).toBe('Tomorrow');
+    });
+
+    it('returns formatted date string for a future daily date', () => {
+      // Any date beyond tomorrow should produce a "Weekday M/D" label.
+      // We use day +3 to ensure it's never today or tomorrow regardless of timezone.
+      const label = formatMatchedDate(futureDateString(3));
+      expect(label).not.toBeNull();
+      expect(label).not.toBe('Today');
+      expect(label).not.toBe('Tomorrow');
+      // Should contain a slash — "Mon 5/5", "Fri 5/2", etc.
+      expect(label).toMatch(/\//);
+    });
+
+    it('returns "Today" for an ISO timestamp that falls on today', () => {
+      // An hourly metric time-stamp for the current UTC day should resolve to "Today"
+      // regardless of the hour offset.
+      const todayIso = new Date().toISOString(); // right now — unambiguously today
+      expect(formatMatchedDate(todayIso)).toBe('Today');
+    });
+
+    it('returns null for null input', () => {
+      expect(formatMatchedDate(null)).toBeNull();
+    });
+
+    it('returns null for invalid string', () => {
+      expect(formatMatchedDate('not-a-date')).toBeNull();
     });
   });
 

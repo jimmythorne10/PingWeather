@@ -18,6 +18,7 @@ import {
   gridKey,
   extractTimezone,
   processInBatches,
+  formatMatchedDate,
 } from "../_shared/weatherEngine.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -363,11 +364,22 @@ Deno.serve(async (req) => {
           const pushToken = pushTokenByUserId.get(alert.user_id as string);
           if (!pushToken) return;
 
+          const details = (alert.details ?? []) as Array<{ matchedTime?: string | null; met?: boolean }>;
+          const firstMatchedTime = details.find(d => d.met && d.matchedTime)?.matchedTime ?? null;
+          const dayLabel = formatMatchedDate(firstMatchedTime);
+          const notifBody = dayLabel
+            ? `${dayLabel}: ${alert.summary as string}`
+            : alert.summary as string;
+
+
           const { sent, isInvalidToken } = await sendPushNotification(
             pushToken,
-            `${alert.rule_name} - ${alert.location_name}`,
-            alert.summary as string,
-            { rule_id: alert.rule_id as string }
+            `${alert.rule_name as string} — ${alert.location_name as string}`,
+            notifBody,
+            {
+              rule_id: alert.rule_id as string,
+              alert_date: firstMatchedTime ?? '',
+            }
           );
 
           if (sent && alert.alert_history_id) {

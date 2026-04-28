@@ -7,6 +7,7 @@ import { useAlertRulesStore } from '../../src/stores/alertRulesStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { fetchForecast } from '../../src/services/weatherApi';
 import { weatherCodeToEmoji, degreesToCardinal } from '../../src/services/weatherIcon';
+import { RainfallCard } from '../../src/components/RainfallCard';
 import type { ThemeTokens } from '../../src/theme';
 import type { HourlyForecast, DailyForecast, AlertRule } from '../../src/types';
 
@@ -215,6 +216,13 @@ export default function ForecastsScreen() {
                         </View>
                       ))}
                     </ScrollView>
+
+                    {/* Rainfall history */}
+                    <RainfallCard
+                      locationId={loc.id}
+                      latitude={loc.latitude}
+                      longitude={loc.longitude}
+                    />
 
                     {/* Daily list */}
                     <Text style={styles.sectionLabel}>14-day Outlook</Text>

@@ -41,6 +41,8 @@ Deno.serve(async (req) => {
       wind_speed_unit?: unknown;
       hourly?: unknown;
       daily?: unknown;
+      past_days?: unknown;
+      precipitation_unit?: unknown;
     };
 
     const {
@@ -51,6 +53,8 @@ Deno.serve(async (req) => {
       wind_speed_unit = "mph",
       hourly = [],
       daily = [],
+      past_days,
+      precipitation_unit,
     } = body;
 
     if (typeof latitude !== "number" || typeof longitude !== "number") {
@@ -85,6 +89,12 @@ Deno.serve(async (req) => {
     }
     if (Array.isArray(daily) && daily.length > 0) {
       params.set("daily", (daily as string[]).join(","));
+    }
+    if (past_days !== undefined) {
+      params.set("past_days", String(past_days));
+    }
+    if (precipitation_unit !== undefined) {
+      params.set("precipitation_unit", String(precipitation_unit));
     }
 
     const controller = new AbortController();

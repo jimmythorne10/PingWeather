@@ -135,13 +135,28 @@ export default function HomeScreen() {
               const rain = weather.daily.precipitation_probability_max[i];
               const wind = Math.round(weather.daily.wind_speed_10m_max[i]);
               return (
-                <View key={date} style={styles.forecastDay}>
+                <Pressable
+                  key={date}
+                  style={({ pressed }) => [styles.forecastDay, pressed && { opacity: 0.7 }]}
+                  onPress={() => {
+                    if (selectedLocation) {
+                      router.push({
+                        pathname: '/day-detail',
+                        params: {
+                          locationId: selectedLocation.id,
+                          date,
+                          locationName: selectedLocation.name,
+                        },
+                      });
+                    }
+                  }}
+                >
                   <Text style={styles.forecastDayLabel}>{formatDayLabel(date, i)}</Text>
                   <Text style={styles.forecastHigh}>{high}{unitSymbol}</Text>
                   <Text style={styles.forecastLow}>{low}{unitSymbol}</Text>
                   {rain > 0 && <Text style={styles.forecastRain}>{rain}%</Text>}
                   <Text style={styles.forecastWind}>{wind} {windSpeedUnit}</Text>
-                </View>
+                </Pressable>
               );
             })}
           </ScrollView>
