@@ -58,6 +58,7 @@ export interface Profile {
   digest_location_id: string | null;
   digest_last_sent_at: string | null;
   temperature_unit: 'fahrenheit' | 'celsius';
+  wind_speed_unit: WindSpeedUnit;
   created_at: string;
   updated_at: string;
 }

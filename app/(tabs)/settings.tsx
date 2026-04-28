@@ -285,7 +285,7 @@ export default function SettingsScreen() {
               <Pressable
                 key={unit}
                 style={[styles.toggleButton, settings.windSpeedUnit === unit && styles.toggleActive]}
-                onPress={() => settings.setWindSpeedUnit(unit)}
+                onPress={() => { settings.setWindSpeedUnit(unit); void updateProfile({ wind_speed_unit: unit }); }}
               >
                 <Text style={[styles.toggleText, settings.windSpeedUnit === unit && styles.toggleTextActive]}>{unit}</Text>
               </Pressable>

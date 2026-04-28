@@ -5,7 +5,10 @@
  *   - Maps RevenueCat package identifiers to PingWeather subscription tiers
  *   - Handles initialization with the API key from env
  *   - Provides typed purchase/restore/status functions
- *   - Syncs tier changes back to Supabase profile
+ *
+ * Supabase tier sync is intentionally NOT done client-side. Migration 00013
+ * WITH CHECK blocks any user-JWT UPDATE that changes subscription_tier. The
+ * subscription-webhook Edge Function (service_role) is the only write path.
  *
  * The RevenueCat API key is stored as EXPO_PUBLIC_REVENUECAT_API_KEY in
  * .env.local. It's a public key (safe to ship in the app binary) — the
@@ -18,7 +21,6 @@
 
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { supabase } from '../utils/supabase';
 import type { SubscriptionTier } from '../types';
 
 // Lazy-load to avoid crashing in Jest / environments without native modules.
@@ -196,11 +198,6 @@ export async function purchasePackage(packageIdentifier: string): Promise<Purcha
     // Determine the new tier from active entitlements
     const newTier = determineTierFromCustomerInfo(customerInfo);
 
-    // Sync to Supabase immediately (don't wait for webhook — belt + suspenders)
-    if (newTier) {
-      await syncTierToSupabase(newTier);
-    }
-
     return { success: true, tier: newTier, error: null };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Purchase failed';
@@ -223,10 +220,6 @@ export async function restorePurchases(): Promise<PurchaseResult> {
   try {
     const customerInfo = await P.restorePurchases();
     const newTier = determineTierFromCustomerInfo(customerInfo);
-
-    if (newTier) {
-      await syncTierToSupabase(newTier);
-    }
 
     return {
       success: true,
@@ -256,24 +249,6 @@ function determineTierFromCustomerInfo(customerInfo: { activeSubscriptions: stri
     return 'free';
   }
   return null;
-}
-
-// ── Sync to Supabase ────────────────────────────────────────
-// Belt-and-suspenders: update the profile immediately on purchase/restore
-// rather than waiting for the webhook. The webhook is the canonical path,
-// but client-side sync makes the UI update instantly.
-
-async function syncTierToSupabase(tier: SubscriptionTier): Promise<void> {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase
-      .from('profiles')
-      .update({ subscription_tier: tier })
-      .eq('id', user.id);
-  } catch (err) {
-    console.error('[purchases] syncTierToSupabase error:', err);
-  }
 }
 
 // ── Get Current Subscription Status ─────────────────────────

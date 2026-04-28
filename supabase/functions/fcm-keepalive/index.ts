@@ -21,7 +21,9 @@ const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 const BATCH_SIZE = 100; // Expo push accepts up to 100 messages per request
 const PAGE_SIZE = 500;  // DB rows fetched per page to handle large user bases
 
-async function sendBatch(tokens: string[]): Promise<void> {
+// Returns the subset of tokens that Expo has marked DeviceNotRegistered.
+// Callers are responsible for nulling these out in the DB.
+async function sendBatch(tokens: string[]): Promise<string[]> {
   const messages = tokens.map((token) => ({
     to: token,
     priority: "normal",
@@ -40,7 +42,24 @@ async function sendBatch(tokens: string[]): Promise<void> {
 
   if (!res.ok) {
     console.error(`Expo push batch failed: ${res.status}`, await res.text());
+    return [];
   }
+
+  let body: { data?: Array<{ status?: string; details?: { error?: string } }> };
+  try {
+    body = await res.json();
+  } catch {
+    return [];
+  }
+
+  const results = body?.data ?? [];
+  const invalidTokens: string[] = [];
+  results.forEach((result, idx) => {
+    if (result?.status === "error" && result?.details?.error === "DeviceNotRegistered") {
+      invalidTokens.push(tokens[idx]);
+    }
+  });
+  return invalidTokens;
 }
 
 Deno.serve(async (req) => {
@@ -87,11 +106,26 @@ Deno.serve(async (req) => {
     }
 
     // Send in batches of 100 to stay within Expo's per-request limit.
+    // Collect DeviceNotRegistered tokens across all batches for a single prune query.
+    const invalidTokens: string[] = [];
     for (let i = 0; i < allTokens.length; i += BATCH_SIZE) {
-      await sendBatch(allTokens.slice(i, i + BATCH_SIZE));
+      const batchInvalid = await sendBatch(allTokens.slice(i, i + BATCH_SIZE));
+      invalidTokens.push(...batchInvalid);
     }
 
-    return new Response(JSON.stringify({ sent: allTokens.length }), {
+    if (invalidTokens.length > 0) {
+      const { error: pruneError } = await supabase
+        .from("profiles")
+        .update({ push_token: null })
+        .in("push_token", invalidTokens);
+      if (pruneError) {
+        console.error("Failed to prune invalid push tokens:", pruneError);
+      } else {
+        console.log(`Pruned ${invalidTokens.length} stale push token(s)`);
+      }
+    }
+
+    return new Response(JSON.stringify({ sent: allTokens.length, pruned: invalidTokens.length }), {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {

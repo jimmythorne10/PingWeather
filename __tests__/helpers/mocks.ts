@@ -25,6 +25,7 @@ export const mockProfile = (overrides: Partial<Profile> = {}): Profile => ({
   digest_location_id: null,
   digest_last_sent_at: null,
   temperature_unit: 'fahrenheit',
+  wind_speed_unit: 'mph',
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
   ...overrides,

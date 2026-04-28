@@ -133,6 +133,13 @@ function formatTemp(fahrenheit: number, unit: string): string {
     : `${Math.round(fahrenheit)}°F`;
 }
 
+// Open-Meteo always returns wind in mph. Convert per-user preference.
+function convertWind(mph: number, unit: string): { value: number; label: string } {
+  if (unit === "kmh") return { value: Math.round(mph * 1.60934), label: "km/h" };
+  if (unit === "knots") return { value: Math.round(mph * 0.868976), label: "kts" };
+  return { value: Math.round(mph), label: "mph" };
+}
+
 interface ForecastResponse {
   daily: {
     time: string[];
@@ -147,7 +154,8 @@ function formatDigest(
   forecast: ForecastResponse,
   locationName: string,
   frequency: string,
-  temperatureUnit: string
+  temperatureUnit: string,
+  windSpeedUnit: string
 ): { title: string; body: string } {
   const { daily } = forecast;
   if (!daily?.time?.length) throw new Error("Empty forecast data");
@@ -156,10 +164,10 @@ function formatDigest(
     const high = formatTemp(daily.temperature_2m_max[0], temperatureUnit);
     const low = formatTemp(daily.temperature_2m_min[0], temperatureUnit);
     const rain = daily.precipitation_probability_max[0];
-    const wind = Math.round(daily.wind_speed_10m_max[0]);
+    const wind = convertWind(daily.wind_speed_10m_max[0], windSpeedUnit);
     return {
       title: `Today's forecast — ${locationName}`,
-      body: `High ${high}, Low ${low} · ${rain}% rain · ${wind} mph wind`,
+      body: `High ${high}, Low ${low} · ${rain}% rain · ${wind.value} ${wind.label} wind`,
     };
   }
 
@@ -252,6 +260,7 @@ Deno.serve(async (req) => {
         digest_last_sent_at,
         digest_location_id,
         temperature_unit,
+        wind_speed_unit,
         locations!digest_location_id (
           id,
           name,
@@ -305,7 +314,8 @@ Deno.serve(async (req) => {
           forecast,
           loc.name,
           profile.digest_frequency,
-          profile.temperature_unit ?? "fahrenheit"
+          profile.temperature_unit ?? "fahrenheit",
+          profile.wind_speed_unit ?? "mph"
         );
         const ok = await sendPush(profile.push_token!, title, body);
 
