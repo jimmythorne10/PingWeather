@@ -156,6 +156,7 @@ export interface HourlyForecast {
   apparent_temperature: number[];
   uv_index: number[];
   weather_code: number[];
+  precipitation?: number[];
 }
 
 export interface DailyForecast {
@@ -167,6 +168,7 @@ export interface DailyForecast {
   wind_direction_10m_dominant: number[];
   uv_index_max: number[];
   weather_code: number[];
+  precipitation_sum?: number[];
 }
 
 export interface ForecastResponse {

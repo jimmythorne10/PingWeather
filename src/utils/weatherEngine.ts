@@ -79,6 +79,7 @@ export interface EvaluationResult {
     operator: string;
     threshold: number;
     matchedValue: number | null;
+    matchedTime?: string | null;
     met: boolean;
   }>;
 }
@@ -200,6 +201,110 @@ export function getMetricValues(
   }
 }
 
+// ── Metric entry extraction (value + time) ───────────────────────────────────
+// Internal helper used by evaluateCondition. Returns {value, time} pairs so
+// that the first matching value can report WHICH day or hour triggered the
+// alert. Not exported — callers that only need values should use getMetricValues.
+//
+// The `time` field mirrors what the forecast arrays contain:
+//   daily metrics  → "YYYY-MM-DD" string (e.g. "2026-05-02")
+//   hourly metrics → ISO timestamp string (e.g. "2026-05-02T14:00:00Z")
+
+function getMetricEntries(
+  metric: string,
+  forecast: ForecastData,
+  lookaheadHours: number
+): Array<{ value: number; time: string }> {
+  const now = new Date();
+  const cutoff = new Date(now.getTime() + lookaheadHours * 60 * 60 * 1000);
+  const todayUtc = new Date(now.toISOString().slice(0, 10) + 'T00:00:00.000Z');
+
+  switch (metric) {
+    case 'temperature_high': {
+      return forecast.daily.temperature_2m_max
+        .map((value, i) => ({ value, time: forecast.daily.time[i] }))
+        .filter(({ time }) => {
+          const date = new Date(time);
+          return date >= todayUtc && date <= cutoff;
+        });
+    }
+    case 'temperature_low': {
+      return forecast.daily.temperature_2m_min
+        .map((value, i) => ({ value, time: forecast.daily.time[i] }))
+        .filter(({ time }) => {
+          const date = new Date(time);
+          return date >= todayUtc && date <= cutoff;
+        });
+    }
+    case 'temperature_current': {
+      return forecast.hourly.temperature_2m
+        .map((value, i) => ({ value, time: forecast.hourly.time[i] }))
+        .filter(({ time }) => {
+          const t = new Date(time);
+          return t >= now && t <= cutoff;
+        });
+    }
+    case 'precipitation_probability': {
+      if (lookaheadHours <= 24) {
+        return forecast.hourly.precipitation_probability
+          .map((value, i) => ({ value, time: forecast.hourly.time[i] }))
+          .filter(({ time }) => {
+            const t = new Date(time);
+            return t >= now && t <= cutoff;
+          });
+      }
+      return forecast.daily.precipitation_probability_max
+        .map((value, i) => ({ value, time: forecast.daily.time[i] }))
+        .filter(({ time }) => {
+          const date = new Date(time);
+          return date >= todayUtc && date <= cutoff;
+        });
+    }
+    case 'wind_speed': {
+      if (lookaheadHours <= 24) {
+        return forecast.hourly.wind_speed_10m
+          .map((value, i) => ({ value, time: forecast.hourly.time[i] }))
+          .filter(({ time }) => {
+            const t = new Date(time);
+            return t >= now && t <= cutoff;
+          });
+      }
+      return forecast.daily.wind_speed_10m_max
+        .map((value, i) => ({ value, time: forecast.daily.time[i] }))
+        .filter(({ time }) => {
+          const date = new Date(time);
+          return date >= todayUtc && date <= cutoff;
+        });
+    }
+    case 'humidity': {
+      return forecast.hourly.relative_humidity_2m
+        .map((value, i) => ({ value, time: forecast.hourly.time[i] }))
+        .filter(({ time }) => {
+          const t = new Date(time);
+          return t >= now && t <= cutoff;
+        });
+    }
+    case 'feels_like': {
+      return forecast.hourly.apparent_temperature
+        .map((value, i) => ({ value, time: forecast.hourly.time[i] }))
+        .filter(({ time }) => {
+          const t = new Date(time);
+          return t >= now && t <= cutoff;
+        });
+    }
+    case 'uv_index': {
+      return forecast.daily.uv_index_max
+        .map((value, i) => ({ value, time: forecast.daily.time[i] }))
+        .filter(({ time }) => {
+          const date = new Date(time);
+          return date >= todayUtc && date <= cutoff;
+        });
+    }
+    default:
+      return [];
+  }
+}
+
 // ── Comparison ───────────────────────────────────────────────────────────────
 
 export function compare(
@@ -225,11 +330,11 @@ export function evaluateCondition(
   forecast: ForecastData,
   lookaheadHours: number
 ): { met: boolean; matchedValue: number | null; matchedTime: string | null } {
-  const values = getMetricValues(condition.metric, forecast, lookaheadHours);
+  const entries = getMetricEntries(condition.metric, forecast, lookaheadHours);
 
-  for (const value of values) {
+  for (const { value, time } of entries) {
     if (compare(value, condition.operator, condition.value)) {
-      return { met: true, matchedValue: value, matchedTime: null };
+      return { met: true, matchedValue: value, matchedTime: time };
     }
   }
 
@@ -259,6 +364,7 @@ export function evaluateRule(
       operator: condition.operator,
       threshold: condition.value,
       matchedValue: result.matchedValue,
+      matchedTime: result.matchedTime,
       met: result.met,
     };
   });
@@ -323,6 +429,48 @@ export function formatConditionSummary(
   const actual = matchedValue !== null ? ` (forecast: ${matchedValue})` : '';
 
   return `${label} ${op} ${threshold}${actual}`;
+}
+
+// ── Day label formatter ───────────────────────────────────────────────────────
+// Converts a raw forecast time value to a human-readable day label for use in
+// push notification bodies.
+//
+//   Daily metric time  → "YYYY-MM-DD"  → "Today" / "Tomorrow" / "Fri 5/2"
+//   Hourly metric time → ISO timestamp → same labels based on the calendar date
+//
+// Returns null for null/undefined input or an unrecognised string — callers
+// should fall back to the plain summary in that case.
+
+export function formatMatchedDate(time: string | null | undefined): string | null {
+  if (!time) return null;
+
+  // Daily metric: "YYYY-MM-DD" (no time component)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(time)) {
+    const today = new Date().toISOString().slice(0, 10);
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    if (time === today) return 'Today';
+    if (time === tomorrow) return 'Tomorrow';
+    const [y, m, d] = time.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'numeric',
+      day: 'numeric',
+    });
+  }
+
+  // Hourly metric: ISO timestamp — extract the calendar date portion to compare
+  const parsed = new Date(time);
+  if (isNaN(parsed.getTime())) return null;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const dateStr = parsed.toISOString().slice(0, 10);
+  if (dateStr === todayStr) return 'Today';
+  if (dateStr === tomorrowStr) return 'Tomorrow';
+  return parsed.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'numeric',
+    day: 'numeric',
+  });
 }
 
 // ── Batch concurrency helper ──────────────────────────────────────────────────

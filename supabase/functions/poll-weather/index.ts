@@ -18,6 +18,7 @@ import {
   gridKey,
   extractTimezone,
   processInBatches,
+  formatMatchedDate,
 } from "../_shared/weatherEngine.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -80,12 +81,15 @@ async function fetchForecast(lat: number, lon: number): Promise<Record<string, u
 
 // ── Send push notification via Expo Push Service ───────────
 // Expo Push Service routes to FCM V1 on Android.
+// Returns both delivery status and whether the token is permanently invalid.
+// The HTTP response is always 200 for per-message errors — the actual status
+// lives in the JSON body (data.status / data.details.error).
 async function sendPushNotification(
   pushToken: string,
   title: string,
   body: string,
   data?: Record<string, string>
-): Promise<boolean> {
+): Promise<{ sent: boolean; isInvalidToken: boolean }> {
   const message = {
     to: pushToken,
     sound: "default",
@@ -102,12 +106,31 @@ async function sendPushNotification(
 
   if (!response.ok) {
     console.error(
-      `sendPushNotification failed for token ${pushToken.slice(0, 20)}…:`,
-      await response.text()
+      `sendPushNotification HTTP error for token ${pushToken.slice(0, 20)}…: ${response.status}`
     );
+    return { sent: false, isInvalidToken: false };
   }
 
-  return response.ok;
+  let result: { data?: { status?: string; details?: { error?: string } } };
+  try {
+    result = await response.json();
+  } catch {
+    return { sent: false, isInvalidToken: false };
+  }
+
+  const msgData = result?.data;
+  if (msgData?.status === "error") {
+    const isInvalidToken = msgData?.details?.error === "DeviceNotRegistered";
+    if (!isInvalidToken) {
+      console.error(
+        `sendPushNotification error for token ${pushToken.slice(0, 20)}…:`,
+        msgData
+      );
+    }
+    return { sent: false, isInvalidToken };
+  }
+
+  return { sent: true, isInvalidToken: false };
 }
 
 // ── Process one grid square ─────────────────────────────────
@@ -341,11 +364,21 @@ Deno.serve(async (req) => {
           const pushToken = pushTokenByUserId.get(alert.user_id as string);
           if (!pushToken) return;
 
-          const sent = await sendPushNotification(
+          const details = (alert.details ?? []) as Array<{ matchedTime?: string | null; met?: boolean }>;
+          const firstMatchedTime = details.find(d => d.met && d.matchedTime)?.matchedTime ?? null;
+          const dayLabel = formatMatchedDate(firstMatchedTime);
+          const notifBody = dayLabel
+            ? `${dayLabel}: ${alert.summary as string}`
+            : alert.summary as string;
+
+          const { sent, isInvalidToken } = await sendPushNotification(
             pushToken,
-            `${alert.rule_name} - ${alert.location_name}`,
-            alert.summary as string,
-            { rule_id: alert.rule_id as string }
+            `${alert.rule_name as string} — ${alert.location_name as string}`,
+            notifBody,
+            {
+              rule_id: alert.rule_id as string,
+              alert_date: firstMatchedTime ?? '',
+            }
           );
 
           if (sent && alert.alert_history_id) {
@@ -353,6 +386,16 @@ Deno.serve(async (req) => {
               .from("alert_history")
               .update({ notification_sent: true })
               .eq("id", alert.alert_history_id as string);
+          }
+
+          // Prune stale tokens immediately so future cron cycles don't retry
+          // and waste cooldown windows on a device that will never receive them.
+          if (isInvalidToken) {
+            await supabase
+              .from("profiles")
+              .update({ push_token: null })
+              .eq("id", alert.user_id as string);
+            console.log(`Pruned stale push token for user ${alert.user_id as string}`);
           }
         })
       );
