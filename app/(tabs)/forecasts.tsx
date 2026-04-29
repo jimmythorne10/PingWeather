@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useStyles, useTokens } from '../../src/theme';
 import { useLocationsStore } from '../../src/stores/locationsStore';
 import { useAlertRulesStore } from '../../src/stores/alertRulesStore';
@@ -25,6 +25,9 @@ export default function ForecastsScreen() {
   const { rules, loadRules } = useAlertRulesStore();
   const temperatureUnit = useSettingsStore((s) => s.temperatureUnit);
   const windSpeedUnit = useSettingsStore((s) => s.windSpeedUnit);
+
+  const { expandLocationId } = useLocalSearchParams<{ expandLocationId?: string }>();
+  const processedExpandRef = useRef<string | null>(null);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [forecasts, setForecasts] = useState<Record<string, LocationForecast>>({});
@@ -82,6 +85,21 @@ export default function ForecastsScreen() {
       loadForecastFor(id, lat, lon);
     }
   };
+
+  // Auto-expand a location when navigated from the home screen day tap.
+  // processedExpandRef prevents re-firing on unrelated re-renders.
+  useEffect(() => {
+    if (!expandLocationId || typeof expandLocationId !== 'string') return;
+    if (processedExpandRef.current === expandLocationId) return;
+    if (activeLocations.length === 0) return;
+    const loc = activeLocations.find((l) => l.id === expandLocationId);
+    if (!loc) return;
+    processedExpandRef.current = expandLocationId;
+    setExpandedId(expandLocationId);
+    void loadForecastFor(expandLocationId, loc.latitude, loc.longitude);
+  // loadForecastFor is stable in behaviour; ref gates re-execution
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expandLocationId, activeLocations]);
 
   const unitSymbol = temperatureUnit === 'fahrenheit' ? '°F' : '°C';
 
