@@ -99,7 +99,7 @@ export default function DayDetailScreen() {
       style={styles.container}
       contentContainerStyle={{
         paddingTop: insets.top + 16,
-        paddingBottom: insets.bottom + 40,
+        paddingBottom: Math.max(insets.bottom + 40, 80),
         paddingHorizontal: 16,
       }}
     >
