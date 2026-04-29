@@ -97,10 +97,11 @@ export default function DayDetailScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 40 },
-      ]}
+      contentContainerStyle={{
+        paddingTop: insets.top + 16,
+        paddingBottom: insets.bottom + 40,
+        paddingHorizontal: 16,
+      }}
     >
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={12}>
@@ -263,7 +264,6 @@ function formatWindRange(winds: number[], unit: string): string {
 
 const createStyles = (t: ThemeTokens) => ({
   container: { flex: 1 as const, backgroundColor: t.background },
-  content: { paddingHorizontal: 16 },
 
   header: {
     flexDirection: 'row' as const,
