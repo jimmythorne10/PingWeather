@@ -1,6 +1,7 @@
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStyles, useTokens } from '../src/theme';
 import { useLocationsStore } from '../src/stores/locationsStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
@@ -19,6 +20,7 @@ export default function DayDetailScreen() {
   const styles = useStyles(createStyles);
   const tokens = useTokens();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const params = useLocalSearchParams<{
     locationId?: string;
@@ -93,7 +95,13 @@ export default function DayDetailScreen() {
   const headerTitle = locationName || location?.name || 'Day Forecast';
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 40 },
+      ]}
+    >
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={12}>
           <Text style={styles.backArrow}>←</Text>
@@ -255,7 +263,7 @@ function formatWindRange(winds: number[], unit: string): string {
 
 const createStyles = (t: ThemeTokens) => ({
   container: { flex: 1 as const, backgroundColor: t.background },
-  content: { padding: 16, paddingBottom: 40 },
+  content: { paddingHorizontal: 16 },
 
   header: {
     flexDirection: 'row' as const,
