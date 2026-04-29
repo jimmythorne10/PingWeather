@@ -138,18 +138,7 @@ export default function HomeScreen() {
                 <Pressable
                   key={date}
                   style={({ pressed }) => [styles.forecastDay, pressed && { opacity: 0.7 }]}
-                  onPress={() => {
-                    if (selectedLocation) {
-                      router.push({
-                        pathname: '/day-detail',
-                        params: {
-                          locationId: selectedLocation.id,
-                          date,
-                          locationName: selectedLocation.name,
-                        },
-                      });
-                    }
-                  }}
+                  onPress={() => router.navigate('/(tabs)/forecasts')}
                 >
                   <Text style={styles.forecastDayLabel}>{formatDayLabel(date, i)}</Text>
                   <Text style={styles.forecastHigh}>{high}{unitSymbol}</Text>
