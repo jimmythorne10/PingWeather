@@ -14,7 +14,6 @@ interface RainfallCardProps {
 
 const WINDOWS: RainfallWindow[] = ['24h', '7d', '30d'];
 
-// Max daily rows shown in the 7d/30d breakdown to keep the card compact.
 const MAX_DAY_ROWS = 7;
 
 export function RainfallCard({ locationId, latitude, longitude }: RainfallCardProps) {
@@ -22,15 +21,17 @@ export function RainfallCard({ locationId, latitude, longitude }: RainfallCardPr
   const tokens = useTokens();
   const temperatureUnit = useSettingsStore((s) => s.temperatureUnit);
 
-  // fahrenheit users are in the US → inches; celsius → mm (international convention)
   const precipitationUnit = temperatureUnit === 'fahrenheit' ? 'inch' : 'mm' as const;
 
+  const [isExpanded, setIsExpanded] = useState(false);
   const [window, setWindow] = useState<RainfallWindow>('24h');
   const [data, setData] = useState<RainfallData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isExpanded) return;
+
     let cancelled = false;
 
     async function load() {
@@ -48,10 +49,8 @@ export function RainfallCard({ locationId, latitude, longitude }: RainfallCardPr
 
     void load();
 
-    // Prevent stale state updates if location or window changes before the
-    // current fetch resolves.
     return () => { cancelled = true; };
-  }, [locationId, latitude, longitude, window, precipitationUnit]);
+  }, [locationId, latitude, longitude, window, precipitationUnit, isExpanded]);
 
   const nonZeroDays = (data?.days ?? [])
     .filter((d) => d.amount > 0)
@@ -59,57 +58,68 @@ export function RainfallCard({ locationId, latitude, longitude }: RainfallCardPr
 
   return (
     <View>
-      <Text style={styles.sectionLabel}>RAINFALL HISTORY</Text>
+      <Pressable
+        style={({ pressed }) => [styles.header, pressed && { opacity: 0.7 }]}
+        onPress={() => setIsExpanded((v) => !v)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: isExpanded }}
+        accessibilityLabel="Rainfall history"
+      >
+        <Text style={styles.sectionLabel}>RAINFALL HISTORY</Text>
+        <Text style={styles.chevron}>{isExpanded ? '▾' : '▸'}</Text>
+      </Pressable>
 
-      {/* Window selector */}
-      <View style={styles.segmentRow}>
-        {WINDOWS.map((w) => (
-          <Pressable
-            key={w}
-            style={[styles.segmentButton, window === w && styles.segmentActive]}
-            onPress={() => setWindow(w)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: window === w }}
-          >
-            <Text style={[styles.segmentText, window === w && styles.segmentTextActive]}>
-              {w}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      {isExpanded && (
+        <View>
+          <View style={styles.segmentRow}>
+            {WINDOWS.map((w) => (
+              <Pressable
+                key={w}
+                style={[styles.segmentButton, window === w && styles.segmentActive]}
+                onPress={() => setWindow(w)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: window === w }}
+              >
+                <Text style={[styles.segmentText, window === w && styles.segmentTextActive]}>
+                  {w}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
 
-      {loading && (
-        <ActivityIndicator
-          color={tokens.rainBlue}
-          style={styles.spinner}
-          accessibilityLabel="Loading rainfall data"
-        />
-      )}
-
-      {!loading && error && (
-        <Text style={styles.errorText}>{error}</Text>
-      )}
-
-      {!loading && !error && data && (
-        <View style={styles.resultContainer}>
-          <Text style={styles.totalAmount}>{data.totalFormatted}</Text>
-
-          {/* Day-by-day breakdown for multi-day windows */}
-          {data.days.length > 0 && nonZeroDays.length > 0 && (
-            <View style={styles.dayList}>
-              {nonZeroDays.map((day) => (
-                <View key={day.date} style={styles.dayRow}>
-                  <Text style={styles.dayLabel}>{day.label}</Text>
-                  <Text style={styles.dayAmount}>
-                    {day.amount} {data.unit}
-                  </Text>
-                </View>
-              ))}
-            </View>
+          {loading && (
+            <ActivityIndicator
+              color={tokens.rainBlue}
+              style={styles.spinner}
+              accessibilityLabel="Loading rainfall data"
+            />
           )}
 
-          {data.days.length > 0 && nonZeroDays.length === 0 && (
-            <Text style={styles.noDataNote}>No rainfall on individual days</Text>
+          {!loading && error && (
+            <Text style={styles.errorText}>{error}</Text>
+          )}
+
+          {!loading && !error && data && (
+            <View style={styles.resultContainer}>
+              <Text style={styles.totalAmount}>{data.totalFormatted}</Text>
+
+              {data.days.length > 0 && nonZeroDays.length > 0 && (
+                <View style={styles.dayList}>
+                  {nonZeroDays.map((day) => (
+                    <View key={day.date} style={styles.dayRow}>
+                      <Text style={styles.dayLabel}>{day.label}</Text>
+                      <Text style={styles.dayAmount}>
+                        {day.amount} {data.unit}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {data.days.length > 0 && nonZeroDays.length === 0 && (
+                <Text style={styles.noDataNote}>No rainfall on individual days</Text>
+              )}
+            </View>
           )}
         </View>
       )}
@@ -118,13 +128,23 @@ export function RainfallCard({ locationId, latitude, longitude }: RainfallCardPr
 }
 
 const createStyles = (t: ThemeTokens) => ({
+  header: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginTop: 16,
+    marginBottom: 8,
+    paddingVertical: 2,
+  },
   sectionLabel: {
     fontSize: 12,
     fontWeight: '600' as const,
     color: t.textTertiary,
     letterSpacing: 0.5,
-    marginTop: 16,
-    marginBottom: 8,
+  },
+  chevron: {
+    fontSize: 14,
+    color: t.textTertiary,
   },
 
   segmentRow: {
