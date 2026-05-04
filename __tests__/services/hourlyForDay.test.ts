@@ -10,7 +10,7 @@ import type { HourlyForecast } from '../../src/types';
 
 // Build a 3-day synthetic hourly forecast (72 hours) with distinguishable
 // per-field values so we can verify the arrays stay in lockstep.
-function buildHourly(): HourlyForecast {
+function buildHourly(includeOptional = false): HourlyForecast {
   const time: string[] = [];
   const temperature_2m: number[] = [];
   const relative_humidity_2m: number[] = [];
@@ -19,6 +19,13 @@ function buildHourly(): HourlyForecast {
   const apparent_temperature: number[] = [];
   const uv_index: number[] = [];
   const weather_code: number[] = [];
+
+  // Optional arrays — only populated when includeOptional is true
+  const precipitation: number[] = [];
+  const surface_pressure: number[] = [];
+  const snowfall: number[] = [];
+  const snow_depth: number[] = [];
+  const soil_temperature_0cm: number[] = [];
 
   const days = ['2026-04-09', '2026-04-10', '2026-04-11'];
   days.forEach((day, dayIdx) => {
@@ -32,10 +39,17 @@ function buildHourly(): HourlyForecast {
       apparent_temperature.push(dayIdx * 200 + h);
       uv_index.push(h);
       weather_code.push(dayIdx * 1 + (h % 4));
+      if (includeOptional) {
+        precipitation.push(dayIdx * 0.5 + h * 0.1);
+        surface_pressure.push(1013 + h);
+        snowfall.push(h < 6 ? dayIdx * 0.2 : 0);
+        snow_depth.push(dayIdx * 5 + h);
+        soil_temperature_0cm.push(10 + dayIdx + h * 0.5);
+      }
     }
   });
 
-  return {
+  const base: HourlyForecast = {
     time,
     temperature_2m,
     relative_humidity_2m,
@@ -45,6 +59,18 @@ function buildHourly(): HourlyForecast {
     uv_index,
     weather_code,
   };
+
+  if (includeOptional) {
+    return {
+      ...base,
+      precipitation,
+      surface_pressure,
+      snowfall,
+      snow_depth,
+      soil_temperature_0cm,
+    };
+  }
+  return base;
 }
 
 describe('getHourlyForDay', () => {
@@ -151,5 +177,46 @@ describe('getHourlyForDay', () => {
     expect(result.apparent_temperature).toHaveLength(len);
     expect(result.uv_index).toHaveLength(len);
     expect(result.weather_code).toHaveLength(len);
+  });
+
+  describe('optional field forwarding', () => {
+    it('returns undefined for all optional fields when source does not include them', () => {
+      const hourly = buildHourly(false); // no optional fields
+      const result = getHourlyForDay(hourly, '2026-04-10');
+
+      expect(result.precipitation).toBeUndefined();
+      expect(result.surface_pressure).toBeUndefined();
+      expect(result.snowfall).toBeUndefined();
+      expect(result.snow_depth).toBeUndefined();
+      expect(result.soil_temperature_0cm).toBeUndefined();
+    });
+
+    it('forwards optional arrays when source includes them, preserving lockstep with time', () => {
+      const hourly = buildHourly(true); // includes optional fields
+      const result = getHourlyForDay(hourly, '2026-04-10');
+
+      expect(result.surface_pressure).toBeDefined();
+      expect(result.surface_pressure).toHaveLength(24);
+      expect(result.snowfall).toBeDefined();
+      expect(result.snowfall).toHaveLength(24);
+      expect(result.snow_depth).toBeDefined();
+      expect(result.snow_depth).toHaveLength(24);
+      expect(result.soil_temperature_0cm).toBeDefined();
+      expect(result.soil_temperature_0cm).toHaveLength(24);
+      expect(result.precipitation).toBeDefined();
+      expect(result.precipitation).toHaveLength(24);
+    });
+
+    it('optional arrays contain the correct values for the selected day (lockstep check)', () => {
+      const hourly = buildHourly(true);
+      // Day index 1 = '2026-04-10'. surface_pressure[i] = 1013 + h for that day.
+      const result = getHourlyForDay(hourly, '2026-04-10');
+
+      for (let h = 0; h < 24; h++) {
+        expect(result.surface_pressure![h]).toBe(1013 + h);
+        expect(result.snow_depth![h]).toBe(1 * 5 + h); // dayIdx=1 → 5 + h
+        expect(result.soil_temperature_0cm![h]).toBeCloseTo(10 + 1 + h * 0.5, 5);
+      }
+    });
   });
 });

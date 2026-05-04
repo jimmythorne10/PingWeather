@@ -20,6 +20,9 @@ export function getHourlyForDay(hourly: HourlyForecast, isoDate: string): Hourly
   }
 
   const pick = <T>(arr: T[]): T[] => indices.map((i) => arr[i]);
+  // Optional arrays — only include in the result when the source is present.
+  const pickOpt = <T>(arr: T[] | undefined): T[] | undefined =>
+    arr !== undefined ? pick(arr) : undefined;
 
   return {
     time: pick(hourly.time),
@@ -30,5 +33,11 @@ export function getHourlyForDay(hourly: HourlyForecast, isoDate: string): Hourly
     apparent_temperature: pick(hourly.apparent_temperature),
     uv_index: pick(hourly.uv_index),
     weather_code: pick(hourly.weather_code),
+    // Optional new metric fields — forwarded when present in the source.
+    precipitation: pickOpt(hourly.precipitation),
+    surface_pressure: pickOpt(hourly.surface_pressure),
+    snowfall: pickOpt(hourly.snowfall),
+    snow_depth: pickOpt(hourly.snow_depth),
+    soil_temperature_0cm: pickOpt(hourly.soil_temperature_0cm),
   };
 }

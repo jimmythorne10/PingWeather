@@ -93,3 +93,53 @@ export function getMoonIlluminationForDate(isoDate: string): number {
   }
   return getMoonIllumination(parsed);
 }
+
+/**
+ * Maps a moon illumination percentage (0–100) to the standard 8-phase emoji set.
+ *
+ * The synodic cycle is divided into 8 equal segments of 45° each. The cycle
+ * progresses: new → waxing crescent → first quarter → waxing gibbous →
+ * full → waning gibbous → last quarter → waning crescent → new.
+ *
+ * Because illumination is symmetric (waxing crescent and waning crescent both
+ * read ~25%), we use the cycle position (days elapsed) rather than raw
+ * illumination to distinguish waxing from waning halves. The illumination
+ * value alone cannot distinguish them — so we compute cycle position from the
+ * date and use waxing emojis for the first half of the cycle (days 0–14.77)
+ * and waning emojis for the second half (days 14.77–29.53).
+ *
+ * @param illumination  0–100 from getMoonIllumination / getMoonIlluminationForDate
+ * @param isoDate       YYYY-MM-DD string — used to determine waxing vs waning
+ * @returns             One of: 🌑 🌒 🌓 🌔 🌕 🌖 🌗 🌘
+ */
+export function getMoonEmoji(illumination: number, isoDate: string): string {
+  const parsed = new Date(`${isoDate}T00:00:00.000Z`);
+  if (isNaN(parsed.getTime())) {
+    // Fallback: use illumination only, assume waxing
+    return _moonEmojiFromIlluminationWaxing(illumination);
+  }
+
+  const jd = toJulianDate(parsed);
+  const daysSinceNew = jd - KNOWN_NEW_MOON_JD;
+  const cyclePos =
+    ((daysSinceNew % SYNODIC_PERIOD) + SYNODIC_PERIOD) % SYNODIC_PERIOD;
+
+  // First half = waxing (days 0 to ~14.77), second half = waning
+  const halfCycle = SYNODIC_PERIOD / 2;
+  const isWaxing = cyclePos < halfCycle;
+
+  if (illumination <= 6.25) return '🌑';                        // new moon
+  if (illumination <= 43.75) return isWaxing ? '🌒' : '🌘';    // crescent
+  if (illumination <= 56.25) return isWaxing ? '🌓' : '🌗';    // quarter
+  if (illumination <= 93.75) return isWaxing ? '🌔' : '🌖';    // gibbous
+  return '🌕';                                                   // full moon
+}
+
+/** Internal fallback used when isoDate is invalid. Assumes waxing. */
+function _moonEmojiFromIlluminationWaxing(illumination: number): string {
+  if (illumination <= 6.25) return '🌑';
+  if (illumination <= 43.75) return '🌒';
+  if (illumination <= 56.25) return '🌓';
+  if (illumination <= 93.75) return '🌔';
+  return '🌕';
+}

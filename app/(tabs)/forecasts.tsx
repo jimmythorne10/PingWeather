@@ -7,6 +7,7 @@ import { useAlertRulesStore } from '../../src/stores/alertRulesStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { fetchForecast } from '../../src/services/weatherApi';
 import { weatherCodeToEmoji, degreesToCardinal } from '../../src/services/weatherIcon';
+import { getMoonIlluminationForDate, getMoonEmoji } from '../../src/utils/moonPhase';
 import { RainfallCard } from '../../src/components/RainfallCard';
 import type { ThemeTokens } from '../../src/theme';
 import type { HourlyForecast, DailyForecast, AlertRule } from '../../src/types';
@@ -251,36 +252,61 @@ export default function ForecastsScreen() {
                       <Text style={styles.dailyHeaderRight}>Rain</Text>
                       <Text style={styles.dailyHeaderRight}>Wind</Text>
                     </View>
-                    {forecast.daily.time.map((date, i) => (
-                      <Pressable
-                        key={date}
-                        style={styles.dailyRow}
-                        onPress={() =>
-                          router.push({
-                            pathname: '/day-detail',
-                            params: { locationId: loc.id, date, locationName: loc.name },
-                          })
-                        }
-                      >
-                        <Text style={styles.dailyIcon}>
-                          {weatherCodeToEmoji(forecast.daily.weather_code[i])}
-                        </Text>
-                        <Text style={styles.dailyDate}>{formatDayLabel(date, i)}</Text>
-                        <Text style={styles.dailyTemps}>
-                          {Math.round(forecast.daily.temperature_2m_max[i])}{unitSymbol} /{' '}
-                          <Text style={styles.dailyLow}>
-                            {Math.round(forecast.daily.temperature_2m_min[i])}{unitSymbol}
-                          </Text>
-                        </Text>
-                        <Text style={styles.dailyRain}>
-                          {forecast.daily.precipitation_probability_max[i]}%
-                        </Text>
-                        <Text style={styles.dailyWind}>
-                          {degreesToCardinal(forecast.daily.wind_direction_10m_dominant[i])}{' '}
-                          {Math.round(forecast.daily.wind_speed_10m_max[i])} {windSpeedUnit}
-                        </Text>
-                      </Pressable>
-                    ))}
+                    {forecast.daily.time.map((date, i) => {
+                      const moonIllum = getMoonIlluminationForDate(date);
+                      const moonEmoji = getMoonEmoji(moonIllum, date);
+                      const uvMax = forecast.daily.uv_index_max[i];
+                      // Barometric pressure: use noon hourly reading for the day when available.
+                      const noonKey = `${date}T12:00`;
+                      const noonIdx = forecast.hourly.time.indexOf(noonKey);
+                      const pressureHPa = noonIdx >= 0
+                        ? (forecast.hourly.surface_pressure?.[noonIdx] ?? undefined)
+                        : undefined;
+
+                      return (
+                        <Pressable
+                          key={date}
+                          style={styles.dailyRow}
+                          onPress={() =>
+                            router.push({
+                              pathname: '/day-detail',
+                              params: { locationId: loc.id, date, locationName: loc.name },
+                            })
+                          }
+                        >
+                          {/* Primary row: icon / day label / hi+lo / rain / wind */}
+                          <View style={styles.dailyPrimaryRow}>
+                            <Text style={styles.dailyIcon}>
+                              {weatherCodeToEmoji(forecast.daily.weather_code[i])}
+                            </Text>
+                            <Text style={styles.dailyDate}>{formatDayLabel(date, i)}</Text>
+                            <Text style={styles.dailyTemps}>
+                              {Math.round(forecast.daily.temperature_2m_max[i])}{unitSymbol} /{' '}
+                              <Text style={styles.dailyLow}>
+                                {Math.round(forecast.daily.temperature_2m_min[i])}{unitSymbol}
+                              </Text>
+                            </Text>
+                            <Text style={styles.dailyRain}>
+                              {forecast.daily.precipitation_probability_max[i]}%
+                            </Text>
+                            <Text style={styles.dailyWind}>
+                              {degreesToCardinal(forecast.daily.wind_direction_10m_dominant[i])}{' '}
+                              {Math.round(forecast.daily.wind_speed_10m_max[i])} {windSpeedUnit}
+                            </Text>
+                          </View>
+                          {/* Secondary row: moon phase / UV / pressure */}
+                          <View style={styles.dailySecondaryRow}>
+                            <Text style={styles.dailyMeta}>{moonEmoji}</Text>
+                            {uvMax >= 3 && (
+                              <Text style={styles.dailyMeta}>UV {uvMax}</Text>
+                            )}
+                            {pressureHPa !== undefined && (
+                              <Text style={styles.dailyMeta}>{Math.round(pressureHPa)} hPa</Text>
+                            )}
+                          </View>
+                        </Pressable>
+                      );
+                    })}
 
                     {/* Rule Status Preview */}
                     {locationRules.length > 0 && (
@@ -437,13 +463,28 @@ const createStyles = (t: ThemeTokens) => ({
   dailyHeaderCell: { fontSize: 11, color: t.textTertiary, flex: 1.5 as const, fontWeight: '500' as const },
   dailyHeaderTemps: { fontSize: 11, color: t.textTertiary, flex: 2 as const, fontWeight: '500' as const },
   dailyHeaderRight: { fontSize: 11, color: t.textTertiary, flex: 1.2 as const, textAlign: 'right' as const, fontWeight: '500' as const },
+
   dailyRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderBottomColor: t.divider,
   },
+  dailyPrimaryRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+  },
+  dailySecondaryRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    marginTop: 2,
+    marginLeft: 26,
+    gap: 10,
+  },
+  dailyMeta: {
+    fontSize: 10,
+    color: t.textTertiary,
+  },
+
   dailyIcon: { fontSize: 16, width: 26 as const },
   dailyDate: { fontSize: 13, color: t.textPrimary, flex: 1.5 as const },
   dailyTemps: { fontSize: 14, color: t.textPrimary, flex: 2 as const, fontWeight: '600' as const },

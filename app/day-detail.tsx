@@ -89,6 +89,7 @@ export default function DayDetailScreen() {
   }, [forecast, date]);
 
   const unitSymbol = temperatureUnit === 'fahrenheit' ? '°F' : '°C';
+  const soilUnit = temperatureUnit === 'fahrenheit' ? '°F' : '°C';
 
   const dayLabel = useMemo(() => formatDayLabel(date), [date]);
 
@@ -177,24 +178,56 @@ export default function DayDetailScreen() {
             <Text style={styles.emptyBody}>No hourly data for this day.</Text>
           ) : (
             <View style={styles.hourlyList}>
-              {hoursForDay.time.map((t, i) => (
-                <View key={t} style={styles.hourlyRow}>
-                  <Text style={styles.hourTime}>{formatHourLabel(t)}</Text>
-                  <Text style={styles.hourEmoji}>
-                    {weatherCodeToEmoji(hoursForDay.weather_code[i])}
-                  </Text>
-                  <Text style={styles.hourTemp}>
-                    {Math.round(hoursForDay.temperature_2m[i])}
-                    {unitSymbol}
-                  </Text>
-                  <Text style={styles.hourRain}>
-                    {hoursForDay.precipitation_probability[i]}%
-                  </Text>
-                  <Text style={styles.hourWind}>
-                    {Math.round(hoursForDay.wind_speed_10m[i])} {windSpeedUnit}
-                  </Text>
-                </View>
-              ))}
+              {hoursForDay.time.map((t, i) => {
+                const pressure = hoursForDay.surface_pressure?.[i];
+                const snowfallVal = hoursForDay.snowfall?.[i];
+                const snowDepthVal = hoursForDay.snow_depth?.[i];
+                const soilTempVal = hoursForDay.soil_temperature_0cm?.[i];
+                const hasExtra =
+                  pressure !== undefined ||
+                  (snowfallVal !== undefined && snowfallVal > 0) ||
+                  (snowDepthVal !== undefined && snowDepthVal > 0) ||
+                  soilTempVal !== undefined;
+
+                return (
+                  <View key={t} style={styles.hourlyRow}>
+                    {/* Primary row */}
+                    <View style={styles.hourlyPrimary}>
+                      <Text style={styles.hourTime}>{formatHourLabel(t)}</Text>
+                      <Text style={styles.hourEmoji}>
+                        {weatherCodeToEmoji(hoursForDay.weather_code[i])}
+                      </Text>
+                      <Text style={styles.hourTemp}>
+                        {Math.round(hoursForDay.temperature_2m[i])}
+                        {unitSymbol}
+                      </Text>
+                      <Text style={styles.hourRain}>
+                        {hoursForDay.precipitation_probability[i]}%
+                      </Text>
+                      <Text style={styles.hourWind}>
+                        {Math.round(hoursForDay.wind_speed_10m[i])} {windSpeedUnit}
+                      </Text>
+                    </View>
+                    {/* Secondary row — only rendered when at least one optional field is present */}
+                    {hasExtra && (
+                      <View style={styles.hourlyExtra}>
+                        {pressure !== undefined && (
+                          <Text style={styles.hourExtraItem}>{Math.round(pressure)} hPa</Text>
+                        )}
+                        {snowfallVal !== undefined && snowfallVal > 0 && (
+                          <Text style={styles.hourExtraItem}>Snow {snowfallVal.toFixed(1)} cm</Text>
+                        )}
+                        {snowDepthVal !== undefined && snowDepthVal > 0 && (
+                          <Text style={styles.hourExtraItem}>Depth {snowDepthVal.toFixed(1)} cm</Text>
+                        )}
+                        {soilTempVal !== undefined && (
+                          <Text style={styles.hourExtraItem}>Soil {Math.round(soilTempVal)}{soilUnit}</Text>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
             </View>
           )}
         </>
@@ -390,12 +423,25 @@ const createStyles = (t: ThemeTokens) => ({
     overflow: 'hidden' as const,
   },
   hourlyRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 14,
     borderBottomWidth: 1,
     borderBottomColor: t.divider,
+  },
+  hourlyPrimary: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+  },
+  hourlyExtra: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    marginTop: 3,
+    marginLeft: 82, // align under temp column (time 52 + emoji 30)
+    gap: 10,
+  },
+  hourExtraItem: {
+    fontSize: 10,
+    color: t.textTertiary,
   },
   hourTime: {
     fontSize: 13,
