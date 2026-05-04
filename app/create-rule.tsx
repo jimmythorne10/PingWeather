@@ -128,6 +128,43 @@ const BEARING_TOLERANCES = [
   { label: '±90°', value: 90 },
 ] as const;
 
+// Controlled numeric input that keeps a local string buffer so mid-edit states
+// like "" or "-" don't snap back to the last valid number. Syncs from `value`
+// when an external change (preset chip, compass bearing) sets a new number.
+function NumericInput({
+  value,
+  onValueChange,
+  style,
+}: {
+  value: number;
+  onValueChange: (n: number) => void;
+  style?: object;
+}) {
+  const [text, setText] = useState(value.toString());
+
+  useEffect(() => {
+    // Only overwrite the local text when the external value genuinely changed
+    // (e.g. a preset chip set it). Don't clobber while the user is mid-edit.
+    if (parseFloat(text) !== value) {
+      setText(value.toString());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  return (
+    <TextInput
+      style={style}
+      keyboardType="numeric"
+      value={text}
+      onChangeText={(val) => {
+        setText(val);
+        const num = parseFloat(val);
+        if (!isNaN(num)) onValueChange(num);
+      }}
+    />
+  );
+}
+
 export default function CreateRuleScreen() {
   const router = useRouter();
   const t = useTokens();
@@ -478,14 +515,10 @@ export default function CreateRuleScreen() {
               </>
             ) : (
               <View style={styles.valueRow}>
-                <TextInput
+                <NumericInput
                   style={[styles.valueInput, { backgroundColor: t.inputBackground, borderColor: t.border, color: t.textPrimary }]}
-                  keyboardType="numeric"
-                  value={condition.value.toString()}
-                  onChangeText={(val) => {
-                    const num = parseFloat(val);
-                    if (!isNaN(num)) updateCondition(index, { value: num });
-                  }}
+                  value={condition.value}
+                  onValueChange={(num) => updateCondition(index, { value: num })}
                 />
                 <Text style={[styles.unitLabel, { color: t.textTertiary }]}>
                   {getUnitLabel(condition.unit)}
