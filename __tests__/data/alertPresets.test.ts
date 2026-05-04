@@ -31,6 +31,11 @@ const VALID_METRICS: WeatherMetric[] = [
   'soil_temperature',
   'weather_code',
   'moon_phase',
+  // New metrics added 2026-05-04
+  'wind_gusts',
+  'dew_point',
+  'visibility',
+  'cloud_cover',
 ];
 
 const VALID_OPERATORS: ComparisonOperator[] = ['gt', 'gte', 'lt', 'lte', 'eq'];

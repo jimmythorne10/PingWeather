@@ -215,6 +215,52 @@ export const ALERT_PRESETS: AlertPreset[] = [
     cooldown_hours: 48,
   },
 
+  // ── Wind Gusts ───────────────────────────────────────────────
+  {
+    id: 'dangerous-gusts',
+    name: 'Dangerous Gusts',
+    description: 'Alert when wind gusts exceed 50 mph. Risk to structures, outdoor equipment, and trees.',
+    icon: '🌬️',
+    category: 'wind',
+    conditions: [
+      { metric: 'wind_gusts', operator: 'gt', value: 50, unit: 'mph' },
+    ],
+    logical_operator: 'AND',
+    lookahead_hours: 24,
+    polling_interval_hours: 4,
+    cooldown_hours: 6,
+  },
+
+  // ── Atmosphere ───────────────────────────────────────────────
+  {
+    id: 'low-visibility-fog',
+    name: 'Low Visibility / Fog',
+    description: 'Alert when visibility drops below 1 mile. Dangerous for driving and outdoor work.',
+    icon: '🌫️',
+    category: 'work',
+    conditions: [
+      { metric: 'visibility', operator: 'lt', value: 1, unit: 'miles' },
+    ],
+    logical_operator: 'AND',
+    lookahead_hours: 12,
+    polling_interval_hours: 4,
+    cooldown_hours: 6,
+  },
+  {
+    id: 'overcast-sky',
+    name: 'Clear Sky Window',
+    description: 'Alert when cloud cover is below 20%. Ideal for stargazing, photography, and moon observation.',
+    icon: '🔭',
+    category: 'work',
+    conditions: [
+      { metric: 'cloud_cover', operator: 'lt', value: 20, unit: 'percent' },
+    ],
+    logical_operator: 'AND',
+    lookahead_hours: 24,
+    polling_interval_hours: 6,
+    cooldown_hours: 12,
+  },
+
   // ── Farming / Planting ───────────────────────────────────
   {
     id: 'soil-warm-planting',

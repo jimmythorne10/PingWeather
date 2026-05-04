@@ -99,6 +99,10 @@ export interface HourlyForecast {
   snowfall?: number[];             // cm — hourly snowfall
   snow_depth?: number[];           // cm — snow depth on ground
   soil_temperature_0cm?: number[]; // °F when temperature_unit=fahrenheit (Open-Meteo converts all temp vars)
+  wind_gusts_10m?: number[];       // mph — wind gusts
+  dew_point_2m?: number[];         // °F or °C — follows temperature_unit
+  visibility?: number[];           // meters raw from API (convert to miles in getMetricValues)
+  cloud_cover?: number[];          // % cloud cover
 }
 
 export interface DailyForecast {
@@ -323,6 +327,45 @@ export function getMetricValues(
         .map((dateStr) => _getMoonIlluminationForDate(dateStr));
     }
 
+    case 'wind_gusts': {
+      // Hourly wind gusts (mph) from wind_gusts_10m.
+      if (!forecast.hourly.wind_gusts_10m) return [];
+      return forecast.hourly.wind_gusts_10m.filter((_, i) => {
+        const time = new Date(forecast.hourly.time[i]);
+        return time >= now && time <= cutoff;
+      });
+    }
+
+    case 'dew_point': {
+      // Hourly dew point temperature (°F or °C, follows temperature_unit).
+      if (!forecast.hourly.dew_point_2m) return [];
+      return forecast.hourly.dew_point_2m.filter((_, i) => {
+        const time = new Date(forecast.hourly.time[i]);
+        return time >= now && time <= cutoff;
+      });
+    }
+
+    case 'visibility': {
+      // Hourly visibility — Open-Meteo returns raw meters. Convert to miles
+      // for storage and comparison (US-first: 1 mile = 1609.34 m).
+      if (!forecast.hourly.visibility) return [];
+      return forecast.hourly.visibility
+        .filter((_, i) => {
+          const time = new Date(forecast.hourly.time[i]);
+          return time >= now && time <= cutoff;
+        })
+        .map((meters) => meters / 1609.34);
+    }
+
+    case 'cloud_cover': {
+      // Hourly cloud cover (%).
+      if (!forecast.hourly.cloud_cover) return [];
+      return forecast.hourly.cloud_cover.filter((_, i) => {
+        const time = new Date(forecast.hourly.time[i]);
+        return time >= now && time <= cutoff;
+      });
+    }
+
     default:
       return [];
   }
@@ -512,6 +555,47 @@ function getMetricEntries(
         }));
     }
 
+    case 'wind_gusts': {
+      if (!forecast.hourly.wind_gusts_10m) return [];
+      return forecast.hourly.wind_gusts_10m
+        .map((value, i) => ({ value, time: forecast.hourly.time[i] }))
+        .filter(({ time }) => {
+          const t = new Date(time);
+          return t >= now && t <= cutoff;
+        });
+    }
+
+    case 'dew_point': {
+      if (!forecast.hourly.dew_point_2m) return [];
+      return forecast.hourly.dew_point_2m
+        .map((value, i) => ({ value, time: forecast.hourly.time[i] }))
+        .filter(({ time }) => {
+          const t = new Date(time);
+          return t >= now && t <= cutoff;
+        });
+    }
+
+    case 'visibility': {
+      // Convert meters → miles before returning.
+      if (!forecast.hourly.visibility) return [];
+      return forecast.hourly.visibility
+        .map((meters, i) => ({ value: meters / 1609.34, time: forecast.hourly.time[i] }))
+        .filter(({ time }) => {
+          const t = new Date(time);
+          return t >= now && t <= cutoff;
+        });
+    }
+
+    case 'cloud_cover': {
+      if (!forecast.hourly.cloud_cover) return [];
+      return forecast.hourly.cloud_cover
+        .map((value, i) => ({ value, time: forecast.hourly.time[i] }))
+        .filter(({ time }) => {
+          const t = new Date(time);
+          return t >= now && t <= cutoff;
+        });
+    }
+
     default:
       return [];
   }
@@ -653,6 +737,10 @@ export function formatConditionSummary(
     soil_temperature: 'Soil temperature',
     weather_code: 'Weather code',
     moon_phase: 'Moon illumination',
+    wind_gusts: 'Wind gusts',
+    dew_point: 'Dew point',
+    visibility: 'Visibility',
+    cloud_cover: 'Cloud cover',
   };
 
   const operatorLabels: Record<string, string> = {

@@ -34,7 +34,49 @@ const METRICS: { value: WeatherMetric; label: string; defaultUnit: string }[] = 
   { value: 'weather_code', label: 'Weather Condition', defaultUnit: '' },
   // moon_phase: % illumination — 0 = new moon, 100 = full moon
   { value: 'moon_phase', label: 'Moon Phase', defaultUnit: '%' },
+  // wind_gusts: peak gust speed in mph
+  { value: 'wind_gusts', label: 'Wind Gusts', defaultUnit: 'mph' },
+  // dew_point: dew point temperature; follows temperature_unit
+  { value: 'dew_point', label: 'Dew Point', defaultUnit: '°F' },
+  // visibility: converted from raw meters to miles for display and comparison
+  { value: 'visibility', label: 'Visibility', defaultUnit: 'mi' },
+  // cloud_cover: percentage of sky covered by clouds
+  { value: 'cloud_cover', label: 'Cloud Cover', defaultUnit: '%' },
 ];
+
+// ── Category definitions for the metric filter chips ─────────────────────────
+type MetricCategory = 'all' | 'temperature' | 'wind' | 'precipitation' | 'atmosphere' | 'special';
+
+const METRIC_CATEGORIES: { value: MetricCategory; label: string }[] = [
+  { value: 'all',         label: 'All' },
+  { value: 'temperature', label: 'Temperature' },
+  { value: 'wind',        label: 'Wind' },
+  { value: 'precipitation', label: 'Precipitation' },
+  { value: 'atmosphere',  label: 'Atmosphere' },
+  { value: 'special',     label: 'Special' },
+];
+
+const METRIC_CATEGORY_MAP: Record<string, MetricCategory> = {
+  temperature_high:           'temperature',
+  temperature_low:            'temperature',
+  temperature_current:        'temperature',
+  feels_like:                 'temperature',
+  dew_point:                  'temperature',
+  soil_temperature:           'temperature',
+  wind_speed:                 'wind',
+  wind_gusts:                 'wind',
+  precipitation_probability:  'precipitation',
+  precipitation_amount:       'precipitation',
+  snowfall:                   'precipitation',
+  snow_depth:                 'precipitation',
+  humidity:                   'atmosphere',
+  barometric_pressure:        'atmosphere',
+  uv_index:                   'atmosphere',
+  cloud_cover:                'atmosphere',
+  visibility:                 'atmosphere',
+  weather_code:               'atmosphere',
+  moon_phase:                 'special',
+};
 
 const OPERATORS: { value: ComparisonOperator; label: string }[] = [
   { value: 'gt', label: 'above' },
@@ -108,6 +150,10 @@ export default function CreateRuleScreen() {
     sourceRule ? sourceRule.cooldown_hours : 12
   );
   const [saving, setSaving] = useState(false);
+  // Category filter state — one entry per condition, defaults to 'all'
+  const [conditionCategories, setConditionCategories] = useState<MetricCategory[]>(() =>
+    (sourceRule?.conditions ?? [{ metric: 'temperature_low' }]).map(() => 'all' as MetricCategory)
+  );
 
   useEffect(() => {
     // FIX 12: Load both locations and rules on mount. On a cold-start deep
@@ -131,11 +177,17 @@ export default function CreateRuleScreen() {
       return;
     }
     setConditions([...conditions, { metric: 'precipitation_probability', operator: 'gt', value: 50, unit: 'percent' }]);
+    setConditionCategories([...conditionCategories, 'all']);
   };
 
   const removeCondition = (index: number) => {
     if (conditions.length <= 1) return;
     setConditions(conditions.filter((_, i) => i !== index));
+    setConditionCategories(conditionCategories.filter((_, i) => i !== index));
+  };
+
+  const setConditionCategory = (index: number, category: MetricCategory) => {
+    setConditionCategories(conditionCategories.map((c, i) => i === index ? category : c));
   };
 
   const updateCondition = (index: number, updates: Partial<AlertCondition>) => {
@@ -250,10 +302,36 @@ export default function CreateRuleScreen() {
             </View>
           )}
           <View style={[styles.conditionCard, { backgroundColor: t.card, borderColor: t.borderLight }]}>
-            {/* Metric selector */}
+            {/* Metric selector — category filter + filtered metric chips */}
             <Text style={[styles.condLabel, { color: t.textTertiary }]}>WHEN</Text>
+            {/* Category filter row */}
+            <View style={[styles.chipRow, { marginBottom: 6 }]}>
+              {METRIC_CATEGORIES.map((cat) => {
+                const isActive = (conditionCategories[index] ?? 'all') === cat.value;
+                return (
+                  <Pressable
+                    key={cat.value}
+                    style={[
+                      styles.chip,
+                      styles.categoryChip,
+                      { borderColor: isActive ? t.primary : t.border },
+                      isActive && { backgroundColor: t.primaryLight },
+                    ]}
+                    onPress={() => setConditionCategory(index, cat.value)}
+                  >
+                    <Text style={{ color: isActive ? t.primary : t.textTertiary, fontSize: 12, fontWeight: '500' }}>
+                      {cat.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {/* Filtered metric chips */}
             <View style={styles.chipRow}>
-              {METRICS.map((m) => (
+              {METRICS.filter((m) => {
+                const activeCategory = conditionCategories[index] ?? 'all';
+                return activeCategory === 'all' || METRIC_CATEGORY_MAP[m.value] === activeCategory;
+              }).map((m) => (
                 <Pressable
                   key={m.value}
                   style={[
@@ -343,6 +421,26 @@ export default function CreateRuleScreen() {
             {condition.metric === 'barometric_pressure' && (
               <Text style={[styles.metricHelperText, { color: t.textTertiary }]}>
                 Normal sea level = 1013 hPa. Typical range 970–1040 hPa. Below 1005 hPa may indicate approaching storm.
+              </Text>
+            )}
+            {condition.metric === 'visibility' && (
+              <Text style={[styles.metricHelperText, { color: t.textTertiary }]}>
+                Clear day = 10+ mi. Dense fog = &lt; 0.25 mi. Typical fog alert threshold: 1 mi.
+              </Text>
+            )}
+            {condition.metric === 'cloud_cover' && (
+              <Text style={[styles.metricHelperText, { color: t.textTertiary }]}>
+                0% = clear sky, 100% = fully overcast.
+              </Text>
+            )}
+            {condition.metric === 'wind_gusts' && (
+              <Text style={[styles.metricHelperText, { color: t.textTertiary }]}>
+                Peak wind speed — typically higher than sustained wind. More damaging to structures.
+              </Text>
+            )}
+            {condition.metric === 'dew_point' && (
+              <Text style={[styles.metricHelperText, { color: t.textTertiary }]}>
+                Above 65°F (18°C) feels oppressive. Above 70°F (21°C) very uncomfortable.
               </Text>
             )}
 
@@ -508,6 +606,9 @@ const styles = StyleSheet.create({
   },
   moonChip: {
     paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center', minWidth: 100,
+  },
+  categoryChip: {
+    paddingVertical: 5, paddingHorizontal: 10,
   },
   conditionCard: {
     borderWidth: 1, borderRadius: 12, padding: 16, marginBottom: 8,

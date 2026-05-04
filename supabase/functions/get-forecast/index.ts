@@ -99,6 +99,10 @@ Deno.serve(async (req) => {
       "snowfall",
       "snow_depth",
       "soil_temperature_0cm",
+      "wind_gusts_10m",
+      "dew_point_2m",
+      "visibility",
+      "cloud_cover",
     ];
     const defaultDaily = [
       "temperature_2m_max",

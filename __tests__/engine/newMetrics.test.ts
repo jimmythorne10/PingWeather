@@ -54,6 +54,11 @@ function buildExtendedForecast(): ForecastData {
       snowfall: [0.0, 0.0, 1.5, 3.2, 0.0],
       snow_depth: [0.0, 0.0, 2.0, 5.5, 5.5],
       soil_temperature_0cm: [10.5, 10.0, 9.5, 8.0, 7.5],
+      // New metrics (session 10)
+      wind_gusts_10m: [35, 42, 55, 70, 85],
+      dew_point_2m: [55, 58, 62, 65, 68],
+      visibility: [16093.4, 12874.7, 8046.7, 3218.7, 804.7], // meters (10 mi, 8 mi, 5 mi, 2 mi, 0.5 mi)
+      cloud_cover: [10, 25, 50, 75, 90],
     },
     daily: {
       time: [
@@ -391,6 +396,197 @@ describe('getMetricValues — moon_phase', () => {
     const values = getMetricValues('moon_phase', futureForecast, 48);
     expect(Array.isArray(values)).toBe(true);
     expect(values.every((v) => typeof v === 'number')).toBe(true);
+  });
+});
+
+// ── wind_gusts ────────────────────────────────────────────────
+
+describe('getMetricValues — wind_gusts', () => {
+  it('returns wind_gusts_10m values within the lookahead window', () => {
+    const forecast = buildExtendedForecast();
+    const values = getMetricValues('wind_gusts', forecast, 12);
+    expect(values.length).toBeGreaterThan(0);
+    expect(values.every((v) => (forecast.hourly.wind_gusts_10m ?? []).includes(v))).toBe(true);
+  });
+
+  it('excludes wind gust values outside the lookahead window', () => {
+    const forecast = buildExtendedForecast();
+    const values = getMetricValues('wind_gusts', forecast, 2);
+    expect(values).toContain(35); // 1h entry
+    expect(values).not.toContain(85); // 48h entry
+  });
+
+  it('returns empty array when wind_gusts_10m field is absent', () => {
+    const forecast: ForecastData = {
+      hourly: {
+        time: [hoursFromNow(1)],
+        temperature_2m: [50],
+        relative_humidity_2m: [60],
+        precipitation_probability: [20],
+        wind_speed_10m: [10],
+        apparent_temperature: [48],
+        uv_index: [3],
+        // wind_gusts_10m omitted
+      },
+      daily: {
+        time: [],
+        temperature_2m_max: [],
+        temperature_2m_min: [],
+        precipitation_probability_max: [],
+        wind_speed_10m_max: [],
+        uv_index_max: [],
+      },
+    };
+    const values = getMetricValues('wind_gusts', forecast, 24);
+    expect(values).toEqual([]);
+  });
+});
+
+// ── dew_point ─────────────────────────────────────────────────
+
+describe('getMetricValues — dew_point', () => {
+  it('returns dew_point_2m values within the lookahead window', () => {
+    const forecast = buildExtendedForecast();
+    const values = getMetricValues('dew_point', forecast, 12);
+    expect(values.length).toBeGreaterThan(0);
+    expect(values.every((v) => (forecast.hourly.dew_point_2m ?? []).includes(v))).toBe(true);
+  });
+
+  it('returns empty array when dew_point_2m field is absent', () => {
+    const forecast: ForecastData = {
+      hourly: {
+        time: [hoursFromNow(1)],
+        temperature_2m: [50],
+        relative_humidity_2m: [60],
+        precipitation_probability: [20],
+        wind_speed_10m: [10],
+        apparent_temperature: [48],
+        uv_index: [3],
+        // dew_point_2m omitted
+      },
+      daily: {
+        time: [],
+        temperature_2m_max: [],
+        temperature_2m_min: [],
+        precipitation_probability_max: [],
+        wind_speed_10m_max: [],
+        uv_index_max: [],
+      },
+    };
+    const values = getMetricValues('dew_point', forecast, 24);
+    expect(values).toEqual([]);
+  });
+});
+
+// ── visibility ────────────────────────────────────────────────
+
+describe('getMetricValues — visibility', () => {
+  it('returns visibility values converted from meters to miles', () => {
+    const forecast = buildExtendedForecast();
+    const values = getMetricValues('visibility', forecast, 12);
+    expect(values.length).toBeGreaterThan(0);
+    // Raw meter values divided by 1609.34 — verify conversion
+    const rawMeters = forecast.hourly.visibility ?? [];
+    // Each returned value should be the raw meter value / 1609.34
+    values.forEach((v) => {
+      const matchingRaw = rawMeters.find((m) => Math.abs(m / 1609.34 - v) < 0.0001);
+      expect(matchingRaw).toBeDefined();
+    });
+  });
+
+  it('dense fog (< 500m) converts to < 1 mile', () => {
+    const forecast: ForecastData = {
+      hourly: {
+        time: [hoursFromNow(1)],
+        temperature_2m: [50],
+        relative_humidity_2m: [95],
+        precipitation_probability: [10],
+        wind_speed_10m: [2],
+        apparent_temperature: [48],
+        uv_index: [0],
+        visibility: [400], // 400m = ~0.25 mi
+      },
+      daily: {
+        time: [],
+        temperature_2m_max: [],
+        temperature_2m_min: [],
+        precipitation_probability_max: [],
+        wind_speed_10m_max: [],
+        uv_index_max: [],
+      },
+    };
+    const values = getMetricValues('visibility', forecast, 6);
+    expect(values.length).toBe(1);
+    expect(values[0]).toBeCloseTo(400 / 1609.34, 4);
+    expect(values[0]).toBeLessThan(1); // < 1 mile
+  });
+
+  it('returns empty array when visibility field is absent', () => {
+    const forecast: ForecastData = {
+      hourly: {
+        time: [hoursFromNow(1)],
+        temperature_2m: [50],
+        relative_humidity_2m: [60],
+        precipitation_probability: [20],
+        wind_speed_10m: [10],
+        apparent_temperature: [48],
+        uv_index: [3],
+        // visibility omitted
+      },
+      daily: {
+        time: [],
+        temperature_2m_max: [],
+        temperature_2m_min: [],
+        precipitation_probability_max: [],
+        wind_speed_10m_max: [],
+        uv_index_max: [],
+      },
+    };
+    const values = getMetricValues('visibility', forecast, 24);
+    expect(values).toEqual([]);
+  });
+});
+
+// ── cloud_cover ───────────────────────────────────────────────
+
+describe('getMetricValues — cloud_cover', () => {
+  it('returns cloud_cover values within the lookahead window', () => {
+    const forecast = buildExtendedForecast();
+    const values = getMetricValues('cloud_cover', forecast, 12);
+    expect(values.length).toBeGreaterThan(0);
+    expect(values.every((v) => (forecast.hourly.cloud_cover ?? []).includes(v))).toBe(true);
+  });
+
+  it('excludes cloud_cover values outside the lookahead window', () => {
+    const forecast = buildExtendedForecast();
+    const values = getMetricValues('cloud_cover', forecast, 2);
+    expect(values).toContain(10); // 1h entry
+    expect(values).not.toContain(90); // 48h entry
+  });
+
+  it('returns empty array when cloud_cover field is absent', () => {
+    const forecast: ForecastData = {
+      hourly: {
+        time: [hoursFromNow(1)],
+        temperature_2m: [50],
+        relative_humidity_2m: [60],
+        precipitation_probability: [20],
+        wind_speed_10m: [10],
+        apparent_temperature: [48],
+        uv_index: [3],
+        // cloud_cover omitted
+      },
+      daily: {
+        time: [],
+        temperature_2m_max: [],
+        temperature_2m_min: [],
+        precipitation_probability_max: [],
+        wind_speed_10m_max: [],
+        uv_index_max: [],
+      },
+    };
+    const values = getMetricValues('cloud_cover', forecast, 24);
+    expect(values).toEqual([]);
   });
 });
 

@@ -59,6 +59,10 @@ async function fetchForecast(lat: number, lon: number): Promise<Record<string, u
       "snowfall",
       "snow_depth",
       "soil_temperature_0cm",
+      "wind_gusts_10m",
+      "dew_point_2m",
+      "visibility",
+      "cloud_cover",
     ].join(","),
     daily: [
       "temperature_2m_max",

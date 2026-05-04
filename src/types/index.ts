@@ -92,7 +92,11 @@ export type WeatherMetric =
   | 'snow_depth'
   | 'soil_temperature'
   | 'weather_code'
-  | 'moon_phase';
+  | 'moon_phase'
+  | 'wind_gusts'
+  | 'dew_point'
+  | 'visibility'
+  | 'cloud_cover';
 
 export type ComparisonOperator = 'gt' | 'gte' | 'lt' | 'lte' | 'eq';
 
@@ -104,7 +108,7 @@ export interface AlertCondition {
   metric: WeatherMetric;
   operator: ComparisonOperator;
   value: number;
-  unit?: TemperatureUnit | WindSpeedUnit | 'percent' | 'index' | 'hPa' | 'mm' | 'in' | 'cm' | '%illumination';
+  unit?: TemperatureUnit | WindSpeedUnit | 'percent' | 'index' | 'hPa' | 'mm' | 'in' | 'cm' | '%illumination' | 'miles' | 'km';
 }
 
 export type LogicalOperator = 'AND' | 'OR';
@@ -170,6 +174,10 @@ export interface HourlyForecast {
   snowfall?: number[];             // cm
   snow_depth?: number[];           // cm
   soil_temperature_0cm?: number[]; // °C
+  wind_gusts_10m?: number[];       // mph — wind gusts
+  dew_point_2m?: number[];         // °F or °C — follows temperature_unit
+  visibility?: number[];           // meters raw from API (convert to miles in getMetricValues)
+  cloud_cover?: number[];          // % cloud cover
 }
 
 export interface DailyForecast {

@@ -36,13 +36,15 @@ export function getUnitForMetric(
   ) {
     return temperatureUnit;
   }
-  if (metric === 'precipitation_probability' || metric === 'humidity') return 'percent';
-  if (metric === 'wind_speed') return 'mph';
+  if (metric === 'precipitation_probability' || metric === 'humidity' || metric === 'cloud_cover') return 'percent';
+  if (metric === 'wind_speed' || metric === 'wind_gusts') return 'mph';
   if (metric === 'uv_index') return 'index';
   if (metric === 'barometric_pressure') return 'hPa';
   if (metric === 'precipitation_amount') return 'mm';
   if (metric === 'snowfall' || metric === 'snow_depth') return 'cm';
   if (metric === 'moon_phase') return '%illumination';
+  if (metric === 'dew_point') return temperatureUnit;
+  if (metric === 'visibility') return 'miles';
   // weather_code is a unitless WMO integer
   return undefined;
 }
@@ -65,6 +67,8 @@ export function getUnitLabel(unit: AlertCondition['unit']): string {
     case 'in':            return 'in';
     case 'cm':            return 'cm';
     case '%illumination': return '%';
+    case 'miles':         return 'mi';
+    case 'km':            return 'km';
     default:              return '';
   }
 }

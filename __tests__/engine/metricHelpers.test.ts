@@ -69,6 +69,27 @@ describe('getUnitForMetric', () => {
   test('uv_index returns index', () => {
     expect(getUnitForMetric('uv_index')).toBe('index');
   });
+
+  test('wind_gusts returns mph', () => {
+    expect(getUnitForMetric('wind_gusts')).toBe('mph');
+  });
+
+  test('dew_point follows temperatureUnit param', () => {
+    expect(getUnitForMetric('dew_point', 'fahrenheit')).toBe('fahrenheit');
+    expect(getUnitForMetric('dew_point', 'celsius')).toBe('celsius');
+  });
+
+  test('dew_point defaults to fahrenheit', () => {
+    expect(getUnitForMetric('dew_point')).toBe('fahrenheit');
+  });
+
+  test('visibility returns miles', () => {
+    expect(getUnitForMetric('visibility')).toBe('miles');
+  });
+
+  test('cloud_cover returns percent', () => {
+    expect(getUnitForMetric('cloud_cover')).toBe('percent');
+  });
 });
 
 describe('getUnitLabel', () => {
@@ -110,6 +131,14 @@ describe('getUnitLabel', () => {
 
   test('undefined → empty string', () => {
     expect(getUnitLabel(undefined)).toBe('');
+  });
+
+  test('miles → mi', () => {
+    expect(getUnitLabel('miles')).toBe('mi');
+  });
+
+  test('km → km', () => {
+    expect(getUnitLabel('km')).toBe('km');
   });
 });
 
