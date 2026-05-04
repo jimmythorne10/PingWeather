@@ -1,6 +1,6 @@
 # Project Memory — PingWeather
 
-> Last updated: 2026-04-28 (session 4 — feature bundle shipped + OTA live)
+> Last updated: 2026-05-03 (session 9 — moon phase picker, unit bugs fixed, 62 tests rescued)
 
 ## Project Identity
 
@@ -15,26 +15,28 @@
 ## Current Status
 
 **Play Store internal testing: LIVE — versionCode 7 installed**
-**OTA LIVE — preview channel, update group `db4cdeae-f5bc-49cc-8958-c483ed030b2b`, commit `e8697238`**
+**OTA LIVE — preview channel, update group `e6b09d99-092f-4d8b-bd06-bc668eca5fc9`, commit `fef9cc6` (main ahead — pending OTA with forecast UI + 4 new metrics + category filter)**
 **Supabase migrations: 00001–00017 applied**
-**Tests: 489/489 logic tests passing**
+**Tests: 637/637 logic tests passing**
 **Next milestone: closed testing (12+ testers, 14 days)**
+**Closed testing: RECRUITING — tester list in progress. Jimmy posted Discord pitch 2026-04-29. Play Console track created.**
+**Apple Developer enrollment: Company (Truth Centered Tech) submitted 2026-04-29 — awaiting approval.**
+**Open-Meteo key rotation: COMPLETE — new key `y8A63e8V82EPsr7j` set in Supabase secrets 2026-05-03. Old key `eNFRDFntQmSudB7E` revoked. `EXPO_PUBLIC_OPEN_METEO_API_KEY` removed from EAS preview + production.**
 
 ### Jimmy's required manual actions (still pending)
 
-1. **Revoke Open-Meteo commercial key** at customer.open-meteo.com — key `eNFRDFntQmSudB7E` baked into APK bundles; rotate before production launch
-2. **Generate new Open-Meteo key**, update Supabase function secret `OPEN_METEO_API_KEY` via `npx supabase secrets set OPEN_METEO_API_KEY=<new-key>`
-3. **Remove `EXPO_PUBLIC_OPEN_METEO_API_KEY`** from EAS env (preview + production profiles) — no longer needed; client calls get-forecast Edge Function
+_(none — Open-Meteo key rotation complete)_
 
 ### Completed — do not re-propose
 
 | Item | Notes |
 |---|---|
 | RevenueCat Android | `goog_XykDmtoZwUNDfBgswNJaIkDLjNC`, products + webhook live |
-| Open-Meteo commercial license | Supabase secret: `OPEN_METEO_API_KEY` (client key rotated per manual actions above) |
+| Open-Meteo commercial license + key rotation | Supabase secret `OPEN_METEO_API_KEY` set to new key `y8A63e8V82EPsr7j` 2026-05-03. Old key `eNFRDFntQmSudB7E` revoked. `EXPO_PUBLIC_OPEN_METEO_API_KEY` removed from EAS preview + production. |
 | Privacy policy | `truthcenteredtech.com/pingweather-privacy` |
 | Play Store internal testing | versionCode 7 live |
-| Apple Developer Program | Enrolled |
+| Play Store listing | Screenshots, short/full description, data safety form — all complete. Store listing fully populated as of session ~5. |
+| Apple Developer Program | Company enrollment submitted 2026-04-29 — awaiting approval (1–3 business days). Personal account showed "Enroll today" — enrollment is for Truth Centered Tech entity, not personal. |
 | Edge Functions | poll-weather, evaluate-alerts, register-push-token, send-digest, fcm-keepalive, delete-account, subscription-webhook, get-forecast — all deployed |
 | Push token registration | Fixed — `adminClient.auth.getUser(jwt)` pattern |
 | delete-account | Fixed — same broken getUser() pattern; was always 401 |
@@ -57,30 +59,36 @@
 | Open-Meteo key security | get-forecast Edge Function proxies with server-side key; client never sees key |
 | weatherEngine shared module | Pure logic in src/utils/weatherEngine.ts (Jest) + supabase/functions/_shared/ (Deno) |
 | Fraudulent tests fixed | Tests now import from src/utils/weatherEngine — not inline clones |
-| Rainfall history feature | `rainfallApi.ts` + `RainfallCard.tsx` — 24h/7d/30d windows, inch/mm auto-unit, shown in forecasts tab |
+| Rainfall history feature | `rainfallApi.ts` + `RainfallCard.tsx` — 24h/7d/30d windows, inch/mm auto-unit, shown in forecasts tab collapsed by default (accordion, lazy-load on expand) — **device verified** |
 | Enhanced notifications | `matchedTime` propagated through evaluateCondition → evaluateRule → poll-weather; day label prepended to push body (e.g. "Tomorrow: High 95°F...") |
-| Home screen forecast tap | Day cards on home screen tap → `/day-detail` for that location; `Pressable` with 0.7 opacity press state |
+| Home screen forecast tap | Day cards tap → Forecasts tab via `router.navigate('/(tabs)/forecasts', { expandLocationId })`. Forecasts tab reads param + auto-expands/loads that location. `processedExpandRef` prevents re-fire on unrelated renders. — **device verified** |
+| day-detail header/padding | Removed duplicate native Stack header (`headerShown: false`); safe area handled via `useSafeAreaInsets` inline contentContainerStyle (`paddingTop: insets.top+16, paddingBottom: Math.max(insets.bottom+40, 80)`). Still reachable from Forecasts tab 14-day row tap. |
 | Wind speed unit profile sync | Settings screen syncs wind_speed_unit to Supabase profiles immediately on change |
 | migration 00017 | Adds `wind_speed_unit` column to profiles table — applied remotely |
 | syncTierToSupabase removed | Client-side tier sync removed from purchases.ts; subscription-webhook is only valid write path (RLS blocks user-JWT writes) |
 | FCM keepalive token pruning | `fcm-keepalive` now prunes DeviceNotRegistered tokens in a single batch UPDATE |
+| 7 new alert metrics | precipitation_amount, barometric_pressure, snowfall, snow_depth, soil_temperature, weather_code, moon_phase — in weatherEngine + types + rule builder + 5 new presets. Shipped OTA `53231720` 2026-05-03. **Device verification pending.** |
+| WMO emoji in notifications | `weatherCodeToEmoji()` in weatherEngine; prepended to poll-weather push body. Shipped same OTA. |
+| 3-day digest | send-digest shows Today/Tomorrow/DayName with Hi/Lo/emoji/rain%. Deployed 2026-05-03. **Live invocation verification pending.** |
+| Branded OTA update screen | `UpdateCheckScreen.tsx` — navy background, animated pulse, 5s timeout/fallback. `checkAutomatically: NEVER` in app.json. Shipped same OTA. **Device verification pending (preview/production build only).** |
+| Moon phase chip picker + unit bugs fixed | Rule builder: moon_phase shows 🌑🌒🌓🌔🌕 phase chips (not raw %). soil_temperature unit fixed (was hardcoded celsius; now follows user's temperatureUnit). snow_depth unit was also wrong. `src/utils/metricHelpers.ts` extracted. 62 tests were silently skipped (wrong __tests__ subdirectory) — moved to `__tests__/engine/` where logic project picks them up. 524 → 586 tests. OTA `e6b09d99` 2026-05-03. **Device verification pending.** |
+| Forecast UI — new metrics display | Background agent working on it: baro pressure, snowfall, snow depth, soil temp, UV, moon phase emoji on daily cards + day-detail hourly rows. **In progress.** |
 
 ### Backlog — nice to have, not blocking
 
-- **Digest: multi-day (3-day) forecast view** — show 3 days instead of just today; format as Today/Sat/Sun with high/low/rain
-- **Digest: weather condition images/icons** — WMO weather code → emoji or image in push body (Android supports BigPicture style)
+- **Wind direction condition** — needs new `from_bearing` operator (circular math, 0-360°). Design-first before build. High value for hunters/fire safety.
+- **Barometric pressure rate-of-change** — "falling X hPa over Y hours" condition. Requires trend logic across time window, not a point comparison. Design-first.
 - **Favicon** — currently just a dot; not blocking for mobile but fix before any web presence
 - **AsyncStorage brand key migration** — stores use `weatherwatch-*` keys (old brand). Needs migration strategy before production launch (P3)
 
 ### Not done — gates production
 
-1. **Rotate Open-Meteo commercial API key** — key `eNFRDFntQmSudB7E` baked into versionCode 7 APK. Rotate before production: find key in Open-Meteo account, revoke, generate new, `npx supabase secrets set OPEN_METEO_API_KEY=<new-key>` + remove `EXPO_PUBLIC_OPEN_METEO_API_KEY` from EAS preview/production env vars
-2. **Closed testing (12+ testers, 14 days)** — clock starts at tester #12
+1. **Closed testing (12+ testers, 14 days)** — IN PROGRESS recruiting. Track created in Play Console, tester list being built. Jimmy posted Discord pitch 2026-04-29. Clock starts at tester #12 opt-in.
 3. **RevenueCat iOS** — blocked on Apple M0
 4. **Real SMTP (Resend)** — deferred
 5. **Maestro E2E suite** — deferred
 6. **Integration test: timezone backfill** — `SUPABASE_SERVICE_ROLE_KEY=<key> npx ts-node scripts/test-timezone-backfill.ts`
-7. **Jimmy device verification** — UI features (RainfallCard, forecast tap navigation, notification day label) require "Jimmy on device" confirmation per Testing Contract
+7. **Jimmy device verification** — RainfallCard accordion and forecast tap auto-expand confirmed session 6. Notification day label still pending. From session 8: 7 new metrics in rule builder, 5 new presets, branded OTA screen (preview build only), 3-day digest (verify via SQL editor invocation). From session 9: moon phase chip picker, unit fixes (OTA `e6b09d99`), forecast UI new metrics display (agent in progress).
 
 ---
 

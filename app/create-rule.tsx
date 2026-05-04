@@ -42,6 +42,10 @@ const METRICS: { value: WeatherMetric; label: string; defaultUnit: string }[] = 
   { value: 'visibility', label: 'Visibility', defaultUnit: 'mi' },
   // cloud_cover: percentage of sky covered by clouds
   { value: 'cloud_cover', label: 'Cloud Cover', defaultUnit: '%' },
+  // wind_direction: compass bearing wind is coming FROM (0=N, 90=E, 180=S, 270=W)
+  { value: 'wind_direction', label: 'Wind Direction', defaultUnit: '°' },
+  // pressure_tendency: expected pressure change over lookahead window (hPa, negative=falling)
+  { value: 'pressure_tendency', label: 'Pressure Tendency', defaultUnit: 'hPa' },
 ];
 
 // ── Category definitions for the metric filter chips ─────────────────────────
@@ -76,6 +80,8 @@ const METRIC_CATEGORY_MAP: Record<string, MetricCategory> = {
   visibility:                 'atmosphere',
   weather_code:               'atmosphere',
   moon_phase:                 'special',
+  wind_direction:             'wind',
+  pressure_tendency:          'atmosphere',
 };
 
 const OPERATORS: { value: ComparisonOperator; label: string }[] = [
@@ -103,6 +109,24 @@ const COOLDOWN_OPTIONS = [
   { hours: 24, label: '24 hours' },
   { hours: 48, label: '48 hours' },
 ];
+
+const COMPASS_DIRECTIONS = [
+  { label: 'N', value: 0 },
+  { label: 'NE', value: 45 },
+  { label: 'E', value: 90 },
+  { label: 'SE', value: 135 },
+  { label: 'S', value: 180 },
+  { label: 'SW', value: 225 },
+  { label: 'W', value: 270 },
+  { label: 'NW', value: 315 },
+] as const;
+
+const BEARING_TOLERANCES = [
+  { label: '±22.5°', value: 22.5 },
+  { label: '±45°', value: 45 },
+  { label: '±67.5°', value: 67.5 },
+  { label: '±90°', value: 90 },
+] as const;
 
 export default function CreateRuleScreen() {
   const router = useRouter();
@@ -339,7 +363,13 @@ export default function CreateRuleScreen() {
                     { borderColor: condition.metric === m.value ? t.primary : t.border },
                     condition.metric === m.value && { backgroundColor: t.primaryLight },
                   ]}
-                  onPress={() => updateCondition(index, { metric: m.value, unit: getUnitForMetric(m.value, temperatureUnit) })}
+                  onPress={() => {
+                    if (m.value === 'wind_direction') {
+                      updateCondition(index, { metric: 'wind_direction', operator: 'from_bearing', unit: 'degrees', value: 0, tolerance: 45 });
+                    } else {
+                      updateCondition(index, { metric: m.value, unit: getUnitForMetric(m.value, temperatureUnit) });
+                    }
+                  }}
                 >
                   <Text style={{ color: condition.metric === m.value ? t.primary : t.textSecondary, fontSize: 13 }}>
                     {m.label}
@@ -348,28 +378,34 @@ export default function CreateRuleScreen() {
               ))}
             </View>
 
-            {/* Operator selector */}
-            <Text style={[styles.condLabel, { color: t.textTertiary }]}>IS</Text>
-            <View style={styles.chipRow}>
-              {OPERATORS.map((op) => (
-                <Pressable
-                  key={op.value}
-                  style={[
-                    styles.chip,
-                    { borderColor: condition.operator === op.value ? t.primary : t.border },
-                    condition.operator === op.value && { backgroundColor: t.primaryLight },
-                  ]}
-                  onPress={() => updateCondition(index, { operator: op.value })}
-                >
-                  <Text style={{ color: condition.operator === op.value ? t.primary : t.textSecondary, fontSize: 13 }}>
-                    {op.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+            {/* Operator selector — hidden for wind_direction (operator is always from_bearing) */}
+            {condition.metric !== 'wind_direction' && (
+              <>
+                <Text style={[styles.condLabel, { color: t.textTertiary }]}>IS</Text>
+                <View style={styles.chipRow}>
+                  {OPERATORS.map((op) => (
+                    <Pressable
+                      key={op.value}
+                      style={[
+                        styles.chip,
+                        { borderColor: condition.operator === op.value ? t.primary : t.border },
+                        condition.operator === op.value && { backgroundColor: t.primaryLight },
+                      ]}
+                      onPress={() => updateCondition(index, { operator: op.value })}
+                    >
+                      <Text style={{ color: condition.operator === op.value ? t.primary : t.textSecondary, fontSize: 13 }}>
+                        {op.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
 
             {/* Value input */}
-            <Text style={[styles.condLabel, { color: t.textTertiary }]}>VALUE</Text>
+            <Text style={[styles.condLabel, { color: t.textTertiary }]}>
+              {condition.metric === 'wind_direction' ? 'COMING FROM' : 'VALUE'}
+            </Text>
             {condition.metric === 'moon_phase' ? (
               <View style={styles.chipRow}>
                 {MOON_PHASE_PRESETS.map((preset) => {
@@ -395,6 +431,50 @@ export default function CreateRuleScreen() {
                   );
                 })}
               </View>
+            ) : condition.metric === 'wind_direction' ? (
+              <>
+                <View style={styles.chipRow}>
+                  {COMPASS_DIRECTIONS.map((dir) => {
+                    const isSelected = condition.value === dir.value;
+                    return (
+                      <Pressable
+                        key={dir.value}
+                        style={[
+                          styles.chip,
+                          { borderColor: isSelected ? t.primary : t.border },
+                          isSelected && { backgroundColor: t.primaryLight },
+                        ]}
+                        onPress={() => updateCondition(index, { value: dir.value })}
+                      >
+                        <Text style={{ color: isSelected ? t.primary : t.textSecondary, fontSize: 14, fontWeight: isSelected ? '700' : '400' }}>
+                          {dir.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <Text style={[styles.condLabel, { color: t.textTertiary }]}>WITHIN</Text>
+                <View style={styles.chipRow}>
+                  {BEARING_TOLERANCES.map((tol) => {
+                    const isSelected = (condition.tolerance ?? 45) === tol.value;
+                    return (
+                      <Pressable
+                        key={tol.value}
+                        style={[
+                          styles.chip,
+                          { borderColor: isSelected ? t.primary : t.border },
+                          isSelected && { backgroundColor: t.primaryLight },
+                        ]}
+                        onPress={() => updateCondition(index, { tolerance: tol.value })}
+                      >
+                        <Text style={{ color: isSelected ? t.primary : t.textSecondary, fontSize: 13 }}>
+                          {tol.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
             ) : (
               <View style={styles.valueRow}>
                 <TextInput
@@ -441,6 +521,16 @@ export default function CreateRuleScreen() {
             {condition.metric === 'dew_point' && (
               <Text style={[styles.metricHelperText, { color: t.textTertiary }]}>
                 Above 65°F (18°C) feels oppressive. Above 70°F (21°C) very uncomfortable.
+              </Text>
+            )}
+            {condition.metric === 'wind_direction' && (
+              <Text style={[styles.metricHelperText, { color: t.textTertiary }]}>
+                The compass direction wind is coming FROM. North wind blows south. Wider tolerance catches more wind events.
+              </Text>
+            )}
+            {condition.metric === 'pressure_tendency' && (
+              <Text style={[styles.metricHelperText, { color: t.textTertiary }]}>
+                Expected pressure change over the forecast window. Negative = falling (storm risk). A drop of –8 hPa or more is a classic approaching-storm signal. Positive = rising (clearing).
               </Text>
             )}
 
@@ -542,10 +632,16 @@ export default function CreateRuleScreen() {
             // Build the condition sentence
             const condParts = conditions.map((c) => {
               const metric = METRICS.find((m) => m.value === c.metric)?.label?.toLowerCase() ?? c.metric;
+              if (c.metric === 'wind_direction') {
+                const dir = COMPASS_DIRECTIONS.find((d) => d.value === c.value)?.label ?? `${c.value}°`;
+                return `the wind comes from ${dir} (±${c.tolerance ?? 45}°)`;
+              }
               const op = OPERATORS.find((o) => o.value === c.operator)?.label ?? c.operator;
               const unitLabel = getUnitLabel(c.unit);
               const valueDisplay = c.metric === 'moon_phase'
                 ? nearestMoonPhasePreset(c.value).label
+                : c.metric === 'pressure_tendency'
+                ? `${c.value > 0 ? '+' : ''}${c.value} hPa`
                 : `${c.value}${unitLabel ? ' ' + unitLabel : ''}`;
               return `the ${metric} goes ${op} ${valueDisplay}`;
             });
