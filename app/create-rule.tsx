@@ -405,7 +405,10 @@ export default function CreateRuleScreen() {
                     if (m.value === 'wind_direction') {
                       updateCondition(index, { metric: 'wind_direction', operator: 'from_bearing', unit: 'degrees', value: 0, tolerance: 45 });
                     } else {
-                      updateCondition(index, { metric: m.value, unit: getUnitForMetric(m.value, temperatureUnit, pressureUnit) });
+                      // Reset from_bearing operator if switching away from wind_direction —
+                      // from_bearing is invalid for every other metric.
+                      const opOverride = condition.operator === 'from_bearing' ? { operator: 'lt' as const } : {};
+                      updateCondition(index, { metric: m.value, unit: getUnitForMetric(m.value, temperatureUnit, pressureUnit), ...opOverride });
                     }
                   }}
                 >
@@ -675,7 +678,7 @@ export default function CreateRuleScreen() {
               const valueDisplay = c.metric === 'moon_phase'
                 ? nearestMoonPhasePreset(c.value).label
                 : c.metric === 'pressure_tendency'
-                ? `${c.value > 0 ? '+' : ''}${c.value} hPa`
+                ? `${c.value > 0 ? '+' : ''}${c.value}${unitLabel ? ' ' + unitLabel : ''}`
                 : `${c.value}${unitLabel ? ' ' + unitLabel : ''}`;
               return `the ${metric} goes ${op} ${valueDisplay}`;
             });
