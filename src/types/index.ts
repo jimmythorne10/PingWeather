@@ -104,13 +104,14 @@ export type ComparisonOperator = 'gt' | 'gte' | 'lt' | 'lte' | 'eq' | 'from_bear
 
 export type TemperatureUnit = 'fahrenheit' | 'celsius';
 export type WindSpeedUnit = 'mph' | 'kmh' | 'knots';
+export type PressureUnit = 'hPa' | 'inHg';
 
 // Alert rule configuration
 export interface AlertCondition {
   metric: WeatherMetric;
   operator: ComparisonOperator;
   value: number;
-  unit?: TemperatureUnit | WindSpeedUnit | 'percent' | 'index' | 'hPa' | 'mm' | 'in' | 'cm' | '%illumination' | 'miles' | 'km' | 'degrees';
+  unit?: TemperatureUnit | WindSpeedUnit | PressureUnit | 'percent' | 'index' | 'mm' | 'in' | 'cm' | '%illumination' | 'miles' | 'km' | 'degrees';
   /** Used by the `from_bearing` operator — how many degrees either side of `value` to trigger. */
   tolerance?: number;
 }

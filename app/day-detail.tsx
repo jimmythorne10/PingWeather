@@ -35,6 +35,7 @@ export default function DayDetailScreen() {
   const loadLocations = useLocationsStore((s) => s.loadLocations);
   const temperatureUnit = useSettingsStore((s) => s.temperatureUnit);
   const windSpeedUnit = useSettingsStore((s) => s.windSpeedUnit);
+  const pressureUnit = useSettingsStore((s) => s.pressureUnit);
 
   const [forecast, setForecast] = useState<ForecastState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -212,7 +213,11 @@ export default function DayDetailScreen() {
                     {hasExtra && (
                       <View style={styles.hourlyExtra}>
                         {pressure !== undefined && (
-                          <Text style={styles.hourExtraItem}>{Math.round(pressure)} hPa</Text>
+                          <Text style={styles.hourExtraItem}>
+                            {pressureUnit === 'inHg'
+                              ? `${(pressure / 33.8639).toFixed(2)} inHg`
+                              : `${Math.round(pressure)} hPa`}
+                          </Text>
                         )}
                         {snowfallVal !== undefined && snowfallVal > 0 && (
                           <Text style={styles.hourExtraItem}>Snow {snowfallVal.toFixed(1)} cm</Text>

@@ -1,9 +1,22 @@
 import { getUnitForMetric, getUnitLabel, nearestMoonPhasePreset, MOON_PHASE_PRESETS } from '../../src/utils/metricHelpers';
 
 describe('getUnitForMetric', () => {
-  test('barometric_pressure always returns hPa regardless of temperatureUnit', () => {
+  test('barometric_pressure defaults to hPa', () => {
     expect(getUnitForMetric('barometric_pressure')).toBe('hPa');
     expect(getUnitForMetric('barometric_pressure', 'celsius')).toBe('hPa');
+  });
+
+  test('barometric_pressure returns inHg when pressureUnit is inHg', () => {
+    expect(getUnitForMetric('barometric_pressure', 'fahrenheit', 'inHg')).toBe('inHg');
+    expect(getUnitForMetric('barometric_pressure', 'celsius', 'inHg')).toBe('inHg');
+  });
+
+  test('pressure_tendency defaults to hPa', () => {
+    expect(getUnitForMetric('pressure_tendency')).toBe('hPa');
+  });
+
+  test('pressure_tendency returns inHg when pressureUnit is inHg', () => {
+    expect(getUnitForMetric('pressure_tendency', 'fahrenheit', 'inHg')).toBe('inHg');
   });
 
   test('soil_temperature follows temperatureUnit param', () => {
@@ -115,6 +128,10 @@ describe('getUnitLabel', () => {
 
   test('hPa → hPa', () => {
     expect(getUnitLabel('hPa')).toBe('hPa');
+  });
+
+  test('inHg → inHg', () => {
+    expect(getUnitLabel('inHg')).toBe('inHg');
   });
 
   test('cm → cm', () => {

@@ -140,6 +140,7 @@ export default function CreateRuleScreen() {
   const { rules, createRule, updateRule, loadRules } = useAlertRulesStore();
 
   const temperatureUnit = useSettingsStore((s) => s.temperatureUnit);
+  const pressureUnit = useSettingsStore((s) => s.pressureUnit);
   const tier = profile?.subscription_tier ?? 'free';
   const limits = TIER_LIMITS[tier];
 
@@ -367,7 +368,7 @@ export default function CreateRuleScreen() {
                     if (m.value === 'wind_direction') {
                       updateCondition(index, { metric: 'wind_direction', operator: 'from_bearing', unit: 'degrees', value: 0, tolerance: 45 });
                     } else {
-                      updateCondition(index, { metric: m.value, unit: getUnitForMetric(m.value, temperatureUnit) });
+                      updateCondition(index, { metric: m.value, unit: getUnitForMetric(m.value, temperatureUnit, pressureUnit) });
                     }
                   }}
                 >

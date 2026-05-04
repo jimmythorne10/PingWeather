@@ -23,6 +23,7 @@ export type MoonPhasePreset = (typeof MOON_PHASE_PRESETS)[number];
 export function getUnitForMetric(
   metric: WeatherMetric | string,
   temperatureUnit: 'fahrenheit' | 'celsius' = 'fahrenheit',
+  pressureUnit: 'hPa' | 'inHg' = 'hPa',
 ): AlertCondition['unit'] {
   // All temperature fields (including soil) follow the user's unit preference.
   // poll-weather fetches with temperature_unit=fahrenheit, so Open-Meteo returns
@@ -39,14 +40,14 @@ export function getUnitForMetric(
   if (metric === 'precipitation_probability' || metric === 'humidity' || metric === 'cloud_cover') return 'percent';
   if (metric === 'wind_speed' || metric === 'wind_gusts') return 'mph';
   if (metric === 'uv_index') return 'index';
-  if (metric === 'barometric_pressure') return 'hPa';
+  if (metric === 'barometric_pressure') return pressureUnit;
   if (metric === 'precipitation_amount') return 'mm';
   if (metric === 'snowfall' || metric === 'snow_depth') return 'cm';
   if (metric === 'moon_phase') return '%illumination';
   if (metric === 'dew_point') return temperatureUnit;
   if (metric === 'visibility') return 'miles';
   if (metric === 'wind_direction') return 'degrees';
-  if (metric === 'pressure_tendency') return 'hPa';
+  if (metric === 'pressure_tendency') return pressureUnit;
   // weather_code is a unitless WMO integer
   return undefined;
 }
@@ -65,6 +66,7 @@ export function getUnitLabel(unit: AlertCondition['unit']): string {
     case 'knots':         return 'kts';
     case 'index':         return '';
     case 'hPa':           return 'hPa';
+    case 'inHg':          return 'inHg';
     case 'mm':            return 'mm';
     case 'in':            return 'in';
     case 'cm':            return 'cm';

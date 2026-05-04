@@ -281,7 +281,7 @@ export const ALERT_PRESETS: AlertPreset[] = [
   {
     id: 'north-wind',
     name: 'North Wind',
-    description: 'Alert when wind comes from the north (±45°). Critical for hunters hunting south-facing terrain and fire managers.',
+    description: 'Alert when wind comes from the north (±45°). Useful for fire risk monitoring, livestock shelter decisions, and wind-sensitive outdoor activities.',
     icon: '🧭',
     category: 'wind',
     conditions: [{ metric: 'wind_direction', operator: 'from_bearing', value: 0, unit: 'degrees', tolerance: 45 }],

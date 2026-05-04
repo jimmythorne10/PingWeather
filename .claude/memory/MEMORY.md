@@ -1,6 +1,6 @@
 # Project Memory — PingWeather
 
-> Last updated: 2026-05-03 (session 9 — moon phase picker, unit bugs fixed, 62 tests rescued)
+> Last updated: 2026-05-03 (session 10 — wind direction, pressure tendency, 4 new metrics, AsyncStorage migration, OTA live)
 
 ## Project Identity
 
@@ -15,9 +15,10 @@
 ## Current Status
 
 **Play Store internal testing: LIVE — versionCode 7 installed**
-**OTA LIVE — preview channel, update group `e6b09d99-092f-4d8b-bd06-bc668eca5fc9`, commit `fef9cc6` (main ahead — pending OTA with forecast UI + 4 new metrics + category filter)**
+**OTA LIVE — preview channel, update group `e5cce15f-2f55-41e0-a70c-66fdc591e2cd`, commit `43bd16b`**
 **Supabase migrations: 00001–00017 applied**
-**Tests: 637/637 logic tests passing**
+**Tests: 684/684 logic tests passing**
+**Edge Functions: poll-weather + get-forecast redeployed 2026-05-03 (new hourly params)**
 **Next milestone: closed testing (12+ testers, 14 days)**
 **Closed testing: RECRUITING — tester list in progress. Jimmy posted Discord pitch 2026-04-29. Play Console track created.**
 **Apple Developer enrollment: Company (Truth Centered Tech) submitted 2026-04-29 — awaiting approval.**
@@ -71,15 +72,17 @@ _(none — Open-Meteo key rotation complete)_
 | WMO emoji in notifications | `weatherCodeToEmoji()` in weatherEngine; prepended to poll-weather push body. Shipped same OTA. |
 | 3-day digest | send-digest shows Today/Tomorrow/DayName with Hi/Lo/emoji/rain%. Deployed 2026-05-03. **Live invocation verification pending.** |
 | Branded OTA update screen | `UpdateCheckScreen.tsx` — navy background, animated pulse, 5s timeout/fallback. `checkAutomatically: NEVER` in app.json. Shipped same OTA. **Device verification pending (preview/production build only).** |
-| Moon phase chip picker + unit bugs fixed | Rule builder: moon_phase shows 🌑🌒🌓🌔🌕 phase chips (not raw %). soil_temperature unit fixed (was hardcoded celsius; now follows user's temperatureUnit). snow_depth unit was also wrong. `src/utils/metricHelpers.ts` extracted. 62 tests were silently skipped (wrong __tests__ subdirectory) — moved to `__tests__/engine/` where logic project picks them up. 524 → 586 tests. OTA `e6b09d99` 2026-05-03. **Device verification pending.** |
-| Forecast UI — new metrics display | Background agent working on it: baro pressure, snowfall, snow depth, soil temp, UV, moon phase emoji on daily cards + day-detail hourly rows. **In progress.** |
+| Moon phase chip picker + unit bugs fixed | Rule builder: moon_phase shows 🌑🌒🌓🌔🌕 phase chips (not raw %). soil_temperature unit fixed (was hardcoded celsius; now follows user's temperatureUnit). snow_depth unit was also wrong. `src/utils/metricHelpers.ts` extracted. 62 tests were silently skipped (wrong __tests__ subdirectory) — moved to `__tests__/engine/` where logic project picks them up. 524 → 586 tests. |
+| Forecast UI — new metrics display | forecasts.tsx daily cards: moon emoji + UV index (≥3) + baro pressure (noon reading). day-detail hourly rows: surface_pressure, snowfall, snow_depth, soil_temperature with user unit. **Device verification pending.** |
+| 4 new metrics: wind_gusts, dew_point, visibility, cloud_cover | Full pipeline: Open-Meteo → get-forecast → weatherEngine → types → rule builder. Visibility stored in miles (÷1609.34 at engine layer). Category-filtered metric selector replaces flat chip list. |
+| Wind direction (from_bearing operator) | Circular math: `diff = ((actual - bearing) % 360 + 360) % 360; angleDiff = diff ≤ 180 ? diff : 360-diff; triggered = angleDiff ≤ tolerance`. UI: compass bearing chips (N/NE/E/SE/S/SW/W/NW) + tolerance selector (±22.5°–±90°). Presets: north-wind preset. 18 unit tests. |
+| Pressure tendency | Derived metric: `last - first` of surface_pressure in eval window. Positive = rising, negative = falling. Preset: rapid-pressure-drop (lt -8 hPa). 8 unit tests. |
+| AsyncStorage migration | One-time migration from `weatherwatch-*` → `pingweather-*` keys on first app launch. Flag: `pingweather-migration-v1-done`. Non-fatal, safe for fresh installs. Runs in `_layout.tsx` startup. 8 unit tests. |
+| OTA `e5cce15f` | All session-10 work shipped. Edge Functions redeployed (poll-weather + get-forecast) to fetch new hourly params. **Device verification pending.** |
 
 ### Backlog — nice to have, not blocking
 
-- **Wind direction condition** — needs new `from_bearing` operator (circular math, 0-360°). Design-first before build. High value for hunters/fire safety.
-- **Barometric pressure rate-of-change** — "falling X hPa over Y hours" condition. Requires trend logic across time window, not a point comparison. Design-first.
 - **Favicon** — currently just a dot; not blocking for mobile but fix before any web presence
-- **AsyncStorage brand key migration** — stores use `weatherwatch-*` keys (old brand). Needs migration strategy before production launch (P3)
 
 ### Not done — gates production
 
@@ -88,7 +91,7 @@ _(none — Open-Meteo key rotation complete)_
 4. **Real SMTP (Resend)** — deferred
 5. **Maestro E2E suite** — deferred
 6. **Integration test: timezone backfill** — `SUPABASE_SERVICE_ROLE_KEY=<key> npx ts-node scripts/test-timezone-backfill.ts`
-7. **Jimmy device verification** — RainfallCard accordion and forecast tap auto-expand confirmed session 6. Notification day label still pending. From session 8: 7 new metrics in rule builder, 5 new presets, branded OTA screen (preview build only), 3-day digest (verify via SQL editor invocation). From session 9: moon phase chip picker, unit fixes (OTA `e6b09d99`), forecast UI new metrics display (agent in progress).
+7. **Jimmy device verification** — RainfallCard accordion and forecast tap auto-expand confirmed session 6. Notification day label still pending. From session 8: 7 new metrics in rule builder, 5 new presets, branded OTA screen (preview build only), 3-day digest (verify via SQL editor invocation). From session 9+10: moon phase chip picker, unit fixes, forecast UI new metrics display, wind direction compass picker, pressure tendency, AsyncStorage migration — all in OTA `e5cce15f`.
 
 ---
 
@@ -214,9 +217,6 @@ DO NOT re-attempt without concrete UX research.
 - `logic` project — node env, all stores/services/helpers. Acceptable verification.
 - `components` project — jsdom, text-presence only. **FRAUDULENT VERIFICATION** — never cite as proof UI works.
 - jest-expo preset NOT used (winter runtime bug)
-
-### AsyncStorage brand key migration (P3 — deferred)
-Stores use `weatherwatch-*` AsyncStorage keys (old brand name). Users upgrading after a key rename would lose persisted state. Needs a migration strategy before production launch.
 
 ### eas update requires --platform android
 `eas update` without `--platform` tries to export web bundle → fails with missing `react-native-web` dependency. Always run: `eas update --platform android --channel preview --message "..."`.

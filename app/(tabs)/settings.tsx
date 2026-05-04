@@ -292,6 +292,20 @@ export default function SettingsScreen() {
             ))}
           </View>
         </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Barometric Pressure</Text>
+          <View style={styles.toggleRow}>
+            {(['hPa', 'inHg'] as const).map((unit) => (
+              <Pressable
+                key={unit}
+                style={[styles.toggleButton, settings.pressureUnit === unit && styles.toggleActive]}
+                onPress={() => settings.setPressureUnit(unit)}
+              >
+                <Text style={[styles.toggleText, settings.pressureUnit === unit && styles.toggleTextActive]}>{unit}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
       </View>
 
       {/* Theme */}

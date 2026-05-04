@@ -681,6 +681,18 @@ export function compare(
 // ── Condition evaluation ─────────────────────────────────────────────────────
 // A condition is met if ANY value within the lookahead window matches.
 
+// Open-Meteo always returns surface_pressure in hPa. When a rule stores a
+// threshold in inHg, convert the raw hPa value before comparing.
+const INHG_PER_HPA = 1 / 33.8639;
+const PRESSURE_METRICS = new Set(['barometric_pressure', 'pressure_tendency']);
+
+function applyPressureUnit(value: number, metric: string, unit: string | undefined): number {
+  if (PRESSURE_METRICS.has(metric) && unit === 'inHg') {
+    return value * INHG_PER_HPA;
+  }
+  return value;
+}
+
 export function evaluateCondition(
   condition: AlertCondition,
   forecast: ForecastData,
@@ -689,8 +701,9 @@ export function evaluateCondition(
   const entries = getMetricEntries(condition.metric, forecast, lookaheadHours);
 
   for (const { value, time } of entries) {
-    if (compare(value, condition.operator, condition.value, (condition as { tolerance?: number }).tolerance)) {
-      return { met: true, matchedValue: value, matchedTime: time };
+    const converted = applyPressureUnit(value, condition.metric, condition.unit);
+    if (compare(converted, condition.operator, condition.value, (condition as { tolerance?: number }).tolerance)) {
+      return { met: true, matchedValue: converted, matchedTime: time };
     }
   }
 

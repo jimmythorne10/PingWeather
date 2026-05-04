@@ -26,6 +26,7 @@ export default function ForecastsScreen() {
   const { rules, loadRules } = useAlertRulesStore();
   const temperatureUnit = useSettingsStore((s) => s.temperatureUnit);
   const windSpeedUnit = useSettingsStore((s) => s.windSpeedUnit);
+  const pressureUnit = useSettingsStore((s) => s.pressureUnit);
 
   const { expandLocationId } = useLocalSearchParams<{ expandLocationId?: string }>();
   const processedExpandRef = useRef<string | null>(null);
@@ -301,7 +302,11 @@ export default function ForecastsScreen() {
                               <Text style={styles.dailyMeta}>UV {uvMax}</Text>
                             )}
                             {pressureHPa !== undefined && (
-                              <Text style={styles.dailyMeta}>{Math.round(pressureHPa)} hPa</Text>
+                              <Text style={styles.dailyMeta}>
+                                {pressureUnit === 'inHg'
+                                  ? (pressureHPa / 33.8639).toFixed(2)
+                                  : Math.round(pressureHPa)}{' '}{pressureUnit}
+                              </Text>
                             )}
                           </View>
                         </Pressable>
