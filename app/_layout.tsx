@@ -9,6 +9,7 @@ import { useAuthStore } from '../src/stores/authStore';
 import { initializePurchases, loginPurchaseUser, logoutPurchaseUser } from '../src/services/purchases';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { UpdateCheckScreen, type UpdateStatus } from '../src/components/UpdateCheckScreen';
+import { runAsyncStorageMigration } from '../src/utils/migrateAsyncStorage';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -78,8 +79,12 @@ export default function RootLayout() {
   }, []);
 
   // ─── Auth + purchases initialization ─────────────────────────────────────
+  // Migration runs first so that Zustand stores hydrate against the new
+  // "pingweather-*" keys instead of the legacy "weatherwatch-*" keys.
+  // runAsyncStorageMigration() is idempotent and non-fatal — any failure
+  // silently falls through so the app always continues loading.
   useEffect(() => {
-    initialize().then(() => {
+    runAsyncStorageMigration().then(() => initialize()).then(() => {
       setReady(true);
       initializePurchases().catch(() => {});
     });
