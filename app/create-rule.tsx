@@ -9,6 +9,7 @@ import { useSettingsStore } from '../src/stores/settingsStore';
 import { TIER_LIMITS } from '../src/types';
 import type { AlertCondition, WeatherMetric, ComparisonOperator, LogicalOperator } from '../src/types';
 import { getUnitForMetric, getUnitLabel, MOON_PHASE_PRESETS, nearestMoonPhasePreset } from '../src/utils/metricHelpers';
+import { weatherCodeLabel, weatherCodeToEmoji } from '../src/services/weatherIcon';
 
 const METRICS: { value: WeatherMetric; label: string; defaultUnit: string }[] = [
   { value: 'temperature_high', label: 'Daily High Temp', defaultUnit: '°F' },
@@ -537,7 +538,9 @@ export default function CreateRuleScreen() {
             )}
             {condition.metric === 'barometric_pressure' && (
               <Text style={[styles.metricHelperText, { color: t.textTertiary }]}>
-                Normal sea level = 1013 hPa. Typical range 970–1040 hPa. Below 1005 hPa may indicate approaching storm.
+                {pressureUnit === 'inHg'
+                  ? 'Normal sea level = 29.92 inHg. Typical range 28.64–30.71 inHg. Below 29.68 inHg may indicate approaching storm.'
+                  : 'Normal sea level = 1013 hPa. Typical range 970–1040 hPa. Below 1005 hPa may indicate approaching storm.'}
               </Text>
             )}
             {condition.metric === 'visibility' && (
@@ -567,7 +570,9 @@ export default function CreateRuleScreen() {
             )}
             {condition.metric === 'pressure_tendency' && (
               <Text style={[styles.metricHelperText, { color: t.textTertiary }]}>
-                Expected pressure change over the forecast window. Negative = falling (storm risk). A drop of –8 hPa or more is a classic approaching-storm signal. Positive = rising (clearing).
+                {pressureUnit === 'inHg'
+                  ? 'Expected pressure change over the forecast window. Negative = falling (storm risk). A drop of –0.24 inHg or more is a classic approaching-storm signal. Positive = rising (clearing).'
+                  : 'Expected pressure change over the forecast window. Negative = falling (storm risk). A drop of –8 hPa or more is a classic approaching-storm signal. Positive = rising (clearing).'}
               </Text>
             )}
 
@@ -677,10 +682,12 @@ export default function CreateRuleScreen() {
               const unitLabel = getUnitLabel(c.unit);
               const valueDisplay = c.metric === 'moon_phase'
                 ? nearestMoonPhasePreset(c.value).label
+                : c.metric === 'weather_code'
+                ? `${weatherCodeToEmoji(c.value)} ${weatherCodeLabel(c.value)} (WMO ${c.value})`
                 : c.metric === 'pressure_tendency'
                 ? `${c.value > 0 ? '+' : ''}${c.value}${unitLabel ? ' ' + unitLabel : ''}`
                 : `${c.value}${unitLabel ? ' ' + unitLabel : ''}`;
-              return `the ${metric} goes ${op} ${valueDisplay}`;
+              return `the ${metric} is ${op} ${valueDisplay}`;
             });
 
             const condSentence = condParts.length === 1
