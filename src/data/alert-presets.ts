@@ -199,11 +199,11 @@ export const ALERT_PRESETS: AlertPreset[] = [
     cooldown_hours: 8,
   },
 
-  // ── Nature / Hunting ─────────────────────────────────────
+  // ── Nature / Moon ────────────────────────────────────────
   {
-    id: 'full-moon-hunt',
-    name: 'Full Moon Hunt',
-    description: 'Alert when moon is near full. Best conditions for nocturnal wildlife tracking.',
+    id: 'full-moon-alert',
+    name: 'Full Moon',
+    description: 'Alert when moon is near full (≥85% illumination). Useful for outdoor activities, photography, and nocturnal observation.',
     icon: '🌕',
     category: 'work',
     conditions: [
