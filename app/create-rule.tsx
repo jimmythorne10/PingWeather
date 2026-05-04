@@ -11,42 +11,29 @@ import type { AlertCondition, WeatherMetric, ComparisonOperator, LogicalOperator
 import { getUnitForMetric, getUnitLabel, MOON_PHASE_PRESETS, nearestMoonPhasePreset } from '../src/utils/metricHelpers';
 import { weatherCodeLabel, weatherCodeToEmoji } from '../src/services/weatherIcon';
 
+// Sorted alphabetically by label so users can scan predictably.
 const METRICS: { value: WeatherMetric; label: string; summaryLabel?: string; defaultUnit: string }[] = [
-  { value: 'temperature_high', label: 'Daily High Temp', defaultUnit: '°F' },
-  { value: 'temperature_low', label: 'Daily Low Temp', defaultUnit: '°F' },
-  { value: 'temperature_current', label: 'Hourly Temp', summaryLabel: 'current temperature', defaultUnit: '°F' },
-  { value: 'precipitation_probability', label: 'Rain Chance', defaultUnit: '%' },
-  { value: 'wind_speed', label: 'Wind Speed', defaultUnit: 'mph' },
-  { value: 'humidity', label: 'Humidity', defaultUnit: '%' },
-  { value: 'feels_like', label: 'Feels Like', summaryLabel: 'feels-like temperature', defaultUnit: '°F' },
-  { value: 'uv_index', label: 'UV Index', summaryLabel: 'UV index', defaultUnit: '' },
-  // ── New metrics ──────────────────────────────────────────────────────────────
-  // precipitation_amount: daily total rainfall in mm (or inches when converted)
-  { value: 'precipitation_amount', label: 'Precipitation Amount', defaultUnit: 'mm' },
-  // barometric_pressure: sea-level pressure in hPa — typical range 970–1040
   { value: 'barometric_pressure', label: 'Barometric Pressure', defaultUnit: 'hPa' },
-  // snowfall: per-hour accumulation in cm
-  { value: 'snowfall', label: 'Snowfall', defaultUnit: 'cm' },
-  // snow_depth: current depth on the ground in cm
-  { value: 'snow_depth', label: 'Snow Depth', defaultUnit: 'cm' },
-  // soil_temperature: surface (0 cm) soil temp; Open-Meteo returns °F when temperature_unit=fahrenheit
-  { value: 'soil_temperature', label: 'Soil Temperature', defaultUnit: '°F' },
-  // weather_code: WMO integer code — unitless; helper text shown below value input
-  { value: 'weather_code', label: 'Weather Condition', defaultUnit: '' },
-  // moon_phase: % illumination — 0 = new moon, 100 = full moon
-  { value: 'moon_phase', label: 'Moon Phase', defaultUnit: '%' },
-  // wind_gusts: peak gust speed in mph
-  { value: 'wind_gusts', label: 'Wind Gusts', summaryLabel: 'wind gust speed', defaultUnit: 'mph' },
-  // dew_point: dew point temperature; follows temperature_unit
-  { value: 'dew_point', label: 'Dew Point', defaultUnit: '°F' },
-  // visibility: converted from raw meters to miles for display and comparison
-  { value: 'visibility', label: 'Visibility', defaultUnit: 'mi' },
-  // cloud_cover: percentage of sky covered by clouds
-  { value: 'cloud_cover', label: 'Cloud Cover', defaultUnit: '%' },
-  // wind_direction: compass bearing wind is coming FROM (0=N, 90=E, 180=S, 270=W)
-  { value: 'wind_direction', label: 'Wind Direction', defaultUnit: '°' },
-  // pressure_tendency: expected pressure change over lookahead window (hPa, negative=falling)
-  { value: 'pressure_tendency', label: 'Pressure Tendency', defaultUnit: 'hPa' },
+  { value: 'cloud_cover',         label: 'Cloud Cover',         defaultUnit: '%' },
+  { value: 'temperature_high',    label: 'Daily High Temp',     defaultUnit: '°F' },
+  { value: 'temperature_low',     label: 'Daily Low Temp',      defaultUnit: '°F' },
+  { value: 'dew_point',           label: 'Dew Point',           defaultUnit: '°F' },
+  { value: 'feels_like',          label: 'Feels Like',          summaryLabel: 'feels-like temperature', defaultUnit: '°F' },
+  { value: 'temperature_current', label: 'Hourly Temp',         summaryLabel: 'current temperature',    defaultUnit: '°F' },
+  { value: 'humidity',            label: 'Humidity',            defaultUnit: '%' },
+  { value: 'moon_phase',          label: 'Moon Phase',          defaultUnit: '%' },
+  { value: 'precipitation_amount',label: 'Precipitation Amount',defaultUnit: 'mm' },
+  { value: 'pressure_tendency',   label: 'Pressure Tendency',   defaultUnit: 'hPa' },
+  { value: 'precipitation_probability', label: 'Rain Chance',   defaultUnit: '%' },
+  { value: 'snow_depth',          label: 'Snow Depth',          defaultUnit: 'cm' },
+  { value: 'snowfall',            label: 'Snowfall',            defaultUnit: 'cm' },
+  { value: 'soil_temperature',    label: 'Soil Temperature',    defaultUnit: '°F' },
+  { value: 'uv_index',            label: 'UV Index',            summaryLabel: 'UV index',               defaultUnit: '' },
+  { value: 'visibility',          label: 'Visibility',          defaultUnit: 'mi' },
+  { value: 'weather_code',        label: 'Weather Condition',   defaultUnit: '' },
+  { value: 'wind_direction',      label: 'Wind Direction',      defaultUnit: '°' },
+  { value: 'wind_gusts',          label: 'Wind Gusts',          summaryLabel: 'wind gust speed',        defaultUnit: 'mph' },
+  { value: 'wind_speed',          label: 'Wind Speed',          defaultUnit: 'mph' },
 ];
 
 // ── Category definitions for the metric filter chips ─────────────────────────
@@ -405,6 +392,12 @@ export default function CreateRuleScreen() {
                   onPress={() => {
                     if (m.value === 'wind_direction') {
                       updateCondition(index, { metric: 'wind_direction', operator: 'from_bearing', unit: 'degrees', value: 0, tolerance: 45 });
+                    } else if (m.value === 'pressure_tendency') {
+                      // Initialize with a sensible falling-pressure default so the
+                      // direction UI starts in a meaningful state.
+                      const unit = getUnitForMetric('pressure_tendency', temperatureUnit, pressureUnit);
+                      const defaultDrop = pressureUnit === 'inHg' ? -0.24 : -8;
+                      updateCondition(index, { metric: 'pressure_tendency', operator: 'lte', value: defaultDrop, unit });
                     } else {
                       // Reset from_bearing operator if switching away from wind_direction —
                       // from_bearing is invalid for every other metric.
@@ -420,8 +413,8 @@ export default function CreateRuleScreen() {
               ))}
             </View>
 
-            {/* Operator selector — hidden for wind_direction (operator is always from_bearing) */}
-            {condition.metric !== 'wind_direction' && (
+            {/* Operator selector — hidden for wind_direction and pressure_tendency (both use custom UIs) */}
+            {condition.metric !== 'wind_direction' && condition.metric !== 'pressure_tendency' && (
               <>
                 <Text style={[styles.condLabel, { color: t.textTertiary }]}>IS</Text>
                 <View style={styles.chipRow}>
@@ -444,10 +437,12 @@ export default function CreateRuleScreen() {
               </>
             )}
 
-            {/* Value input */}
-            <Text style={[styles.condLabel, { color: t.textTertiary }]}>
-              {condition.metric === 'wind_direction' ? 'COMING FROM' : 'VALUE'}
-            </Text>
+            {/* Value input — label changes per metric; pressure_tendency uses its own inline labels */}
+            {condition.metric !== 'pressure_tendency' && (
+              <Text style={[styles.condLabel, { color: t.textTertiary }]}>
+                {condition.metric === 'wind_direction' ? 'COMING FROM' : 'VALUE'}
+              </Text>
+            )}
             {condition.metric === 'moon_phase' ? (
               <View style={styles.chipRow}>
                 {MOON_PHASE_PRESETS.map((preset) => {
@@ -473,6 +468,50 @@ export default function CreateRuleScreen() {
                   );
                 })}
               </View>
+            ) : condition.metric === 'pressure_tendency' ? (
+              <>
+                <Text style={[styles.condLabel, { color: t.textTertiary }]}>DIRECTION</Text>
+                <View style={styles.chipRow}>
+                  {([{ label: 'Falling ↓', falling: true }, { label: 'Rising ↑', falling: false }] as const).map(({ label, falling }) => {
+                    const isSelected = falling ? condition.value <= 0 : condition.value > 0;
+                    return (
+                      <Pressable
+                        key={label}
+                        style={[
+                          styles.chip,
+                          { borderColor: isSelected ? t.primary : t.border },
+                          isSelected && { backgroundColor: t.primaryLight },
+                        ]}
+                        onPress={() => {
+                          const magnitude = Math.abs(condition.value) || (pressureUnit === 'inHg' ? 0.24 : 8);
+                          updateCondition(index, {
+                            value: falling ? -magnitude : magnitude,
+                            operator: falling ? 'lte' : 'gte',
+                          });
+                        }}
+                      >
+                        <Text style={{ color: isSelected ? t.primary : t.textSecondary, fontSize: 13 }}>
+                          {label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <Text style={[styles.condLabel, { color: t.textTertiary }]}>BY AT LEAST</Text>
+                <View style={styles.valueRow}>
+                  <NumericInput
+                    style={[styles.valueInput, { backgroundColor: t.inputBackground, borderColor: t.border, color: t.textPrimary }]}
+                    value={Math.abs(condition.value) || (pressureUnit === 'inHg' ? 0.24 : 8)}
+                    onValueChange={(num) => {
+                      const isFalling = condition.value <= 0;
+                      updateCondition(index, { value: isFalling ? -num : num });
+                    }}
+                  />
+                  <Text style={[styles.unitLabel, { color: t.textTertiary }]}>
+                    {getUnitLabel(condition.unit)}
+                  </Text>
+                </View>
+              </>
             ) : condition.metric === 'wind_direction' ? (
               <>
                 <View style={styles.chipRow}>
@@ -571,8 +610,8 @@ export default function CreateRuleScreen() {
             {condition.metric === 'pressure_tendency' && (
               <Text style={[styles.metricHelperText, { color: t.textTertiary }]}>
                 {pressureUnit === 'inHg'
-                  ? 'Expected pressure change over the forecast window. Negative = falling (storm risk). A drop of –0.24 inHg or more is a classic approaching-storm signal. Positive = rising (clearing).'
-                  : 'Expected pressure change over the forecast window. Negative = falling (storm risk). A drop of –8 hPa or more is a classic approaching-storm signal. Positive = rising (clearing).'}
+                  ? 'How much pressure changes over the forecast window. Falls precede storms; rises indicate clearing. A drop of 0.24 inHg or more is a classic approaching-storm signal.'
+                  : 'How much pressure changes over the forecast window. Falls precede storms; rises indicate clearing. A drop of 8 hPa or more is a classic approaching-storm signal.'}
               </Text>
             )}
 
@@ -679,14 +718,18 @@ export default function CreateRuleScreen() {
                 const dir = COMPASS_DIRECTIONS.find((d) => d.value === c.value)?.label ?? `${c.value}°`;
                 return `the wind comes from ${dir} (±${c.tolerance ?? 45}°)`;
               }
-              const op = OPERATORS.find((o) => o.value === c.operator)?.label ?? c.operator;
+              if (c.metric === 'pressure_tendency') {
+                const direction = c.value < 0 ? 'drops' : 'rises';
+                const magnitude = Math.abs(c.value);
+                const ptUnit = getUnitLabel(c.unit);
+                return `the pressure ${direction} by at least ${magnitude}${ptUnit ? ' ' + ptUnit : ''}`;
+              }
+              const op = OPERATORS.find((o) => o.value === c.operator)?.label ?? 'matches';
               const unitLabel = getUnitLabel(c.unit);
               const valueDisplay = c.metric === 'moon_phase'
                 ? nearestMoonPhasePreset(c.value).label
                 : c.metric === 'weather_code'
                 ? `${weatherCodeToEmoji(c.value)} ${weatherCodeLabel(c.value)} (WMO ${c.value})`
-                : c.metric === 'pressure_tendency'
-                ? `${c.value > 0 ? '+' : ''}${c.value}${unitLabel ? ' ' + unitLabel : ''}`
                 : `${c.value}${unitLabel ? ' ' + unitLabel : ''}`;
               return `the ${metric} is ${op} ${valueDisplay}`;
             });
