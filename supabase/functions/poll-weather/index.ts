@@ -19,6 +19,7 @@ import {
   extractTimezone,
   processInBatches,
   formatMatchedDate,
+  weatherCodeToEmoji,
 } from "../_shared/weatherEngine.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -52,6 +53,12 @@ async function fetchForecast(lat: number, lon: number): Promise<Record<string, u
       "wind_speed_10m",
       "apparent_temperature",
       "uv_index",
+      "weather_code",
+      "precipitation",
+      "surface_pressure",
+      "snowfall",
+      "snow_depth",
+      "soil_temperature_0cm",
     ].join(","),
     daily: [
       "temperature_2m_max",
@@ -59,6 +66,8 @@ async function fetchForecast(lat: number, lon: number): Promise<Record<string, u
       "precipitation_probability_max",
       "wind_speed_10m_max",
       "uv_index_max",
+      "weather_code",
+      "precipitation_sum",
     ].join(","),
     timezone: "auto",
   });
@@ -367,9 +376,29 @@ Deno.serve(async (req) => {
           const details = (alert.details ?? []) as Array<{ matchedTime?: string | null; met?: boolean }>;
           const firstMatchedTime = details.find(d => d.met && d.matchedTime)?.matchedTime ?? null;
           const dayLabel = formatMatchedDate(firstMatchedTime);
+
+          // Prepend WMO emoji from the daily weather_code for the triggered day.
+          // The forecast is carried on the alert as alert.forecast (set by evaluate-alerts),
+          // or we fall back to no emoji if unavailable.
+          const forecastRaw = alert.forecast as Record<string, unknown> | undefined;
+          const dailyWeatherCodes = (forecastRaw?.daily as Record<string, unknown> | undefined)
+            ?.weather_code as number[] | undefined;
+          const dailyTimes = (forecastRaw?.daily as Record<string, unknown> | undefined)
+            ?.time as string[] | undefined;
+          let wmoEmoji = '';
+          if (dailyWeatherCodes && dailyTimes && firstMatchedTime) {
+            // Match the triggered day — compare date prefix of the matched time
+            const matchedDateStr = firstMatchedTime.slice(0, 10);
+            const dayIndex = dailyTimes.findIndex((t) => t.startsWith(matchedDateStr));
+            if (dayIndex >= 0 && dailyWeatherCodes[dayIndex] !== undefined) {
+              wmoEmoji = weatherCodeToEmoji(dailyWeatherCodes[dayIndex]) + ' ';
+            }
+          }
+
+          const summaryText = alert.summary as string;
           const notifBody = dayLabel
-            ? `${dayLabel}: ${alert.summary as string}`
-            : alert.summary as string;
+            ? `${wmoEmoji}${dayLabel}: ${summaryText}`
+            : `${wmoEmoji}${summaryText}`;
 
 
           const { sent, isInvalidToken } = await sendPushNotification(

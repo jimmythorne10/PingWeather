@@ -85,7 +85,14 @@ export type WeatherMetric =
   | 'wind_speed'
   | 'humidity'
   | 'feels_like'
-  | 'uv_index';
+  | 'uv_index'
+  | 'precipitation_amount'
+  | 'barometric_pressure'
+  | 'snowfall'
+  | 'snow_depth'
+  | 'soil_temperature'
+  | 'weather_code'
+  | 'moon_phase';
 
 export type ComparisonOperator = 'gt' | 'gte' | 'lt' | 'lte' | 'eq';
 
@@ -97,7 +104,7 @@ export interface AlertCondition {
   metric: WeatherMetric;
   operator: ComparisonOperator;
   value: number;
-  unit?: TemperatureUnit | WindSpeedUnit | 'percent' | 'index';
+  unit?: TemperatureUnit | WindSpeedUnit | 'percent' | 'index' | 'hPa' | 'mm' | 'in' | 'cm' | '%illumination';
 }
 
 export type LogicalOperator = 'AND' | 'OR';
@@ -139,7 +146,7 @@ export interface AlertPreset {
   name: string;
   description: string;
   icon: string;
-  category: 'temperature' | 'precipitation' | 'wind' | 'work';
+  category: 'temperature' | 'precipitation' | 'wind' | 'work' | 'severe';
   conditions: AlertCondition[];
   logical_operator: LogicalOperator;
   lookahead_hours: number;
@@ -157,7 +164,12 @@ export interface HourlyForecast {
   apparent_temperature: number[];
   uv_index: number[];
   weather_code: number[];
-  precipitation?: number[];
+  // Optional new fields — present when the caller requests them
+  precipitation?: number[];        // mm
+  surface_pressure?: number[];     // hPa
+  snowfall?: number[];             // cm
+  snow_depth?: number[];           // cm
+  soil_temperature_0cm?: number[]; // °C
 }
 
 export interface DailyForecast {

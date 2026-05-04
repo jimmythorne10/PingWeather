@@ -154,4 +154,80 @@ export const ALERT_PRESETS: AlertPreset[] = [
     polling_interval_hours: 12,
     cooldown_hours: 24,
   },
+
+  // ── Severe Weather ───────────────────────────────────────
+  {
+    id: 'thunderstorm-alert',
+    name: 'Thunderstorm Alert',
+    description: 'Alert when thunderstorms are forecast. WMO code ≥95 indicates thunderstorm activity.',
+    icon: '⛈️',
+    category: 'severe',
+    conditions: [
+      { metric: 'weather_code', operator: 'gte', value: 95 },
+    ],
+    logical_operator: 'AND',
+    lookahead_hours: 12,
+    polling_interval_hours: 4,
+    cooldown_hours: 6,
+  },
+  {
+    id: 'heavy-snowfall',
+    name: 'Heavy Snowfall Warning',
+    description: 'Alert when significant snowfall is forecast. 5 cm (~2 inches) per hour.',
+    icon: '🌨️',
+    category: 'severe',
+    conditions: [
+      { metric: 'snowfall', operator: 'gte', value: 5, unit: 'cm' },
+    ],
+    logical_operator: 'AND',
+    lookahead_hours: 24,
+    polling_interval_hours: 6,
+    cooldown_hours: 12,
+  },
+  {
+    id: 'storm-approaching',
+    name: 'Storm Approaching',
+    description: 'Alert when barometric pressure drops below storm threshold. Pressure ≤1005 hPa signals an approaching low-pressure system.',
+    icon: '🌪️',
+    category: 'severe',
+    conditions: [
+      { metric: 'barometric_pressure', operator: 'lte', value: 1005, unit: 'hPa' },
+    ],
+    logical_operator: 'AND',
+    lookahead_hours: 24,
+    polling_interval_hours: 4,
+    cooldown_hours: 8,
+  },
+
+  // ── Nature / Hunting ─────────────────────────────────────
+  {
+    id: 'full-moon-hunt',
+    name: 'Full Moon Hunt',
+    description: 'Alert when moon is near full. Best conditions for nocturnal wildlife tracking.',
+    icon: '🌕',
+    category: 'work',
+    conditions: [
+      { metric: 'moon_phase', operator: 'gte', value: 85, unit: '%illumination' },
+    ],
+    logical_operator: 'AND',
+    lookahead_hours: 72,
+    polling_interval_hours: 24,
+    cooldown_hours: 48,
+  },
+
+  // ── Farming / Planting ───────────────────────────────────
+  {
+    id: 'soil-warm-planting',
+    name: 'Soil Warm for Planting',
+    description: 'Alert when soil is warm enough for planting. 10°C (50°F) is the minimum for most crops.',
+    icon: '🌱',
+    category: 'work',
+    conditions: [
+      { metric: 'soil_temperature', operator: 'gte', value: 10, unit: 'celsius' },
+    ],
+    logical_operator: 'AND',
+    lookahead_hours: 48,
+    polling_interval_hours: 12,
+    cooldown_hours: 24,
+  },
 ];

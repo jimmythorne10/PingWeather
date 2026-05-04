@@ -4,7 +4,7 @@
 // Called by pg_cron hourly. For each profile with digest_enabled:
 // 1. Checks if it's the right local hour (using digest location's timezone)
 // 2. Fetches a fresh forecast for the digest location
-// 3. Formats a summary push notification
+// 3. Formats a 3-day summary push notification
 // 4. Sends via Expo Push and stamps digest_last_sent_at
 // ────────────────────────────────────────────────────────────
 
@@ -112,6 +112,7 @@ async function getForecast(
       "temperature_2m_min",
       "precipitation_probability_max",
       "wind_speed_10m_max",
+      "weather_code",
     ].join(","),
     timezone: "auto",
   });
@@ -133,13 +134,6 @@ function formatTemp(fahrenheit: number, unit: string): string {
     : `${Math.round(fahrenheit)}°F`;
 }
 
-// Open-Meteo always returns wind in mph. Convert per-user preference.
-function convertWind(mph: number, unit: string): { value: number; label: string } {
-  if (unit === "kmh") return { value: Math.round(mph * 1.60934), label: "km/h" };
-  if (unit === "knots") return { value: Math.round(mph * 0.868976), label: "kts" };
-  return { value: Math.round(mph), label: "mph" };
-}
-
 interface ForecastResponse {
   daily: {
     time: string[];
@@ -147,42 +141,97 @@ interface ForecastResponse {
     temperature_2m_min: number[];
     precipitation_probability_max: number[];
     wind_speed_10m_max: number[];
+    weather_code?: number[];
   };
+}
+
+// ── WMO weather code → emoji ────────────────────────────────
+// Local copy — avoids importing from weatherEngine which would pull in
+// evaluate/gridKey exports and bloat the bundle. Kept in sync manually.
+
+function weatherCodeToEmoji(code: number): string {
+  if (code <= 1) return "☀️";
+  if (code <= 3) return "⛅";
+  if (code <= 49) return "🌫️";
+  if (code <= 69) return "🌧️";
+  if (code <= 79) return "❄️";
+  if (code <= 84) return "🌦️";
+  if (code <= 94) return "🌨️";
+  if (code <= 99) return "⛈️";
+  return "🌡️";
+}
+
+// ── Day label (relative to today UTC) ──────────────────────
+// isoDate: "YYYY-MM-DD" from the Open-Meteo daily.time array.
+// todayIso: today's date in "YYYY-MM-DD" (UTC), pre-computed by the caller
+//           so all days in the loop share the same reference instant.
+
+function getDayLabel(isoDate: string, todayIso: string): string {
+  if (isoDate === todayIso) return "Today";
+
+  const tomorrowDate = new Date(todayIso + "T00:00:00Z");
+  tomorrowDate.setUTCDate(tomorrowDate.getUTCDate() + 1);
+  const tomorrowIso = tomorrowDate.toISOString().slice(0, 10);
+
+  if (isoDate === tomorrowIso) return "Tomorrow";
+
+  // Any other day: short weekday name, forced UTC so the label matches the
+  // forecast date regardless of the Edge Function server's local timezone.
+  const d = new Date(isoDate + "T00:00:00Z");
+  return d.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+}
+
+// ── 3-day digest body builder ───────────────────────────────
+// Iterates up to maxDays forecast days and formats each as:
+//   "Label: [emoji] Hi X° Lo Y° [🌧 Z%]"
+// Joined with " | " to fit in a single push notification body line.
+//
+// temperatureUnit: "fahrenheit" | "celsius" — respects per-user preference.
+// weather_code is optional — if the array is missing or a slot is undefined,
+// the emoji segment is simply omitted (forecast_cache from poll-weather may
+// have been written before weather_code was added to the fetch params).
+
+function buildDigestBody(
+  daily: ForecastResponse["daily"],
+  temperatureUnit: string,
+  maxDays = 3
+): string {
+  if (!daily?.time?.length) throw new Error("Empty forecast data");
+
+  // Anchor to UTC "today" once so all day labels are consistent within the call.
+  const todayIso = new Date().toISOString().slice(0, 10);
+
+  const dayCount = Math.min(daily.time.length, maxDays);
+  const parts: string[] = [];
+
+  for (let i = 0; i < dayCount; i++) {
+    const label = getDayLabel(daily.time[i], todayIso);
+    const hi = formatTemp(daily.temperature_2m_max[i], temperatureUnit);
+    const lo = formatTemp(daily.temperature_2m_min[i], temperatureUnit);
+
+    // Emoji: only include when weather_code is present AND has a value at index i.
+    const code = daily.weather_code?.[i];
+    const emoji = code !== undefined ? `${weatherCodeToEmoji(code)} ` : "";
+
+    // Precipitation: only show when > 0% to keep the string compact.
+    const rainPct = daily.precipitation_probability_max[i];
+    const rainStr = rainPct > 0 ? ` 🌧 ${rainPct}%` : "";
+
+    parts.push(`${label}: ${emoji}Hi ${hi} Lo ${lo}${rainStr}`);
+  }
+
+  return parts.join(" | ");
 }
 
 function formatDigest(
   forecast: ForecastResponse,
   locationName: string,
-  frequency: string,
-  temperatureUnit: string,
-  windSpeedUnit: string
+  temperatureUnit: string
 ): { title: string; body: string } {
-  const { daily } = forecast;
-  if (!daily?.time?.length) throw new Error("Empty forecast data");
-
-  if (frequency === "daily") {
-    const high = formatTemp(daily.temperature_2m_max[0], temperatureUnit);
-    const low = formatTemp(daily.temperature_2m_min[0], temperatureUnit);
-    const rain = daily.precipitation_probability_max[0];
-    const wind = convertWind(daily.wind_speed_10m_max[0], windSpeedUnit);
-    return {
-      title: `Today's forecast — ${locationName}`,
-      body: `High ${high}, Low ${low} · ${rain}% rain · ${wind.value} ${wind.label} wind`,
-    };
-  }
-
-  const maxRain = Math.max(...daily.precipitation_probability_max);
-  const dayLines = daily.time
-    .slice(0, 7)
-    .map(
-      (_: string, i: number) =>
-        `${formatTemp(daily.temperature_2m_max[i], temperatureUnit)}/${formatTemp(daily.temperature_2m_min[i], temperatureUnit)}`
-    )
-    .join(", ");
-
+  const body = buildDigestBody(forecast.daily, temperatureUnit, 3);
   return {
-    title: `7-day forecast — ${locationName}`,
-    body: `${dayLines} · Up to ${maxRain}% rain chance`,
+    title: `PingWeather Forecast — ${locationName}`,
+    body,
   };
 }
 
@@ -313,9 +362,7 @@ Deno.serve(async (req) => {
         const { title, body } = formatDigest(
           forecast,
           loc.name,
-          profile.digest_frequency,
-          profile.temperature_unit ?? "fahrenheit",
-          profile.wind_speed_unit ?? "mph"
+          profile.temperature_unit ?? "fahrenheit"
         );
         const ok = await sendPush(profile.push_token!, title, body);
 

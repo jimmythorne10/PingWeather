@@ -23,6 +23,14 @@ const VALID_METRICS: WeatherMetric[] = [
   'humidity',
   'feels_like',
   'uv_index',
+  // New metrics added 2026-05-03
+  'precipitation_amount',
+  'barometric_pressure',
+  'snowfall',
+  'snow_depth',
+  'soil_temperature',
+  'weather_code',
+  'moon_phase',
 ];
 
 const VALID_OPERATORS: ComparisonOperator[] = ['gt', 'gte', 'lt', 'lte', 'eq'];
@@ -32,6 +40,7 @@ const VALID_CATEGORIES: AlertPreset['category'][] = [
   'precipitation',
   'wind',
   'work',
+  'severe',
 ];
 
 const VALID_LOGICAL_OPERATORS: LogicalOperator[] = ['AND', 'OR'];

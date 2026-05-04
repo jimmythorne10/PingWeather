@@ -56,6 +56,11 @@ export async function fetchForecast(
         'apparent_temperature',
         'uv_index',
         'weather_code',
+        'precipitation',
+        'surface_pressure',
+        'snowfall',
+        'snow_depth',
+        'soil_temperature_0cm',
       ],
       daily: [
         'temperature_2m_max',
@@ -65,6 +70,7 @@ export async function fetchForecast(
         'wind_direction_10m_dominant',
         'uv_index_max',
         'weather_code',
+        'precipitation_sum',
       ],
     },
   });

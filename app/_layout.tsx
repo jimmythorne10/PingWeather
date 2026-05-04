@@ -8,6 +8,7 @@ import * as Updates from 'expo-updates';
 import { useAuthStore } from '../src/stores/authStore';
 import { initializePurchases, loginPurchaseUser, logoutPurchaseUser } from '../src/services/purchases';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
+import { UpdateCheckScreen, type UpdateStatus } from '../src/components/UpdateCheckScreen';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -15,24 +16,70 @@ export default function RootLayout() {
   const { session, profile, initialize } = useAuthStore();
   const [ready, setReady] = useState(false);
 
-  // Initialize auth and check for OTA updates in parallel.
-  // The loading spinner covers both; reloadAsync() restarts before setReady
-  // fires, so users always launch into the latest bundle.
-  useEffect(() => {
-    const checkUpdate = async () => {
-      if (__DEV__) return;
-      try {
-        const result = await Updates.checkForUpdateAsync();
-        if (result.isAvailable) {
-          await Updates.fetchUpdateAsync();
-          await Updates.reloadAsync(); // restarts JS runtime — never returns
-        }
-      } catch (_) {
-        // network failure or no update available — continue normally
-      }
-    };
+  // 'idle'      — update check not started or already complete (render children)
+  // 'checking'  — awaiting checkForUpdateAsync response
+  // 'downloading' — update found, fetchUpdateAsync in progress
+  // 'upToDate'  — no update available, brief pause before dismissing
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | 'idle'>('idle');
 
-    Promise.all([initialize(), checkUpdate()]).then(() => {
+  // ─── OTA update check ────────────────────────────────────────────────────
+  // Runs first on mount, before auth, so the branded screen appears
+  // immediately and there is no generic-spinner flash.
+  //
+  // Why NOT inside Promise.all with initialize():
+  //   Putting it alongside auth hid the branded UI behind the generic
+  //   ActivityIndicator and offered no way to distinguish "checking for
+  //   update" from "loading auth state".
+  //
+  // Why checkAutomatically = "NEVER" in app.json:
+  //   With automatic checking enabled, Expo's own update poller could race
+  //   this manual check and either duplicate the work or reload mid-session.
+  //   Manual-only gives us full control over when and how the user is informed.
+  useEffect(() => {
+    async function checkForOTAUpdate() {
+      // expo-updates throws in dev mode because there is no update server.
+      // Guard here so the app doesn't error out during local development.
+      if (__DEV__) return;
+
+      try {
+        setUpdateStatus('checking');
+
+        // 5-second timeout: on low signal checkForUpdateAsync can hang.
+        // We race it against a rejection so the user isn't stuck on this
+        // screen if the network is slow or offline.
+        const checkPromise = Updates.checkForUpdateAsync();
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 5000),
+        );
+        const update = await Promise.race([checkPromise, timeoutPromise]);
+
+        if (update.isAvailable) {
+          setUpdateStatus('downloading');
+          await Updates.fetchUpdateAsync();
+          // reloadAsync() restarts the JS runtime entirely — nothing after
+          // this line will ever execute in this session.
+          await Updates.reloadAsync();
+        } else {
+          setUpdateStatus('upToDate');
+          // Brief pause so the screen doesn't flash — gives users a moment
+          // to read "Up to date" before the app continues loading.
+          await new Promise<void>((resolve) => setTimeout(resolve, 800));
+          setUpdateStatus('idle');
+        }
+      } catch {
+        // Network error, timeout, no server in __DEV__ (shouldn't reach here),
+        // or any other unexpected failure — always fall through so the app
+        // loads normally. Never block the user over an update check.
+        setUpdateStatus('idle');
+      }
+    }
+
+    checkForOTAUpdate();
+  }, []);
+
+  // ─── Auth + purchases initialization ─────────────────────────────────────
+  useEffect(() => {
+    initialize().then(() => {
       setReady(true);
       initializePurchases().catch(() => {});
     });
@@ -83,11 +130,20 @@ export default function RootLayout() {
     }
   }, [ready, session, profile, segments]);
 
+  // Show branded update screen while checking / downloading. This renders
+  // before the SafeAreaProvider/Stack tree so there is zero overhead and
+  // no stale navigator state during a potential reloadAsync().
+  if (updateStatus === 'checking' || updateStatus === 'downloading' || updateStatus === 'upToDate') {
+    return <UpdateCheckScreen status={updateStatus} />;
+  }
+
+  // Auth is still initializing (but update check is done). Show a branded
+  // spinner that matches the splash screen color instead of the old gray.
   if (!ready) {
     return (
       <SafeAreaProvider>
         <View style={styles.loading}>
-          <ActivityIndicator size="large" color="#1E3A5F" />
+          <ActivityIndicator size="large" color="#FFFFFF" />
         </View>
       </SafeAreaProvider>
     );
@@ -120,6 +176,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0F4F8',
+    // Brand navy — matches splash screen and UpdateCheckScreen so there
+    // is no color flash during the auth-initialization phase either.
+    backgroundColor: '#1E3A5F',
   },
 });

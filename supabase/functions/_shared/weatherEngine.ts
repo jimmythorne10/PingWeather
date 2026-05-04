@@ -13,6 +13,47 @@
 //   import { ... } from '../../src/utils/weatherEngine';
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Moon phase illumination — pure math, no API. Inline here so _shared/ stays
+// a single-file verbatim copy without needing a second _shared/ module.
+// Algorithm: Julian Date → days since known new moon (Jan 6 2000 UTC = JD 2451550.1)
+// → modulo synodic period (29.53058867 days) → phase angle → illumination %.
+const _KNOWN_NEW_MOON_JD = 2451550.1;
+const _SYNODIC_PERIOD = 29.53058867;
+
+function _toJulianDate(date: Date): number {
+  const Y = date.getUTCFullYear();
+  const M = date.getUTCMonth() + 1;
+  const D =
+    date.getUTCDate() +
+    date.getUTCHours() / 24 +
+    date.getUTCMinutes() / 1440 +
+    date.getUTCSeconds() / 86400;
+  const Y2 = M <= 2 ? Y - 1 : Y;
+  const M2 = M <= 2 ? M + 12 : M;
+  const A = Math.floor(Y2 / 100);
+  const B = 2 - A + Math.floor(A / 4);
+  return (
+    Math.floor(365.25 * (Y2 + 4716)) +
+    Math.floor(30.6001 * (M2 + 1)) +
+    D + B - 1524.5
+  );
+}
+
+function _getMoonIllumination(date: Date): number {
+  const jd = _toJulianDate(date);
+  const daysSinceNew = jd - _KNOWN_NEW_MOON_JD;
+  const cyclePos = ((daysSinceNew % _SYNODIC_PERIOD) + _SYNODIC_PERIOD) % _SYNODIC_PERIOD;
+  const phaseRad = (cyclePos / _SYNODIC_PERIOD) * 2 * Math.PI;
+  const illumination = ((1 - Math.cos(phaseRad)) / 2) * 100;
+  return Math.max(0, Math.min(100, illumination));
+}
+
+function _getMoonIlluminationForDate(isoDate: string): number {
+  const parsed = new Date(`${isoDate}T00:00:00.000Z`);
+  if (isNaN(parsed.getTime())) return 0;
+  return _getMoonIllumination(parsed);
+}
+
 // ── Shared interfaces ─────────────────────────────────────────────────────────
 // These must stay in sync with the Edge Function runtime types. The shared
 // source-of-truth lives here; Edge Functions reference this file directly.
@@ -52,6 +93,12 @@ export interface HourlyForecast {
   apparent_temperature: number[];
   uv_index: number[];
   weather_code?: number[];
+  // New metrics — all optional so existing callers don't need to supply them
+  precipitation?: number[];        // mm — hourly precipitation amount
+  surface_pressure?: number[];     // hPa — barometric pressure at surface
+  snowfall?: number[];             // cm — hourly snowfall
+  snow_depth?: number[];           // cm — snow depth on ground
+  soil_temperature_0cm?: number[]; // °C — soil temperature at 0 cm depth
 }
 
 export interface DailyForecast {
@@ -63,6 +110,7 @@ export interface DailyForecast {
   uv_index_max: number[];
   wind_direction_10m_dominant?: number[];
   weather_code?: number[];
+  precipitation_sum?: number[]; // mm — daily total precipitation (fallback for precipitation_amount)
 }
 
 export interface ForecastData {
@@ -196,6 +244,85 @@ export function getMetricValues(
         return date >= todayUtc && date <= cutoff;
       });
     }
+
+    // ── New metrics ─────────────────────────────────────────────────────────
+
+    case 'precipitation_amount': {
+      // Hourly precipitation (mm) for short windows (≤24h), daily sum for longer.
+      // Mirrors the wind_speed / precipitation_probability dual-source pattern.
+      if (lookaheadHours <= 24) {
+        if (!forecast.hourly.precipitation) return [];
+        return forecast.hourly.precipitation.filter((_, i) => {
+          const time = new Date(forecast.hourly.time[i]);
+          return time >= now && time <= cutoff;
+        });
+      }
+      if (!forecast.daily.precipitation_sum) return [];
+      return forecast.daily.precipitation_sum.filter((_, i) => {
+        const date = new Date(forecast.daily.time[i]);
+        return date >= todayUtc && date <= cutoff;
+      });
+    }
+
+    case 'barometric_pressure': {
+      // Hourly surface pressure (hPa). No daily fallback — pressure is only
+      // meaningful at sub-daily resolution for alert purposes.
+      if (!forecast.hourly.surface_pressure) return [];
+      return forecast.hourly.surface_pressure.filter((_, i) => {
+        const time = new Date(forecast.hourly.time[i]);
+        return time >= now && time <= cutoff;
+      });
+    }
+
+    case 'snowfall': {
+      // Hourly snowfall (cm).
+      if (!forecast.hourly.snowfall) return [];
+      return forecast.hourly.snowfall.filter((_, i) => {
+        const time = new Date(forecast.hourly.time[i]);
+        return time >= now && time <= cutoff;
+      });
+    }
+
+    case 'snow_depth': {
+      // Hourly snow depth (cm) on the ground.
+      if (!forecast.hourly.snow_depth) return [];
+      return forecast.hourly.snow_depth.filter((_, i) => {
+        const time = new Date(forecast.hourly.time[i]);
+        return time >= now && time <= cutoff;
+      });
+    }
+
+    case 'soil_temperature': {
+      // Hourly soil temperature at 0 cm depth (°C).
+      if (!forecast.hourly.soil_temperature_0cm) return [];
+      return forecast.hourly.soil_temperature_0cm.filter((_, i) => {
+        const time = new Date(forecast.hourly.time[i]);
+        return time >= now && time <= cutoff;
+      });
+    }
+
+    case 'weather_code': {
+      // Hourly WMO weather code (integer). Existing operators work numerically:
+      // weather_code >= 95 = any thunderstorm.
+      if (!forecast.hourly.weather_code) return [];
+      return forecast.hourly.weather_code.filter((_, i) => {
+        const time = new Date(forecast.hourly.time[i]);
+        return time >= now && time <= cutoff;
+      });
+    }
+
+    case 'moon_phase': {
+      // Pure math — no API field. Returns illumination % for each day in the
+      // daily time array that falls within the lookahead window.
+      // Uses the daily.time array as the time axis (one value per calendar day).
+      return forecast.daily.time
+        .filter((dateStr) => {
+          const date = new Date(dateStr);
+          return date >= todayUtc && date <= cutoff;
+        })
+        .map((dateStr) => _getMoonIlluminationForDate(dateStr));
+    }
+
     default:
       return [];
   }
@@ -300,6 +427,91 @@ function getMetricEntries(
           return date >= todayUtc && date <= cutoff;
         });
     }
+
+    // ── New metrics ─────────────────────────────────────────────────────────
+
+    case 'precipitation_amount': {
+      if (lookaheadHours <= 24) {
+        if (!forecast.hourly.precipitation) return [];
+        return forecast.hourly.precipitation
+          .map((value, i) => ({ value, time: forecast.hourly.time[i] }))
+          .filter(({ time }) => {
+            const t = new Date(time);
+            return t >= now && t <= cutoff;
+          });
+      }
+      if (!forecast.daily.precipitation_sum) return [];
+      return forecast.daily.precipitation_sum
+        .map((value, i) => ({ value, time: forecast.daily.time[i] }))
+        .filter(({ time }) => {
+          const date = new Date(time);
+          return date >= todayUtc && date <= cutoff;
+        });
+    }
+
+    case 'barometric_pressure': {
+      if (!forecast.hourly.surface_pressure) return [];
+      return forecast.hourly.surface_pressure
+        .map((value, i) => ({ value, time: forecast.hourly.time[i] }))
+        .filter(({ time }) => {
+          const t = new Date(time);
+          return t >= now && t <= cutoff;
+        });
+    }
+
+    case 'snowfall': {
+      if (!forecast.hourly.snowfall) return [];
+      return forecast.hourly.snowfall
+        .map((value, i) => ({ value, time: forecast.hourly.time[i] }))
+        .filter(({ time }) => {
+          const t = new Date(time);
+          return t >= now && t <= cutoff;
+        });
+    }
+
+    case 'snow_depth': {
+      if (!forecast.hourly.snow_depth) return [];
+      return forecast.hourly.snow_depth
+        .map((value, i) => ({ value, time: forecast.hourly.time[i] }))
+        .filter(({ time }) => {
+          const t = new Date(time);
+          return t >= now && t <= cutoff;
+        });
+    }
+
+    case 'soil_temperature': {
+      if (!forecast.hourly.soil_temperature_0cm) return [];
+      return forecast.hourly.soil_temperature_0cm
+        .map((value, i) => ({ value, time: forecast.hourly.time[i] }))
+        .filter(({ time }) => {
+          const t = new Date(time);
+          return t >= now && t <= cutoff;
+        });
+    }
+
+    case 'weather_code': {
+      if (!forecast.hourly.weather_code) return [];
+      return forecast.hourly.weather_code
+        .map((value, i) => ({ value, time: forecast.hourly.time[i] }))
+        .filter(({ time }) => {
+          const t = new Date(time);
+          return t >= now && t <= cutoff;
+        });
+    }
+
+    case 'moon_phase': {
+      // moon_phase uses daily dates as the time axis.
+      return forecast.daily.time
+        .filter((dateStr) => {
+          const date = new Date(dateStr);
+          return date >= todayUtc && date <= cutoff;
+        })
+        .map((dateStr) => ({
+          value: _getMoonIlluminationForDate(dateStr),
+          time: dateStr,
+        }));
+    }
+
     default:
       return [];
   }
@@ -397,7 +609,26 @@ export function isInCooldown(rule: AlertRule, now: Date): boolean {
   return now.getTime() < cooldownEnd;
 }
 
-// ── Condition summary formatter ───────────────────────────────────────────────
+// ── WMO weather code → emoji ─────────────────────────────────────────────────
+// Maps WMO interpretation codes to a representative emoji for push notification
+// bodies. Used by poll-weather to prepend a visual cue to the alert text.
+
+export function weatherCodeToEmoji(code: number): string {
+  if (code <= 1) return '☀️';
+  if (code <= 3) return '⛅';
+  if (code <= 9) return '🌫️';
+  if (code <= 19) return '🌧️';
+  if (code <= 29) return '🌨️';
+  if (code <= 39) return '🌫️';
+  if (code <= 49) return '🌫️';
+  if (code <= 59) return '🌦️';
+  if (code <= 69) return '🌧️';
+  if (code <= 79) return '❄️';
+  if (code <= 84) return '🌦️';
+  if (code <= 94) return '🌨️';
+  if (code <= 99) return '⛈️';
+  return '🌡️';
+}
 
 export function formatConditionSummary(
   metric: string,
@@ -414,6 +645,14 @@ export function formatConditionSummary(
     humidity: 'Humidity',
     feels_like: 'Feels like',
     uv_index: 'UV index',
+    // New metrics
+    precipitation_amount: 'Precipitation',
+    barometric_pressure: 'Barometric pressure',
+    snowfall: 'Snowfall',
+    snow_depth: 'Snow depth',
+    soil_temperature: 'Soil temperature',
+    weather_code: 'Weather code',
+    moon_phase: 'Moon illumination',
   };
 
   const operatorLabels: Record<string, string> = {

@@ -79,7 +79,8 @@
       "policy": "sdkVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/6456b66e-6e5a-4881-984f-20e2f3b477f4"
+      "url": "https://u.expo.dev/6456b66e-6e5a-4881-984f-20e2f3b477f4",
+      "checkAutomatically": "NEVER"
     },
     "owner": "jimmy.thorne.10"
   }

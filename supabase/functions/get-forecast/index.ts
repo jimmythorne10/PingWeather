@@ -84,12 +84,42 @@ Deno.serve(async (req) => {
       ...(OPEN_METEO_API_KEY ? { apikey: OPEN_METEO_API_KEY } : {}),
     });
 
-    if (Array.isArray(hourly) && hourly.length > 0) {
-      params.set("hourly", (hourly as string[]).join(","));
-    }
-    if (Array.isArray(daily) && daily.length > 0) {
-      params.set("daily", (daily as string[]).join(","));
-    }
+    // Default hourly variables to request when the client doesn't specify.
+    // Includes all new metrics so the forecast response carries them automatically.
+    const defaultHourly = [
+      "temperature_2m",
+      "relative_humidity_2m",
+      "precipitation_probability",
+      "wind_speed_10m",
+      "apparent_temperature",
+      "uv_index",
+      "weather_code",
+      "precipitation",
+      "surface_pressure",
+      "snowfall",
+      "snow_depth",
+      "soil_temperature_0cm",
+    ];
+    const defaultDaily = [
+      "temperature_2m_max",
+      "temperature_2m_min",
+      "precipitation_probability_max",
+      "wind_speed_10m_max",
+      "wind_direction_10m_dominant",
+      "uv_index_max",
+      "weather_code",
+      "precipitation_sum",
+    ];
+
+    const hourlyVars = Array.isArray(hourly) && hourly.length > 0
+      ? (hourly as string[])
+      : defaultHourly;
+    const dailyVars = Array.isArray(daily) && daily.length > 0
+      ? (daily as string[])
+      : defaultDaily;
+
+    params.set("hourly", hourlyVars.join(","));
+    params.set("daily", dailyVars.join(","));
     if (past_days !== undefined) {
       params.set("past_days", String(past_days));
     }

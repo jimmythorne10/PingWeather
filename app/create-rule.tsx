@@ -17,6 +17,21 @@ const METRICS: { value: WeatherMetric; label: string; defaultUnit: string }[] = 
   { value: 'humidity', label: 'Humidity', defaultUnit: '%' },
   { value: 'feels_like', label: 'Feels Like', defaultUnit: '°F' },
   { value: 'uv_index', label: 'UV Index', defaultUnit: '' },
+  // ── New metrics ──────────────────────────────────────────────────────────────
+  // precipitation_amount: daily total rainfall in mm (or inches when converted)
+  { value: 'precipitation_amount', label: 'Precipitation Amount', defaultUnit: 'mm' },
+  // barometric_pressure: sea-level pressure in hPa — typical range 970–1040
+  { value: 'barometric_pressure', label: 'Barometric Pressure', defaultUnit: 'hPa' },
+  // snowfall: per-hour accumulation in cm
+  { value: 'snowfall', label: 'Snowfall', defaultUnit: 'cm' },
+  // snow_depth: current depth on the ground in cm
+  { value: 'snow_depth', label: 'Snow Depth', defaultUnit: 'cm' },
+  // soil_temperature: surface (0 cm) soil temp; respects °F/°C preference
+  { value: 'soil_temperature', label: 'Soil Temperature', defaultUnit: '°C' },
+  // weather_code: WMO integer code — unitless; helper text shown below value input
+  { value: 'weather_code', label: 'Weather Condition', defaultUnit: '' },
+  // moon_phase: % illumination — 0 = new moon, 100 = full moon
+  { value: 'moon_phase', label: 'Moon Phase', defaultUnit: '%' },
 ];
 
 const OPERATORS: { value: ComparisonOperator; label: string }[] = [
@@ -125,10 +140,17 @@ export default function CreateRuleScreen() {
   };
 
   const getUnitForMetric = (metric: WeatherMetric): AlertCondition['unit'] => {
+    // soil_temperature must be checked before the generic includes('temperature') below
+    if (metric === 'soil_temperature') return 'celsius';
     if (metric.includes('temperature') || metric === 'feels_like') return 'fahrenheit';
     if (metric === 'precipitation_probability' || metric === 'humidity') return 'percent';
     if (metric === 'wind_speed') return 'mph';
     if (metric === 'uv_index') return 'index';
+    if (metric === 'barometric_pressure') return 'hPa';
+    if (metric === 'precipitation_amount') return 'mm';
+    if (metric === 'snowfall' || metric === 'snow_depth') return 'cm';
+    if (metric === 'moon_phase') return '%illumination';
+    // weather_code has no meaningful unit — it's a WMO integer code
     return undefined;
   };
 
@@ -297,6 +319,23 @@ export default function CreateRuleScreen() {
               </Text>
             </View>
 
+            {/* Metric-specific helper text */}
+            {condition.metric === 'weather_code' && (
+              <Text style={[styles.metricHelperText, { color: t.textTertiary }]}>
+                WMO weather codes: ≥95 thunderstorm, ≥80 snow showers, ≥61 rain, ≥51 drizzle, ≥45 fog
+              </Text>
+            )}
+            {condition.metric === 'moon_phase' && (
+              <Text style={[styles.metricHelperText, { color: t.textTertiary }]}>
+                0 = new moon, 50 = quarter moon, 100 = full moon
+              </Text>
+            )}
+            {condition.metric === 'barometric_pressure' && (
+              <Text style={[styles.metricHelperText, { color: t.textTertiary }]}>
+                Normal sea level = 1013 hPa. Typical range 970–1040 hPa. Below 1005 hPa may indicate approaching storm.
+              </Text>
+            )}
+
             {/* Remove button */}
             {conditions.length > 1 && (
               <Pressable onPress={() => removeCondition(index)} style={styles.removeBtn}>
@@ -463,6 +502,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14, fontSize: 20, fontWeight: '700', width: 100, textAlign: 'center',
   },
   unitLabel: { fontSize: 16 },
+  metricHelperText: { fontSize: 12, lineHeight: 17, marginTop: 8 },
   removeBtn: { marginTop: 12, alignItems: 'flex-end' },
   logicalRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginVertical: 8 },
   logicalChip: { borderRadius: 6, paddingVertical: 6, paddingHorizontal: 16, borderWidth: 1, borderColor: '#ccc' },
