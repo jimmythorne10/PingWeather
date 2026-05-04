@@ -45,6 +45,8 @@ export function getUnitForMetric(
   if (metric === 'moon_phase') return '%illumination';
   if (metric === 'dew_point') return temperatureUnit;
   if (metric === 'visibility') return 'miles';
+  if (metric === 'wind_direction') return 'degrees';
+  if (metric === 'pressure_tendency') return 'hPa';
   // weather_code is a unitless WMO integer
   return undefined;
 }
@@ -69,6 +71,7 @@ export function getUnitLabel(unit: AlertCondition['unit']): string {
     case '%illumination': return '%';
     case 'miles':         return 'mi';
     case 'km':            return 'km';
+    case 'degrees':       return '°';
     default:              return '';
   }
 }

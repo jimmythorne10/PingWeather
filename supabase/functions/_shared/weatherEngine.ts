@@ -103,6 +103,7 @@ export interface HourlyForecast {
   dew_point_2m?: number[];         // °F or °C — follows temperature_unit
   visibility?: number[];           // meters raw from API (convert to miles in getMetricValues)
   cloud_cover?: number[];          // % cloud cover
+  wind_direction_10m?: number[];   // degrees 0-360 (0=N, 90=E, 180=S, 270=W)
 }
 
 export interface DailyForecast {
@@ -366,6 +367,29 @@ export function getMetricValues(
       });
     }
 
+    case 'wind_direction': {
+      // Hourly wind direction (degrees, 0-360). Used with the from_bearing operator.
+      if (!forecast.hourly.wind_direction_10m) return [];
+      return forecast.hourly.wind_direction_10m.filter((_, i) => {
+        const time = new Date(forecast.hourly.time[i]);
+        return time >= now && time <= cutoff;
+      });
+    }
+
+    case 'pressure_tendency': {
+      // Derived metric: change in surface pressure over the lookahead window.
+      // last_in_window - first_in_window:
+      //   positive = rising pressure (use 'gt')
+      //   negative = falling pressure (use 'lt')
+      if (!forecast.hourly.surface_pressure) return [];
+      const inWindow = forecast.hourly.surface_pressure.filter((_, i) => {
+        const time = new Date(forecast.hourly.time[i]);
+        return time >= now && time <= cutoff;
+      });
+      if (inWindow.length < 2) return [];
+      return [inWindow[inWindow.length - 1] - inWindow[0]];
+    }
+
     default:
       return [];
   }
@@ -596,6 +620,30 @@ function getMetricEntries(
         });
     }
 
+    case 'wind_direction': {
+      if (!forecast.hourly.wind_direction_10m) return [];
+      return forecast.hourly.wind_direction_10m
+        .map((value, i) => ({ value, time: forecast.hourly.time[i] }))
+        .filter(({ time }) => {
+          const t = new Date(time);
+          return t >= now && t <= cutoff;
+        });
+    }
+
+    case 'pressure_tendency': {
+      if (!forecast.hourly.surface_pressure) return [];
+      const inWindow = forecast.hourly.surface_pressure
+        .map((value, i) => ({ value, time: forecast.hourly.time[i] }))
+        .filter(({ time }) => {
+          const t = new Date(time);
+          return t >= now && t <= cutoff;
+        });
+      if (inWindow.length < 2) return [];
+      const tendency = inWindow[inWindow.length - 1].value - inWindow[0].value;
+      // Use the time of the last value in window as the matchedTime.
+      return [{ value: tendency, time: inWindow[inWindow.length - 1].time }];
+    }
+
     default:
       return [];
   }
@@ -606,7 +654,8 @@ function getMetricEntries(
 export function compare(
   actual: number,
   operator: string,
-  threshold: number
+  threshold: number,
+  tolerance?: number
 ): boolean {
   switch (operator) {
     case 'gt':  return actual > threshold;
@@ -614,6 +663,17 @@ export function compare(
     case 'lt':  return actual < threshold;
     case 'lte': return actual <= threshold;
     case 'eq':  return actual === threshold;
+    case 'from_bearing': {
+      // Circular shortest-arc distance between `actual` (wind direction) and
+      // `threshold` (target bearing). Both are in degrees [0, 360).
+      //   diff = ((actual - threshold) % 360 + 360) % 360   → clockwise angle 0–359
+      //   angleDiff = diff <= 180 ? diff : 360 - diff        → shortest arc 0–180
+      //   triggered = angleDiff <= tolerance (default 0 = exact match only)
+      const tol = tolerance ?? 0;
+      const diff = ((actual - threshold) % 360 + 360) % 360;
+      const angleDiff = diff <= 180 ? diff : 360 - diff;
+      return angleDiff <= tol;
+    }
     default:    return false;
   }
 }
@@ -629,7 +689,7 @@ export function evaluateCondition(
   const entries = getMetricEntries(condition.metric, forecast, lookaheadHours);
 
   for (const { value, time } of entries) {
-    if (compare(value, condition.operator, condition.value)) {
+    if (compare(value, condition.operator, condition.value, (condition as { tolerance?: number }).tolerance)) {
       return { met: true, matchedValue: value, matchedTime: time };
     }
   }
@@ -741,6 +801,8 @@ export function formatConditionSummary(
     dew_point: 'Dew point',
     visibility: 'Visibility',
     cloud_cover: 'Cloud cover',
+    wind_direction: 'Wind direction',
+    pressure_tendency: 'Pressure tendency',
   };
 
   const operatorLabels: Record<string, string> = {
@@ -749,6 +811,7 @@ export function formatConditionSummary(
     lt: 'below',
     lte: 'at or below',
     eq: 'exactly',
+    from_bearing: 'from bearing',
   };
 
   const label = metricLabels[metric] ?? metric;

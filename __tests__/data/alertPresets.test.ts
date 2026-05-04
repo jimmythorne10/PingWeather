@@ -36,9 +36,12 @@ const VALID_METRICS: WeatherMetric[] = [
   'dew_point',
   'visibility',
   'cloud_cover',
+  // New metrics added 2026-05-04 (wind direction + pressure tendency)
+  'wind_direction',
+  'pressure_tendency',
 ];
 
-const VALID_OPERATORS: ComparisonOperator[] = ['gt', 'gte', 'lt', 'lte', 'eq'];
+const VALID_OPERATORS: ComparisonOperator[] = ['gt', 'gte', 'lt', 'lte', 'eq', 'from_bearing'];
 
 const VALID_CATEGORIES: AlertPreset['category'][] = [
   'temperature',

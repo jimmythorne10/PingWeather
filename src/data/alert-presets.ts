@@ -276,4 +276,32 @@ export const ALERT_PRESETS: AlertPreset[] = [
     polling_interval_hours: 12,
     cooldown_hours: 24,
   },
+
+  // ── Wind Direction ───────────────────────────────────────
+  {
+    id: 'north-wind',
+    name: 'North Wind',
+    description: 'Alert when wind comes from the north (±45°). Critical for hunters hunting south-facing terrain and fire managers.',
+    icon: '🧭',
+    category: 'wind',
+    conditions: [{ metric: 'wind_direction', operator: 'from_bearing', value: 0, unit: 'degrees', tolerance: 45 }],
+    logical_operator: 'AND',
+    lookahead_hours: 24,
+    polling_interval_hours: 4,
+    cooldown_hours: 6,
+  },
+
+  // ── Pressure Tendency ────────────────────────────────────
+  {
+    id: 'rapid-pressure-drop',
+    name: 'Rapid Pressure Drop',
+    description: 'Alert when barometric pressure is forecast to fall more than 8 hPa over the lookahead window. A classic storm-incoming signal.',
+    icon: '📉',
+    category: 'severe',
+    conditions: [{ metric: 'pressure_tendency', operator: 'lt', value: -8, unit: 'hPa' }],
+    logical_operator: 'AND',
+    lookahead_hours: 24,
+    polling_interval_hours: 4,
+    cooldown_hours: 12,
+  },
 ];

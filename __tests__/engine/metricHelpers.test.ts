@@ -90,6 +90,14 @@ describe('getUnitForMetric', () => {
   test('cloud_cover returns percent', () => {
     expect(getUnitForMetric('cloud_cover')).toBe('percent');
   });
+
+  test('wind_direction returns degrees', () => {
+    expect(getUnitForMetric('wind_direction')).toBe('degrees');
+  });
+
+  test('pressure_tendency returns hPa', () => {
+    expect(getUnitForMetric('pressure_tendency')).toBe('hPa');
+  });
 });
 
 describe('getUnitLabel', () => {
@@ -139,6 +147,10 @@ describe('getUnitLabel', () => {
 
   test('km → km', () => {
     expect(getUnitLabel('km')).toBe('km');
+  });
+
+  test("'degrees' → '°'", () => {
+    expect(getUnitLabel('degrees')).toBe('°');
   });
 });
 

@@ -103,6 +103,7 @@ Deno.serve(async (req) => {
       "dew_point_2m",
       "visibility",
       "cloud_cover",
+      "wind_direction_10m",
     ];
     const defaultDaily = [
       "temperature_2m_max",
