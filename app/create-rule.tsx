@@ -11,15 +11,15 @@ import type { AlertCondition, WeatherMetric, ComparisonOperator, LogicalOperator
 import { getUnitForMetric, getUnitLabel, MOON_PHASE_PRESETS, nearestMoonPhasePreset } from '../src/utils/metricHelpers';
 import { weatherCodeLabel, weatherCodeToEmoji } from '../src/services/weatherIcon';
 
-const METRICS: { value: WeatherMetric; label: string; defaultUnit: string }[] = [
+const METRICS: { value: WeatherMetric; label: string; summaryLabel?: string; defaultUnit: string }[] = [
   { value: 'temperature_high', label: 'Daily High Temp', defaultUnit: '°F' },
   { value: 'temperature_low', label: 'Daily Low Temp', defaultUnit: '°F' },
-  { value: 'temperature_current', label: 'Hourly Temp', defaultUnit: '°F' },
+  { value: 'temperature_current', label: 'Hourly Temp', summaryLabel: 'current temperature', defaultUnit: '°F' },
   { value: 'precipitation_probability', label: 'Rain Chance', defaultUnit: '%' },
   { value: 'wind_speed', label: 'Wind Speed', defaultUnit: 'mph' },
   { value: 'humidity', label: 'Humidity', defaultUnit: '%' },
-  { value: 'feels_like', label: 'Feels Like', defaultUnit: '°F' },
-  { value: 'uv_index', label: 'UV Index', defaultUnit: '' },
+  { value: 'feels_like', label: 'Feels Like', summaryLabel: 'feels-like temperature', defaultUnit: '°F' },
+  { value: 'uv_index', label: 'UV Index', summaryLabel: 'UV index', defaultUnit: '' },
   // ── New metrics ──────────────────────────────────────────────────────────────
   // precipitation_amount: daily total rainfall in mm (or inches when converted)
   { value: 'precipitation_amount', label: 'Precipitation Amount', defaultUnit: 'mm' },
@@ -36,7 +36,7 @@ const METRICS: { value: WeatherMetric; label: string; defaultUnit: string }[] = 
   // moon_phase: % illumination — 0 = new moon, 100 = full moon
   { value: 'moon_phase', label: 'Moon Phase', defaultUnit: '%' },
   // wind_gusts: peak gust speed in mph
-  { value: 'wind_gusts', label: 'Wind Gusts', defaultUnit: 'mph' },
+  { value: 'wind_gusts', label: 'Wind Gusts', summaryLabel: 'wind gust speed', defaultUnit: 'mph' },
   // dew_point: dew point temperature; follows temperature_unit
   { value: 'dew_point', label: 'Dew Point', defaultUnit: '°F' },
   // visibility: converted from raw meters to miles for display and comparison
@@ -673,7 +673,8 @@ export default function CreateRuleScreen() {
 
             // Build the condition sentence
             const condParts = conditions.map((c) => {
-              const metric = METRICS.find((m) => m.value === c.metric)?.label?.toLowerCase() ?? c.metric;
+              const found = METRICS.find((m) => m.value === c.metric);
+              const metric = found?.summaryLabel ?? found?.label?.toLowerCase() ?? c.metric;
               if (c.metric === 'wind_direction') {
                 const dir = COMPASS_DIRECTIONS.find((d) => d.value === c.value)?.label ?? `${c.value}°`;
                 return `the wind comes from ${dir} (±${c.tolerance ?? 45}°)`;
@@ -694,8 +695,9 @@ export default function CreateRuleScreen() {
               ? condParts[0]
               : condParts.slice(0, -1).join(', ') + (logicalOp === 'AND' ? ' and ' : ' or ') + condParts[condParts.length - 1];
 
-            // Lookahead in plain words
-            const lookahead = LOOKAHEAD_OPTIONS.find((o) => o.hours === lookaheadHours)?.label ?? `${lookaheadHours} hours`;
+            // Lookahead in plain words — '1 day' label reads poorly as "in the next 1 day"
+            const lookaheadProseMap: Record<number, string> = { 24: 'day', 48: '2 days', 72: '3 days', 120: '5 days', 168: '7 days' };
+            const lookahead = lookaheadProseMap[lookaheadHours] ?? LOOKAHEAD_OPTIONS.find((o) => o.hours === lookaheadHours)?.label ?? `${lookaheadHours} hours`;
 
             // Polling in plain words
             const polling = pollingHours === 1 ? 'every hour' :
