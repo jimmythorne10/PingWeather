@@ -98,7 +98,7 @@ export interface HourlyForecast {
   surface_pressure?: number[];     // hPa — barometric pressure at surface
   snowfall?: number[];             // cm — hourly snowfall
   snow_depth?: number[];           // cm — snow depth on ground
-  soil_temperature_0cm?: number[]; // °C — soil temperature at 0 cm depth
+  soil_temperature_0cm?: number[]; // °F when temperature_unit=fahrenheit (Open-Meteo converts all temp vars)
 }
 
 export interface DailyForecast {

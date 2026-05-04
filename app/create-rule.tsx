@@ -5,8 +5,10 @@ import { useTokens } from '../src/theme';
 import { useAlertRulesStore } from '../src/stores/alertRulesStore';
 import { useLocationsStore } from '../src/stores/locationsStore';
 import { useAuthStore } from '../src/stores/authStore';
+import { useSettingsStore } from '../src/stores/settingsStore';
 import { TIER_LIMITS } from '../src/types';
 import type { AlertCondition, WeatherMetric, ComparisonOperator, LogicalOperator } from '../src/types';
+import { getUnitForMetric, getUnitLabel, MOON_PHASE_PRESETS, nearestMoonPhasePreset } from '../src/utils/metricHelpers';
 
 const METRICS: { value: WeatherMetric; label: string; defaultUnit: string }[] = [
   { value: 'temperature_high', label: 'Daily High Temp', defaultUnit: '°F' },
@@ -26,8 +28,8 @@ const METRICS: { value: WeatherMetric; label: string; defaultUnit: string }[] = 
   { value: 'snowfall', label: 'Snowfall', defaultUnit: 'cm' },
   // snow_depth: current depth on the ground in cm
   { value: 'snow_depth', label: 'Snow Depth', defaultUnit: 'cm' },
-  // soil_temperature: surface (0 cm) soil temp; respects °F/°C preference
-  { value: 'soil_temperature', label: 'Soil Temperature', defaultUnit: '°C' },
+  // soil_temperature: surface (0 cm) soil temp; Open-Meteo returns °F when temperature_unit=fahrenheit
+  { value: 'soil_temperature', label: 'Soil Temperature', defaultUnit: '°F' },
   // weather_code: WMO integer code — unitless; helper text shown below value input
   { value: 'weather_code', label: 'Weather Condition', defaultUnit: '' },
   // moon_phase: % illumination — 0 = new moon, 100 = full moon
@@ -71,6 +73,7 @@ export default function CreateRuleScreen() {
   const { locations, loadLocations } = useLocationsStore();
   const { rules, createRule, updateRule, loadRules } = useAlertRulesStore();
 
+  const temperatureUnit = useSettingsStore((s) => s.temperatureUnit);
   const tier = profile?.subscription_tier ?? 'free';
   const limits = TIER_LIMITS[tier];
 
@@ -137,21 +140,6 @@ export default function CreateRuleScreen() {
 
   const updateCondition = (index: number, updates: Partial<AlertCondition>) => {
     setConditions(conditions.map((c, i) => i === index ? { ...c, ...updates } : c));
-  };
-
-  const getUnitForMetric = (metric: WeatherMetric): AlertCondition['unit'] => {
-    // soil_temperature must be checked before the generic includes('temperature') below
-    if (metric === 'soil_temperature') return 'celsius';
-    if (metric.includes('temperature') || metric === 'feels_like') return 'fahrenheit';
-    if (metric === 'precipitation_probability' || metric === 'humidity') return 'percent';
-    if (metric === 'wind_speed') return 'mph';
-    if (metric === 'uv_index') return 'index';
-    if (metric === 'barometric_pressure') return 'hPa';
-    if (metric === 'precipitation_amount') return 'mm';
-    if (metric === 'snowfall' || metric === 'snow_depth') return 'cm';
-    if (metric === 'moon_phase') return '%illumination';
-    // weather_code has no meaningful unit — it's a WMO integer code
-    return undefined;
   };
 
   const handleSave = async () => {
@@ -273,7 +261,7 @@ export default function CreateRuleScreen() {
                     { borderColor: condition.metric === m.value ? t.primary : t.border },
                     condition.metric === m.value && { backgroundColor: t.primaryLight },
                   ]}
-                  onPress={() => updateCondition(index, { metric: m.value, unit: getUnitForMetric(m.value) })}
+                  onPress={() => updateCondition(index, { metric: m.value, unit: getUnitForMetric(m.value, temperatureUnit) })}
                 >
                   <Text style={{ color: condition.metric === m.value ? t.primary : t.textSecondary, fontSize: 13 }}>
                     {m.label}
@@ -304,30 +292,52 @@ export default function CreateRuleScreen() {
 
             {/* Value input */}
             <Text style={[styles.condLabel, { color: t.textTertiary }]}>VALUE</Text>
-            <View style={styles.valueRow}>
-              <TextInput
-                style={[styles.valueInput, { backgroundColor: t.inputBackground, borderColor: t.border, color: t.textPrimary }]}
-                keyboardType="numeric"
-                value={condition.value.toString()}
-                onChangeText={(val) => {
-                  const num = parseFloat(val);
-                  if (!isNaN(num)) updateCondition(index, { value: num });
-                }}
-              />
-              <Text style={[styles.unitLabel, { color: t.textTertiary }]}>
-                {METRICS.find((m) => m.value === condition.metric)?.defaultUnit ?? ''}
-              </Text>
-            </View>
+            {condition.metric === 'moon_phase' ? (
+              <View style={styles.chipRow}>
+                {MOON_PHASE_PRESETS.map((preset) => {
+                  const isSelected = nearestMoonPhasePreset(condition.value).value === preset.value;
+                  return (
+                    <Pressable
+                      key={preset.value}
+                      style={[
+                        styles.chip,
+                        styles.moonChip,
+                        { borderColor: isSelected ? t.primary : t.border },
+                        isSelected && { backgroundColor: t.primaryLight },
+                      ]}
+                      onPress={() => updateCondition(index, { value: preset.value })}
+                    >
+                      <Text style={{ color: isSelected ? t.primary : t.textPrimary, fontSize: 14, fontWeight: '500' }}>
+                        {preset.label}
+                      </Text>
+                      <Text style={{ color: isSelected ? t.primary : t.textTertiary, fontSize: 11 }}>
+                        {preset.description}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.valueRow}>
+                <TextInput
+                  style={[styles.valueInput, { backgroundColor: t.inputBackground, borderColor: t.border, color: t.textPrimary }]}
+                  keyboardType="numeric"
+                  value={condition.value.toString()}
+                  onChangeText={(val) => {
+                    const num = parseFloat(val);
+                    if (!isNaN(num)) updateCondition(index, { value: num });
+                  }}
+                />
+                <Text style={[styles.unitLabel, { color: t.textTertiary }]}>
+                  {getUnitLabel(condition.unit)}
+                </Text>
+              </View>
+            )}
 
             {/* Metric-specific helper text */}
             {condition.metric === 'weather_code' && (
               <Text style={[styles.metricHelperText, { color: t.textTertiary }]}>
                 WMO weather codes: ≥95 thunderstorm, ≥80 snow showers, ≥61 rain, ≥51 drizzle, ≥45 fog
-              </Text>
-            )}
-            {condition.metric === 'moon_phase' && (
-              <Text style={[styles.metricHelperText, { color: t.textTertiary }]}>
-                0 = new moon, 50 = quarter moon, 100 = full moon
               </Text>
             )}
             {condition.metric === 'barometric_pressure' && (
@@ -435,8 +445,11 @@ export default function CreateRuleScreen() {
             const condParts = conditions.map((c) => {
               const metric = METRICS.find((m) => m.value === c.metric)?.label?.toLowerCase() ?? c.metric;
               const op = OPERATORS.find((o) => o.value === c.operator)?.label ?? c.operator;
-              const unit = METRICS.find((m) => m.value === c.metric)?.defaultUnit ?? '';
-              return `the ${metric} goes ${op} ${c.value}${unit}`;
+              const unitLabel = getUnitLabel(c.unit);
+              const valueDisplay = c.metric === 'moon_phase'
+                ? nearestMoonPhasePreset(c.value).label
+                : `${c.value}${unitLabel ? ' ' + unitLabel : ''}`;
+              return `the ${metric} goes ${op} ${valueDisplay}`;
             });
 
             const condSentence = condParts.length === 1
@@ -492,6 +505,9 @@ const styles = StyleSheet.create({
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     borderWidth: 1, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14,
+  },
+  moonChip: {
+    paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center', minWidth: 100,
   },
   conditionCard: {
     borderWidth: 1, borderRadius: 12, padding: 16, marginBottom: 8,

@@ -14,7 +14,7 @@
 import {
   getMoonIllumination,
   getMoonIlluminationForDate,
-} from '../src/utils/moonPhase';
+} from '../../src/utils/moonPhase';
 
 describe('getMoonIllumination', () => {
   it('returns near 0 at the known new moon anchor (Jan 6 2000 UTC)', () => {

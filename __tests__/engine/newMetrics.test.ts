@@ -6,7 +6,7 @@
  *   barometric_pressure   — hourly surface_pressure (hPa)
  *   snowfall              — hourly snowfall (cm)
  *   snow_depth            — hourly snow_depth (cm)
- *   soil_temperature      — hourly soil_temperature_0cm (°C)
+ *   soil_temperature      — hourly soil_temperature_0cm (°F when temperature_unit=fahrenheit)
  *   weather_code          — hourly WMO code (numeric, existing field)
  *   moon_phase            — computed illumination % per day (no API field)
  *
@@ -17,7 +17,7 @@
 import {
   getMetricValues,
   type ForecastData,
-} from '../src/utils/weatherEngine';
+} from '../../src/utils/weatherEngine';
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -368,11 +368,8 @@ describe('getMetricValues — moon_phase', () => {
     expect(values).toEqual([]);
   });
 
-  it('returns a value that can be compared numerically (e.g. full moon > 90)', () => {
-    // A rule like "moon_phase >= 90" should work — the value must be numeric and
-    // comparable. We seed a known full-moon date to test this end-to-end.
-    // Jan 20 2000 was a known full moon (illumination ~100).
-    const forecast: ForecastData = {
+  it('returns numeric values that can be compared (e.g. for full moon rule)', () => {
+    const futureForecast: ForecastData = {
       hourly: {
         time: [],
         temperature_2m: [],
@@ -383,24 +380,12 @@ describe('getMetricValues — moon_phase', () => {
         uv_index: [],
       },
       daily: {
-        time: ['2000-01-20'], // known full moon date
-        temperature_2m_max: [45],
-        temperature_2m_min: [32],
-        precipitation_probability_max: [10],
-        wind_speed_10m_max: [8],
-        uv_index_max: [2],
-      },
-    };
-    // NOTE: getMetricValues uses `now` for the window, so this historical date
-    // will be OUTSIDE the lookahead window. The test should therefore return [].
-    // To test the illumination math itself, see moonPhase.test.ts.
-    // This test verifies the metric is handled (not defaulting to unknown_metric []).
-    // We use a future date instead to get actual values:
-    const futureForecast: ForecastData = {
-      ...forecast,
-      daily: {
-        ...forecast.daily,
         time: [futureDateString(0), futureDateString(1)],
+        temperature_2m_max: [45, 40],
+        temperature_2m_min: [32, 30],
+        precipitation_probability_max: [10, 20],
+        wind_speed_10m_max: [8, 12],
+        uv_index_max: [2, 3],
       },
     };
     const values = getMetricValues('moon_phase', futureForecast, 48);
@@ -412,9 +397,8 @@ describe('getMetricValues — moon_phase', () => {
 // ── weatherCodeToEmoji ────────────────────────────────────────
 
 describe('weatherCodeToEmoji', () => {
-  // Import separately since this is a new export
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { weatherCodeToEmoji } = require('../src/utils/weatherEngine');
+  const { weatherCodeToEmoji } = require('../../src/utils/weatherEngine');
 
   it('returns ☀️ for clear sky (code 0)', () => {
     expect(weatherCodeToEmoji(0)).toBe('☀️');
