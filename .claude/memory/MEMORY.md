@@ -1,6 +1,6 @@
 # Project Memory — PingWeather
 
-> Last updated: 2026-05-03 (session 10 — wind direction, pressure tendency, 4 new metrics, AsyncStorage migration, OTA live)
+> Last updated: 2026-05-04 (session 11 — inHg pressure unit, summary card fixes, alphabetical metrics, pressure tendency UX, snow in precipitation history, favicon)
 
 ## Project Identity
 
@@ -15,9 +15,9 @@
 ## Current Status
 
 **Play Store internal testing: LIVE — versionCode 7 installed**
-**OTA LIVE — preview channel, update group `e5cce15f-2f55-41e0-a70c-66fdc591e2cd`, commit `43bd16b`**
+**OTA LIVE — preview channel, update group `96876e3e-d284-476a-8cfc-94a11b04e00d`, commit `d6d18cb`**
 **Supabase migrations: 00001–00017 applied**
-**Tests: 684/684 logic tests passing**
+**Tests: 696/696 logic tests passing**
 **Edge Functions: poll-weather + get-forecast redeployed 2026-05-03 (new hourly params)**
 **Next milestone: closed testing (12+ testers, 14 days)**
 **Closed testing: RECRUITING — tester list in progress. Jimmy posted Discord pitch 2026-04-29. Play Console track created.**
@@ -26,7 +26,10 @@
 
 ### Jimmy's required manual actions (still pending)
 
-_(none — Open-Meteo key rotation complete)_
+1. **Check Apple Developer approval** — Submitted 2026-04-29 (now 5+ days). Check developer.apple.com portal / email. Approval unlocks iOS build path.
+2. **After Apple approval: `eas credentials --platform ios`** — Upload APNs `.p8` auth key. Without it, push notifications don't reach iOS devices.
+3. **After Apple approval: Create app in App Store Connect** — Get `ascAppId` (numeric App Store app ID) and `appleTeamId`, then fill them into `eas.json` submit config (currently `PLACEHOLDER_*`).
+4. **Before iOS launch: `revenueCatIosApiKey`** — Fill in `app.json` extra field. RevenueCat silently no-ops on iOS until this is set.
 
 ### Completed — do not re-propose
 
@@ -79,10 +82,17 @@ _(none — Open-Meteo key rotation complete)_
 | Pressure tendency | Derived metric: `last - first` of surface_pressure in eval window. Positive = rising, negative = falling. Preset: rapid-pressure-drop (lt -8 hPa). 8 unit tests. |
 | AsyncStorage migration | One-time migration from `weatherwatch-*` → `pingweather-*` keys on first app launch. Flag: `pingweather-migration-v1-done`. Non-fatal, safe for fresh installs. Runs in `_layout.tsx` startup. 8 unit tests. |
 | OTA `e5cce15f` | All session-10 work shipped. Edge Functions redeployed (poll-weather + get-forecast) to fetch new hourly params. **Device verification pending.** |
+| inHg pressure unit | `PressureUnit` type in `src/types/index.ts`. `settingsStore` adds `pressureUnit` (default hPa). `metricHelpers.getUnitForMetric` takes optional 3rd param. `weatherEngine` converts at `evaluateCondition` via `applyPressureUnit()` — stored unit drives conversion so backend handles inHg rules automatically. Settings UI toggle. `forecasts.tsx` + `day-detail.tsx` display with unit. `__tests__/engine/pressureUnit.test.ts` (8 tests). |
+| Summary card fixes | `from_bearing` raw operator leak fixed via `opOverride` on metric chip switch. `summaryLabel` optional field on METRICS decouples chip label from prose (fixes "feels like is", "wind gusts is", "uv index", "hourly temp"). Verb changed from "goes" to "is". Weather code shows emoji + label + WMO code. Lookahead prose map fixes "in the next 1 day". Pressure tendency early-return: "the pressure drops/rises by at least X unit". |
+| Alphabetical metric ordering | METRICS array in `create-rule.tsx` reordered A→Z (Barometric Pressure → Wind Speed). |
+| Pressure tendency direction UI | Direction chips (Falling ↓ / Rising ↑) replace raw operator chips for pressure_tendency metric. Magnitude input (always positive). Internal storage unchanged: lte/negative for falling, gte/positive for rising. Summary prose: "the pressure drops/rises by at least X unit". |
+| NumericInput wrapper | `NumericInput` component with local string state buffer in `create-rule.tsx`. Fixes backspace freeze where `value={number.toString()}` overwrote intermediate empty/partial states. |
+| Snow in Precipitation History | `rainfallApi.ts`: `HourlyRaw.snowfall?`, `DailyRaw.snowfall_sum?`, `RainfallData` snow fields. Both fetch functions request snowfall. Open-Meteo applies `precipitation_unit` to snowfall so no manual cm→in conversion. `RainfallCard.tsx` renamed to "PRECIPITATION HISTORY"; snow section shown when `snowTotal > 0` with `freezeBlue` color + SNOWFALL sub-label. RAINFALL sub-label shown only when snow section also present. |
+| Favicon | `assets/favicon.png` replaced with PingWeather branded icon (copy of `assets/icon.png` — navy/orange raindrop+wifi). |
 
 ### Backlog — nice to have, not blocking
 
-- **Favicon** — currently just a dot; not blocking for mobile but fix before any web presence
+_(none)_
 
 ### Not done — gates production
 
@@ -91,7 +101,7 @@ _(none — Open-Meteo key rotation complete)_
 4. **Real SMTP (Resend)** — deferred
 5. **Maestro E2E suite** — deferred
 6. **Integration test: timezone backfill** — `SUPABASE_SERVICE_ROLE_KEY=<key> npx ts-node scripts/test-timezone-backfill.ts`
-7. **Jimmy device verification** — RainfallCard accordion and forecast tap auto-expand confirmed session 6. Notification day label still pending. From session 8: 7 new metrics in rule builder, 5 new presets, branded OTA screen (preview build only), 3-day digest (verify via SQL editor invocation). From session 9+10: moon phase chip picker, unit fixes, forecast UI new metrics display, wind direction compass picker, pressure tendency, AsyncStorage migration — all in OTA `e5cce15f`.
+7. **Jimmy device verification** — RainfallCard accordion and forecast tap auto-expand confirmed session 6. Notification day label still pending. From session 8: 7 new metrics in rule builder, 5 new presets, branded OTA screen (preview build only), 3-day digest (verify via SQL editor invocation). From session 9+10: moon phase chip picker, unit fixes, forecast UI new metrics display, wind direction compass picker, pressure tendency, AsyncStorage migration — all in OTA `e5cce15f`. From session 10/11: inHg display in forecasts/day-detail, alphabetical metric ordering, pressure tendency direction UI (Falling ↓/Rising ↑), snow in precipitation history — pending OTA deployment.
 
 ---
 
@@ -122,8 +132,9 @@ pg_cron hourly
 ### get-forecast — supported extra params
 
 Beyond the default 7-day forecast, `get-forecast` forwards these optional body params to Open-Meteo:
-- `past_days` — integer 0-92; used by `rainfallApi.ts` for rainfall history
-- `precipitation_unit` — `'inch'` or `'mm'`; used by `rainfallApi.ts`
+- `past_days` — integer 0-92; used by `rainfallApi.ts` for precipitation history
+- `precipitation_unit` — `'inch'` or `'mm'`; used by `rainfallApi.ts`; applies to snowfall too (Open-Meteo converts both)
+- Custom `hourly`/`daily` arrays — `rainfallApi.ts` passes `['precipitation','snowfall']` / `['precipitation_sum','snowfall_sum']`
 
 ### OTA deployment — ALWAYS use --platform android
 

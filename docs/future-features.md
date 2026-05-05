@@ -68,3 +68,42 @@ Track forecast accuracy over time by comparing what was forecasted vs what actua
 - Storage cost: minimal per data point, but grows with locations x days
 - Natural Premium tier feature — free/pro users get current alerts, premium gets the intelligence layer
 - Could eventually feed into ML-based alert suggestions ("based on 3 years of data, you typically need freeze prep by Oct 15 at this location")
+
+## Promo Code / Free Trial System
+**Source:** Jimmy, 2026-05-04
+**Priority:** Post-Android-launch (marketing feature)
+
+Allow users to enter a promo code (e.g., `PINGWEATHER30`) to unlock a free tier upgrade for a set period. Primary use case: recruit early adopters and beta testers by offering 1 month free Premium.
+
+### Short-term workaround (use this until the feature is built)
+For small cohorts (12–20 testers), manually set tier via Supabase SQL editor:
+```sql
+UPDATE profiles
+SET subscription_tier = 'premium'
+WHERE id = (SELECT id FROM auth.users WHERE email = 'tester@example.com');
+```
+Reset to `'free'` after the test period or let a real purchase override it.
+
+### Full feature scope
+
+**New DB tables (migration):**
+- `promo_codes`: `code TEXT UNIQUE`, `tier subscription_tier`, `duration_days INT`, `max_uses INT`, `uses_count INT`, `expires_at TIMESTAMPTZ`
+- `promo_redemptions`: `user_id UUID`, `promo_code_id UUID`, `redeemed_at TIMESTAMPTZ`, `access_expires_at TIMESTAMPTZ`, UNIQUE(user_id, promo_code_id)
+
+**New Edge Function `redeem-promo` (verify_jwt=true):**
+- Validate code exists, not expired, under max_uses, user hasn't already redeemed it
+- Atomically: increment uses_count, insert redemption row, update profiles.subscription_tier
+- Return access_expires_at so UI can show "Premium until May 31"
+
+**Tier expiry enforcement:**
+- `poll-weather` must check `promo_redemptions.access_expires_at` when resolving effective tier
+- Scheduled pg_cron job (or check in poll-weather): reset `subscription_tier = 'free'` when promo expires
+- Current `profiles.subscription_tier` has no expiry — this is the main architectural addition
+
+**UI:**
+- Settings screen → "Have a promo code?" text field → invoke `redeem-promo` → show success with expiry date
+
+### Implementation notes
+- RevenueCat Promotional Entitlements (dashboard-only, no code) is a viable alternative for small-scale manual grants — worth evaluating before building the full system
+- RevenueCat purchase/renewal events already override `subscription_tier`, so a real purchase during a promo period upgrades correctly
+- Estimate: ~1.5–2 sessions (migration + edge function + poll-weather tier resolution + UI)

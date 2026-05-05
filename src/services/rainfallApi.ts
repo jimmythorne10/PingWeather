@@ -8,18 +8,25 @@ export interface RainfallData {
   unit: 'in' | 'mm';
   totalFormatted: string;
   days: Array<{ date: string; label: string; amount: number }>;
+  // Snow fields — Open-Meteo applies precipitation_unit to snowfall, so unit matches rain
+  snowTotal: number;
+  snowUnit: 'in' | 'cm';
+  snowTotalFormatted: string;
+  snowDays: Array<{ date: string; label: string; amount: number }>;
 }
 
 // Maps Open-Meteo hourly response shape for the fields we request.
 interface HourlyRaw {
   time: string[];
   precipitation: number[];
+  snowfall?: number[];
 }
 
 // Maps Open-Meteo daily response shape for the fields we request.
 interface DailyRaw {
   time: string[];
   precipitation_sum: number[];
+  snowfall_sum?: number[];
 }
 
 interface ForecastRaw {
@@ -56,7 +63,7 @@ async function fetch24h(
     longitude,
     forecast_days: 1,
     past_days: 1,
-    hourly: ['precipitation'],
+    hourly: ['precipitation', 'snowfall'],
     daily: [],
     precipitation_unit: precipitationUnit,
   });
@@ -68,6 +75,7 @@ async function fetch24h(
 
   const nowIso = new Date().toISOString();
   let total = 0;
+  let snowTotal = 0;
 
   for (let i = 0; i < hourly.time.length; i++) {
     // Only accumulate hours that have already passed — future hours have no
@@ -75,6 +83,7 @@ async function fetch24h(
     // a single array; we want only the historical half.
     if (hourly.time[i] < nowIso) {
       total += hourly.precipitation[i] ?? 0;
+      snowTotal += hourly.snowfall?.[i] ?? 0;
     }
   }
 
@@ -83,12 +92,21 @@ async function fetch24h(
   const rounded = Math.round(total * 10) / 10;
   const unit: 'in' | 'mm' = precipitationUnit === 'inch' ? 'in' : 'mm';
 
+  // Open-Meteo applies precipitation_unit to snowfall too:
+  //   inch → snowfall in inches; mm → snowfall in cm
+  const snowUnit: 'in' | 'cm' = precipitationUnit === 'inch' ? 'in' : 'cm';
+  const snowRounded = Math.round(snowTotal * 10) / 10;
+
   return {
     window: '24h',
     totalMm: rounded,
     unit,
     totalFormatted: rounded === 0 ? 'No rainfall recorded' : `${rounded} ${unit}`,
     days: [],
+    snowTotal: snowRounded,
+    snowUnit,
+    snowTotalFormatted: snowRounded === 0 ? 'No snowfall recorded' : `${snowRounded} ${snowUnit}`,
+    snowDays: [],
   };
 }
 
@@ -106,7 +124,7 @@ async function fetchMultiDay(
     forecast_days: 1,
     past_days: pastDays,
     hourly: [],
-    daily: ['precipitation_sum'],
+    daily: ['precipitation_sum', 'snowfall_sum'],
     precipitation_unit: precipitationUnit,
   });
 
@@ -116,7 +134,9 @@ async function fetchMultiDay(
   }
 
   let total = 0;
+  let snowTotalRaw = 0;
   const days: RainfallData['days'] = [];
+  const snowDays: RainfallData['snowDays'] = [];
 
   for (let i = 0; i < daily.time.length; i++) {
     const amount = Math.round((daily.precipitation_sum[i] ?? 0) * 10) / 10;
@@ -126,10 +146,21 @@ async function fetchMultiDay(
       label: formatDayLabel(daily.time[i]),
       amount,
     });
+
+    const snowAmount = Math.round((daily.snowfall_sum?.[i] ?? 0) * 10) / 10;
+    snowTotalRaw += snowAmount;
+    snowDays.push({
+      date: daily.time[i],
+      label: formatDayLabel(daily.time[i]),
+      amount: snowAmount,
+    });
   }
 
   const rounded = Math.round(total * 10) / 10;
   const unit: 'in' | 'mm' = precipitationUnit === 'inch' ? 'in' : 'mm';
+
+  const snowUnit: 'in' | 'cm' = precipitationUnit === 'inch' ? 'in' : 'cm';
+  const snowTotal = Math.round(snowTotalRaw * 10) / 10;
 
   return {
     window,
@@ -137,6 +168,10 @@ async function fetchMultiDay(
     unit,
     totalFormatted: rounded === 0 ? 'No rainfall recorded' : `${rounded} ${unit}`,
     days,
+    snowTotal,
+    snowUnit,
+    snowTotalFormatted: snowTotal === 0 ? 'No snowfall recorded' : `${snowTotal} ${snowUnit}`,
+    snowDays,
   };
 }
 

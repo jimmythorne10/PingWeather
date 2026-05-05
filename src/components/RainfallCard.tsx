@@ -41,7 +41,7 @@ export function RainfallCard({ locationId, latitude, longitude }: RainfallCardPr
         const result = await fetchRainfallHistory(latitude, longitude, window, precipitationUnit);
         if (!cancelled) setData(result);
       } catch {
-        if (!cancelled) setError('Could not load rainfall data.');
+        if (!cancelled) setError('Could not load precipitation data.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -52,7 +52,13 @@ export function RainfallCard({ locationId, latitude, longitude }: RainfallCardPr
     return () => { cancelled = true; };
   }, [locationId, latitude, longitude, window, precipitationUnit, isExpanded]);
 
+  const hasSnow = (data?.snowTotal ?? 0) > 0;
+
   const nonZeroDays = (data?.days ?? [])
+    .filter((d) => d.amount > 0)
+    .slice(0, MAX_DAY_ROWS);
+
+  const nonZeroSnowDays = (data?.snowDays ?? [])
     .filter((d) => d.amount > 0)
     .slice(0, MAX_DAY_ROWS);
 
@@ -63,9 +69,9 @@ export function RainfallCard({ locationId, latitude, longitude }: RainfallCardPr
         onPress={() => setIsExpanded((v) => !v)}
         accessibilityRole="button"
         accessibilityState={{ expanded: isExpanded }}
-        accessibilityLabel="Rainfall history"
+        accessibilityLabel="Precipitation history"
       >
-        <Text style={styles.sectionLabel}>RAINFALL HISTORY</Text>
+        <Text style={styles.sectionLabel}>PRECIPITATION HISTORY</Text>
         <Text style={styles.chevron}>{isExpanded ? '▾' : '▸'}</Text>
       </Pressable>
 
@@ -91,7 +97,7 @@ export function RainfallCard({ locationId, latitude, longitude }: RainfallCardPr
             <ActivityIndicator
               color={tokens.rainBlue}
               style={styles.spinner}
-              accessibilityLabel="Loading rainfall data"
+              accessibilityLabel="Loading precipitation data"
             />
           )}
 
@@ -101,6 +107,8 @@ export function RainfallCard({ locationId, latitude, longitude }: RainfallCardPr
 
           {!loading && !error && data && (
             <View style={styles.resultContainer}>
+              {/* Rainfall section — sub-label only shown when snow section is also present */}
+              {hasSnow && <Text style={styles.subsectionLabel}>RAINFALL</Text>}
               <Text style={styles.totalAmount}>{data.totalFormatted}</Text>
 
               {data.days.length > 0 && nonZeroDays.length > 0 && (
@@ -118,6 +126,28 @@ export function RainfallCard({ locationId, latitude, longitude }: RainfallCardPr
 
               {data.days.length > 0 && nonZeroDays.length === 0 && (
                 <Text style={styles.noDataNote}>No rainfall on individual days</Text>
+              )}
+
+              {/* Snowfall section — only rendered when there was measurable snowfall */}
+              {hasSnow && (
+                <View style={styles.snowSection}>
+                  <Text style={styles.subsectionLabel}>SNOWFALL</Text>
+                  <Text style={[styles.totalAmount, styles.snowTotalText]}>
+                    {data.snowTotalFormatted}
+                  </Text>
+                  {data.snowDays.length > 0 && nonZeroSnowDays.length > 0 && (
+                    <View style={styles.dayList}>
+                      {nonZeroSnowDays.map((day) => (
+                        <View key={`snow-${day.date}`} style={styles.dayRow}>
+                          <Text style={styles.dayLabel}>{day.label}</Text>
+                          <Text style={[styles.dayAmount, styles.snowAmountText]}>
+                            {day.amount} {data.snowUnit}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
               )}
             </View>
           )}
@@ -187,11 +217,31 @@ const createStyles = (t: ThemeTokens) => ({
   resultContainer: {
     marginBottom: 4,
   },
+  subsectionLabel: {
+    fontSize: 10,
+    fontWeight: '600' as const,
+    color: t.textTertiary,
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
   totalAmount: {
     fontSize: 22,
     fontWeight: '700' as const,
     color: t.rainBlue,
     marginBottom: 8,
+  },
+
+  snowSection: {
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: t.divider,
+  },
+  snowTotalText: {
+    color: t.freezeBlue,
+  },
+  snowAmountText: {
+    color: t.freezeBlue,
   },
 
   dayList: {
