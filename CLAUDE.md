@@ -13,11 +13,12 @@ users to configure custom conditional weather alerts. Users set locations,
 define alert criteria (temperature thresholds, precipitation probability, wind
 speed, etc.), and receive push notifications when conditions are met.
 
-As of 2026-04-09, the MVP backend pipeline is **complete and device-verified**.
-The app is pending monetization wiring (RevenueCat), real SMTP, Open-Meteo
-commercial license, and store submission. See `docs/JIMMY_HANDOFF.md` for the
-current shipping punch list and `docs/KNOWN_ISSUES.md` for the full bug/infra
-history.
+As of 2026-05-04, the MVP backend pipeline is **complete and device-verified**.
+RevenueCat Android, Open-Meteo commercial license, and Play Store internal
+testing are all live. The remaining gate to Android production is closed testing
+(12+ testers, 14 days). iOS is blocked on Apple Developer enrollment approval.
+See `docs/JIMMY_HANDOFF.md` for the shipping punch list and `.claude/memory/MEMORY.md`
+for authoritative current state.
 
 ### Target Users (MVP)
 - **Livestock owners** — Freeze alerts for water troughs and animal welfare
@@ -46,12 +47,12 @@ currently offers this combination.
 - **Platform**: Supabase (project id `ziyxkgbrdliwvztotxli`)
   - **Database**: PostgreSQL with RLS
   - **Auth**: Supabase Auth (email/password, email confirmation OFF)
-  - **API**: Edge Functions (Deno/TypeScript) — `poll-weather`, `evaluate-alerts`, `register-push-token`
+  - **API**: Edge Functions (Deno/TypeScript) — `poll-weather`, `evaluate-alerts`, `register-push-token`, `send-digest`, `fcm-keepalive`, `delete-account`, `subscription-webhook`, `get-forecast`
   - **Scheduling**: `pg_cron` extension calling `poll-weather` hourly via `pg_net` + vault-held service role key
   - **Storage**: none used (yet)
 
 ### Weather Data
-- **Primary**: Open-Meteo API (free for non-commercial, paid license required before charging users)
+- **Primary**: Open-Meteo API — commercial license purchased (required for monetized apps). Server-side key only; client proxies via `get-forecast` Edge Function.
 - **Architecture**: Server-side polling with grid-square caching. One API call per unique grid (0.1°), evaluate all matching rules against cached data.
 
 ### Push Notifications
@@ -71,9 +72,10 @@ currently offers this combination.
 | Alert History | 7 days | 30 days | 90 days |
 | SMS Alerts | No | No | Yes (future) |
 
-RevenueCat wiring pending — subscribe buttons currently show "Coming Soon"
-alerts. `jimmy@truthcenteredtech.com` has a developer tier-override in
-Settings for testing gating without real payments.
+RevenueCat Android is live — `upgrade.tsx` calls `purchasePackage()` fully wired.
+iOS key is empty (`revenueCatIosApiKey: ""` in `app.json`) — blocked on Apple Developer
+approval. `jimmy@truthcenteredtech.com` has a developer tier-override in Settings
+for testing gating without real payments.
 
 ## Project Structure
 
@@ -93,6 +95,7 @@ PingWeather/
 │   │   ├── eula.tsx
 │   │   ├── location-setup.tsx
 │   │   ├── notification-setup.tsx
+│   │   ├── battery-setup.tsx   # Android: Unrestricted battery; iOS: Background App Refresh
 │   │   └── complete.tsx
 │   ├── legal/                  # EULA + privacy policy screens
 │   ├── login.tsx
@@ -117,25 +120,44 @@ PingWeather/
 │   ├── data/                   # Static data (legal docs, presets, metric definitions)
 │   ├── services/               # Pure API clients / helpers
 │   │   ├── weatherApi.ts       # Open-Meteo forecast client
+│   │   ├── rainfallApi.ts      # Precipitation history (24h/7d/30d) via get-forecast
 │   │   ├── geocoding.ts        # Open-Meteo geocoding client
 │   │   ├── hourlyForDay.ts     # Pure filter for day-detail screen
-│   │   ├── weatherIcon.ts      # WMO weather code → emoji
+│   │   ├── weatherIcon.ts      # WMO weather code → emoji + label
+│   │   ├── purchases.ts        # RevenueCat wrapper (lazy-loaded)
+│   │   ├── digestFormatter.ts  # Format forecast data for digest notifications
+│   │   ├── digestScheduler.ts  # Digest scheduling logic
+│   │   ├── subscriptionLogic.ts # Tier limit helpers
 │   │   └── parseRecoveryUrl.ts # Dead code but kept — implicit-flow fallback parser
 │   ├── utils/
 │   │   ├── supabase.ts         # Supabase client with PKCE flowType
 │   │   ├── devAccount.ts       # isDevAccount() email gate
-│   │   └── alertsHelpers.ts    # pickDefaultLocation, filterRules, findLocationName
+│   │   ├── alertsHelpers.ts    # pickDefaultLocation, filterRules, findLocationName
+│   │   ├── weatherEngine.ts    # Pure weather logic — shared with Deno via _shared/
+│   │   ├── metricHelpers.ts    # getUnitForMetric, getUnitLabel, getOperatorsForMetric
+│   │   ├── migrateAsyncStorage.ts  # One-time weatherwatch→pingweather key migration
+│   │   └── moonPhase.ts        # Moon phase calculation helpers
 │   ├── components/
-│   │   └── LocationSearchInput.tsx  # Debounced geocoding autocomplete with race guard
+│   │   ├── LocationSearchInput.tsx  # Debounced geocoding autocomplete with race guard
+│   │   ├── RainfallCard.tsx    # Precipitation history accordion (rainfall + snowfall)
+│   │   ├── UpdateCheckScreen.tsx   # Branded OTA update check screen
+│   │   ├── ErrorBoundary.tsx   # Top-level React error boundary
+│   │   └── WalkthroughModal.tsx    # First-launch guided walkthrough
 │   └── hooks/
 │       └── usePushNotifications.ts  # Lazy-loaded expo-notifications wrapper
 ├── supabase/
 │   ├── config.toml             # verify_jwt flags per function — DO NOT remove
-│   ├── migrations/             # SQL migrations 00001–00007, all applied
+│   ├── migrations/             # SQL migrations 00001–00017, all applied
+│   ├── _shared/                # Deno-compatible shared code (verbatim copy of weatherEngine.ts)
 │   └── functions/              # Edge Functions (Deno)
 │       ├── poll-weather/       # Cron-triggered scheduler + grid cache + push dispatch
 │       ├── evaluate-alerts/    # Rule evaluation engine
-│       └── register-push-token/# Stores Expo push token in profile
+│       ├── register-push-token/# Stores Expo push token in profile
+│       ├── send-digest/        # Daily/weekly forecast digest notifications
+│       ├── fcm-keepalive/      # Daily silent push + token pruning
+│       ├── delete-account/     # GDPR account deletion
+│       ├── subscription-webhook/ # RevenueCat webhook → profiles.subscription_tier
+│       └── get-forecast/       # Open-Meteo proxy (keeps commercial key server-side)
 ├── __tests__/                  # Jest tests, dual project config (logic + components)
 ├── assets/                     # Images, icons, notification icon
 ├── app.json                    # Expo config — includes scheme, permissions, plugins
@@ -178,6 +200,10 @@ npx supabase functions list        # list deployed versions
 # EAS builds
 eas build --platform android --profile development  # new dev APK (burns 1 credit, ~20 min)
 eas credentials                    # manage FCM V1 service account + keystore
+
+# OTA update (JS-only changes — no build credit needed)
+eas update --platform android --channel preview --message "<description>"
+# --platform android is REQUIRED — omitting it tries to build a web bundle (react-native-web not installed)
 ```
 
 ## Environment Variables

@@ -89,6 +89,7 @@
 | NumericInput wrapper | `NumericInput` component with local string state buffer in `create-rule.tsx`. Fixes backspace freeze where `value={number.toString()}` overwrote intermediate empty/partial states. |
 | Snow in Precipitation History | `rainfallApi.ts`: `HourlyRaw.snowfall?`, `DailyRaw.snowfall_sum?`, `RainfallData` snow fields. Both fetch functions request snowfall. Open-Meteo applies `precipitation_unit` to snowfall so no manual cm→in conversion. `RainfallCard.tsx` renamed to "PRECIPITATION HISTORY"; snow section shown when `snowTotal > 0` with `freezeBlue` color + SNOWFALL sub-label. RAINFALL sub-label shown only when snow section also present. |
 | Favicon | `assets/favicon.png` replaced with PingWeather branded icon (copy of `assets/icon.png` — navy/orange raindrop+wifi). |
+| OTA `96876e3e` | Session 11 work deployed 2026-05-04: inHg pressure unit, pressure tendency direction UI, rule builder summary/grammar/alphabetical fixes, NumericInput backspace fix, snow in precipitation history, favicon. **Device verification pending.** |
 
 ### Backlog — nice to have, not blocking
 
@@ -97,11 +98,11 @@ _(none)_
 ### Not done — gates production
 
 1. **Closed testing (12+ testers, 14 days)** — IN PROGRESS recruiting. Track created in Play Console, tester list being built. Jimmy posted Discord pitch 2026-04-29. Clock starts at tester #12 opt-in.
-3. **RevenueCat iOS** — blocked on Apple M0
-4. **Real SMTP (Resend)** — deferred
-5. **Maestro E2E suite** — deferred
-6. **Integration test: timezone backfill** — `SUPABASE_SERVICE_ROLE_KEY=<key> npx ts-node scripts/test-timezone-backfill.ts`
-7. **Jimmy device verification** — RainfallCard accordion and forecast tap auto-expand confirmed session 6. Notification day label still pending. From session 8: 7 new metrics in rule builder, 5 new presets, branded OTA screen (preview build only), 3-day digest (verify via SQL editor invocation). From session 9+10: moon phase chip picker, unit fixes, forecast UI new metrics display, wind direction compass picker, pressure tendency, AsyncStorage migration — all in OTA `e5cce15f`. From session 10/11: inHg display in forecasts/day-detail, alphabetical metric ordering, pressure tendency direction UI (Falling ↓/Rising ↑), snow in precipitation history — pending OTA deployment.
+2. **RevenueCat iOS** — blocked on Apple Developer approval
+3. **Real SMTP (Resend)** — deferred
+4. **Maestro E2E suite** — deferred
+5. **Integration test: timezone backfill** — `SUPABASE_SERVICE_ROLE_KEY=<key> npx ts-node scripts/test-timezone-backfill.ts`
+6. **Jimmy device verification** — RainfallCard accordion and forecast tap auto-expand confirmed session 6. Notification day label still pending. From session 8: 7 new metrics in rule builder, 5 new presets, branded OTA screen (preview build only), 3-day digest (verify via SQL editor invocation). From session 9+10: moon phase chip picker, unit fixes, forecast UI new metrics display, wind direction compass picker, pressure tendency, AsyncStorage migration — all in OTA `e5cce15f`. From session 10/11 (OTA `96876e3e`): inHg display in forecasts/day-detail, alphabetical metric ordering, pressure tendency direction UI (Falling ↓/Rising ↑), snow in precipitation history — all deployed, pending Jimmy on-device confirmation.
 
 ---
 
