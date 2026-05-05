@@ -183,13 +183,14 @@ function getDayLabel(isoDate: string, todayIso: string): string {
 
 // ── 3-day digest body builder ───────────────────────────────
 // Iterates up to maxDays forecast days and formats each as:
-//   "Label: [emoji] Hi X° Lo Y° [🌧 Z%]"
-// Joined with " | " to fit in a single push notification body line.
+//   "[emoji] Label — Hi / Lo[ · Z%]"
+// One line per day, joined with "\n" for an expanded multi-line notification.
 //
 // temperatureUnit: "fahrenheit" | "celsius" — respects per-user preference.
 // weather_code is optional — if the array is missing or a slot is undefined,
 // the emoji segment is simply omitted (forecast_cache from poll-weather may
 // have been written before weather_code was added to the fetch params).
+// Rain probability is shown only when >= 20% to avoid cluttering clear-day lines.
 
 function buildDigestBody(
   daily: ForecastResponse["daily"],
@@ -213,14 +214,14 @@ function buildDigestBody(
     const code = daily.weather_code?.[i];
     const emoji = code !== undefined ? `${weatherCodeToEmoji(code)} ` : "";
 
-    // Precipitation: only show when > 0% to keep the string compact.
+    // Precipitation: only show when >= 20% to avoid cluttering clear-day lines.
     const rainPct = daily.precipitation_probability_max[i];
-    const rainStr = rainPct > 0 ? ` 🌧 ${rainPct}%` : "";
+    const rainStr = rainPct >= 20 ? ` · ${rainPct}%` : "";
 
-    parts.push(`${label}: ${emoji}Hi ${hi} Lo ${lo}${rainStr}`);
+    parts.push(`${emoji}${label} — ${hi} / ${lo}${rainStr}`);
   }
 
-  return parts.join(" | ");
+  return parts.join("\n");
 }
 
 function formatDigest(

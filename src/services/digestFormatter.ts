@@ -4,6 +4,7 @@ interface DailyForecast {
   temperature_2m_min: number[];
   precipitation_probability_max: number[];
   wind_speed_10m_max: number[];
+  weather_code?: number[];
 }
 
 interface ForecastData {
@@ -23,47 +24,71 @@ function formatTemp(f: number, unit: 'fahrenheit' | 'celsius'): string {
   return unit === 'celsius' ? `${fToC(f)}°C` : `${Math.round(f)}°F`;
 }
 
-// FIX 13: Wind was always formatted as "mph" regardless of the user's setting.
-// Accept the unit explicitly so callers can pass the persisted preference.
-function formatWind(mph: number, unit: 'mph' | 'kmh' | 'knots'): string {
-  if (unit === 'kmh') return `${Math.round(mph * 1.60934)} km/h`;
-  if (unit === 'knots') return `${Math.round(mph * 0.868976)} kn`;
-  return `${Math.round(mph)} mph`;
+// Kept in sync with send-digest/index.ts weatherCodeToEmoji (Deno can't import from src/).
+function weatherCodeToEmoji(code: number): string {
+  if (code <= 1) return '☀️';
+  if (code <= 3) return '⛅';
+  if (code <= 49) return '🌫️';
+  if (code <= 69) return '🌧️';
+  if (code <= 79) return '❄️';
+  if (code <= 84) return '🌦️';
+  if (code <= 94) return '🌨️';
+  if (code <= 99) return '⛈️';
+  return '🌡️';
+}
+
+// Index-based labels avoid the "what is today's date" problem in tests.
+// index 0 = Today, 1 = Tomorrow, 2+ = short weekday name derived from the ISO date.
+function getDayLabel(index: number, isoDate: string): string {
+  if (index === 0) return 'Today';
+  if (index === 1) return 'Tomorrow';
+  const [y, m, d] = isoDate.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short' });
+}
+
+function buildLines(
+  daily: DailyForecast,
+  temperatureUnit: 'fahrenheit' | 'celsius',
+  maxDays: number
+): string[] {
+  const count = Math.min(daily.time.length, maxDays);
+  const lines: string[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const label = getDayLabel(i, daily.time[i]);
+    const hi = formatTemp(daily.temperature_2m_max[i], temperatureUnit);
+    const lo = formatTemp(daily.temperature_2m_min[i], temperatureUnit);
+
+    const code = daily.weather_code?.[i];
+    const emoji = code !== undefined ? `${weatherCodeToEmoji(code)} ` : '';
+
+    const rain = daily.precipitation_probability_max[i];
+    const rainStr = rain >= 20 ? ` · ${rain}%` : '';
+
+    lines.push(`${emoji}${label} — ${hi} / ${lo}${rainStr}`);
+  }
+
+  return lines;
 }
 
 export function formatDigestNotification(
   forecast: ForecastData,
   locationName: string,
   temperatureUnit: 'fahrenheit' | 'celsius',
-  frequency: 'daily' | 'weekly',
-  windSpeedUnit: 'mph' | 'kmh' | 'knots' = 'mph'
+  frequency: 'daily' | 'weekly'
 ): DigestNotification {
   const { daily } = forecast;
   if (!daily.time.length) throw new Error('Forecast daily data is empty');
 
   if (frequency === 'daily') {
-    const high = formatTemp(daily.temperature_2m_max[0], temperatureUnit);
-    const low = formatTemp(daily.temperature_2m_min[0], temperatureUnit);
-    const rain = daily.precipitation_probability_max[0];
-    const wind = formatWind(daily.wind_speed_10m_max[0], windSpeedUnit);
-
     return {
       title: `Today's forecast — ${locationName}`,
-      body: `High ${high}, Low ${low} · ${rain}% rain · ${wind} wind`,
+      body: buildLines(daily, temperatureUnit, 3).join('\n'),
     };
   }
 
-  // Weekly: show 7-day high/low range and worst rain day
-  const highs = daily.temperature_2m_max.map((f) => formatTemp(f, temperatureUnit));
-  const lows = daily.temperature_2m_min.map((f) => formatTemp(f, temperatureUnit));
-  const maxRain = Math.max(...daily.precipitation_probability_max);
-  const weekSummary = daily.time
-    .slice(0, 7)
-    .map((_, i) => `${highs[i]}/${lows[i]}`)
-    .join(', ');
-
   return {
     title: `7-day forecast — ${locationName}`,
-    body: `${weekSummary} · Up to ${maxRain}% rain chance`,
+    body: buildLines(daily, temperatureUnit, 5).join('\n'),
   };
 }
