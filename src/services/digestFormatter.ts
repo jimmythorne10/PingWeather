@@ -37,13 +37,10 @@ function weatherCodeToEmoji(code: number): string {
   return '🌡️';
 }
 
-// Index-based labels avoid the "what is today's date" problem in tests.
-// index 0 = Today, 1 = Tomorrow, 2+ = short weekday name derived from the ISO date.
-function getDayLabel(index: number, isoDate: string): string {
-  if (index === 0) return 'Today';
-  if (index === 1) return 'Tomorrow';
+function getDayLabel(isoDate: string): string {
   const [y, m, d] = isoDate.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short' });
+  const weekday = new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short' });
+  return `${weekday} ${m}/${d}`;
 }
 
 function buildLines(
@@ -55,7 +52,7 @@ function buildLines(
   const lines: string[] = [];
 
   for (let i = 0; i < count; i++) {
-    const label = getDayLabel(i, daily.time[i]);
+    const label = getDayLabel(daily.time[i]);
     const hi = formatTemp(daily.temperature_2m_max[i], temperatureUnit);
     const lo = formatTemp(daily.temperature_2m_min[i], temperatureUnit);
 

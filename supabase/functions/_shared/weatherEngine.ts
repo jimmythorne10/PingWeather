@@ -686,9 +686,21 @@ export function compare(
 const INHG_PER_HPA = 1 / 33.8639;
 const PRESSURE_METRICS = new Set(['barometric_pressure', 'pressure_tendency']);
 
+const TEMP_METRICS = new Set([
+  'temperature_current', 'temperature_high', 'temperature_low',
+  'feels_like', 'soil_temperature', 'dew_point',
+]);
+
 function applyPressureUnit(value: number, metric: string, unit: string | undefined): number {
   if (PRESSURE_METRICS.has(metric) && unit === 'inHg') {
     return value * INHG_PER_HPA;
+  }
+  return value;
+}
+
+function applyTemperatureUnit(value: number, metric: string, unit: string | undefined): number {
+  if (TEMP_METRICS.has(metric) && unit === 'celsius') {
+    return (value - 32) * 5 / 9;
   }
   return value;
 }
@@ -701,7 +713,8 @@ export function evaluateCondition(
   const entries = getMetricEntries(condition.metric, forecast, lookaheadHours);
 
   for (const { value, time } of entries) {
-    const converted = applyPressureUnit(value, condition.metric, condition.unit);
+    const withTempUnit = applyTemperatureUnit(value, condition.metric, condition.unit);
+    const converted = applyPressureUnit(withTempUnit, condition.metric, condition.unit);
     if (compare(converted, condition.operator, condition.value, (condition as { tolerance?: number }).tolerance)) {
       return { met: true, matchedValue: converted, matchedTime: time };
     }

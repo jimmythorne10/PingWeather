@@ -10,6 +10,7 @@ import { initializePurchases, loginPurchaseUser, logoutPurchaseUser } from '../s
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { UpdateCheckScreen, type UpdateStatus } from '../src/components/UpdateCheckScreen';
 import { runAsyncStorageMigration } from '../src/utils/migrateAsyncStorage';
+import { setupNotificationChannels, refreshPushToken } from '../src/hooks/usePushNotifications';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -84,6 +85,7 @@ export default function RootLayout() {
   // runAsyncStorageMigration() is idempotent and non-fatal — any failure
   // silently falls through so the app always continues loading.
   useEffect(() => {
+    setupNotificationChannels().catch(() => {});
     runAsyncStorageMigration().then(() => initialize()).then(() => {
       setReady(true);
       initializePurchases().catch(() => {});
@@ -91,10 +93,13 @@ export default function RootLayout() {
   }, []);
 
   // Sync RevenueCat identity with Supabase auth state.
+  // Also silently refresh the push token so FCM rotation / new-APK installs
+  // don't leave a DeviceNotRegistered token in the database.
   useEffect(() => {
     if (!ready) return;
     if (session?.user?.id) {
       loginPurchaseUser(session.user.id).catch(() => {});
+      refreshPushToken().catch(() => {});
     } else {
       logoutPurchaseUser().catch(() => {});
     }

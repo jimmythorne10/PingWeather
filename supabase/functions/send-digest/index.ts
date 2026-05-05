@@ -161,24 +161,15 @@ function weatherCodeToEmoji(code: number): string {
   return "🌡️";
 }
 
-// ── Day label (relative to today UTC) ──────────────────────
-// isoDate: "YYYY-MM-DD" from the Open-Meteo daily.time array.
-// todayIso: today's date in "YYYY-MM-DD" (UTC), pre-computed by the caller
-//           so all days in the loop share the same reference instant.
+// ── Day label ───────────────────────────────────────────────
+// Returns "Weekday M/D" (e.g. "Mon 5/4") for every day — uniform length
+// so the temperature columns align visually in the notification body.
 
-function getDayLabel(isoDate: string, todayIso: string): string {
-  if (isoDate === todayIso) return "Today";
-
-  const tomorrowDate = new Date(todayIso + "T00:00:00Z");
-  tomorrowDate.setUTCDate(tomorrowDate.getUTCDate() + 1);
-  const tomorrowIso = tomorrowDate.toISOString().slice(0, 10);
-
-  if (isoDate === tomorrowIso) return "Tomorrow";
-
-  // Any other day: short weekday name, forced UTC so the label matches the
-  // forecast date regardless of the Edge Function server's local timezone.
-  const d = new Date(isoDate + "T00:00:00Z");
-  return d.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+function getDayLabel(isoDate: string): string {
+  const [, m, d] = isoDate.split("-").map(Number);
+  const weekday = new Date(isoDate + "T00:00:00Z")
+    .toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+  return `${weekday} ${m}/${d}`;
 }
 
 // ── 3-day digest body builder ───────────────────────────────
@@ -199,14 +190,11 @@ function buildDigestBody(
 ): string {
   if (!daily?.time?.length) throw new Error("Empty forecast data");
 
-  // Anchor to UTC "today" once so all day labels are consistent within the call.
-  const todayIso = new Date().toISOString().slice(0, 10);
-
   const dayCount = Math.min(daily.time.length, maxDays);
   const parts: string[] = [];
 
   for (let i = 0; i < dayCount; i++) {
-    const label = getDayLabel(daily.time[i], todayIso);
+    const label = getDayLabel(daily.time[i]);
     const hi = formatTemp(daily.temperature_2m_max[i], temperatureUnit);
     const lo = formatTemp(daily.temperature_2m_min[i], temperatureUnit);
 

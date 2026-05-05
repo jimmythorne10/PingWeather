@@ -24,12 +24,21 @@ describe('formatDigestNotification', () => {
       expect(result.body.split('\n')).toHaveLength(3);
     });
 
-    it('first line contains Today', () => {
-      expect(result.body.split('\n')[0]).toContain('Today');
-    });
-
     it('first line starts with weather emoji (code 0 → ☀️)', () => {
       expect(result.body.split('\n')[0]).toMatch(/^☀️/);
+    });
+
+    it('first line contains weekday abbreviation for 2026-04-22 (Wed)', () => {
+      expect(result.body.split('\n')[0]).toContain('Wed');
+    });
+
+    it('first line contains the short date for day 1 (4/22)', () => {
+      expect(result.body.split('\n')[0]).toContain('4/22');
+    });
+
+    it('first line does not contain Today or Tomorrow', () => {
+      expect(result.body.split('\n')[0]).not.toContain('Today');
+      expect(result.body.split('\n')[0]).not.toContain('Tomorrow');
     });
 
     it('body includes today high in °F', () => {
@@ -48,8 +57,12 @@ describe('formatDigestNotification', () => {
       expect(result.body.split('\n')[1]).toContain('60%');
     });
 
-    it('second line contains Tomorrow', () => {
-      expect(result.body.split('\n')[1]).toContain('Tomorrow');
+    it('second line contains the short date for day 2 (4/23)', () => {
+      expect(result.body.split('\n')[1]).toContain('4/23');
+    });
+
+    it('third line contains the short date for day 3 (4/24)', () => {
+      expect(result.body.split('\n')[2]).toContain('4/24');
     });
   });
 
@@ -75,8 +88,8 @@ describe('formatDigestNotification', () => {
       expect(result.body.split('\n')).toHaveLength(3);
     });
 
-    it('first line starts with Today when no emoji', () => {
-      expect(result.body.split('\n')[0]).toMatch(/^Today/);
+    it('first line starts with weekday when no emoji', () => {
+      expect(result.body.split('\n')[0]).toMatch(/^[A-Z][a-z]{2}/);
     });
   });
 
