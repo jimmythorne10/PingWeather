@@ -175,6 +175,7 @@ export default function RootLayout() {
           <Stack.Screen name="upgrade" options={{ headerShown: true, title: 'Upgrade', presentation: 'modal' }} />
           <Stack.Screen name="legal/eula" options={{ headerShown: true, title: 'Terms of Use' }} />
           <Stack.Screen name="legal/privacy-policy" options={{ headerShown: true, title: 'Privacy Policy' }} />
+          <Stack.Screen name="radar" options={{ headerShown: true }} />
         </Stack>
       </SafeAreaProvider>
     </ErrorBoundary>

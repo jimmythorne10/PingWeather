@@ -219,6 +219,23 @@ export default function ForecastsScreen() {
                   <ActivityIndicator color={tokens.primary} style={{ marginVertical: 24 }} />
                 ) : forecast ? (
                   <>
+                    {/* Radar */}
+                    <Pressable
+                      style={styles.radarButton}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/radar',
+                          params: {
+                            lat: String(loc.latitude),
+                            lng: String(loc.longitude),
+                            locationName: loc.name,
+                          },
+                        })
+                      }
+                    >
+                      <Text style={styles.radarButtonText}>🌧 View Radar →</Text>
+                    </Pressable>
+
                     {/* Hourly scroll */}
                     <Text style={styles.sectionLabel}>Next 24 hours</Text>
                     <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourlyRow}>
@@ -520,5 +537,22 @@ const createStyles = (t: ThemeTokens) => ({
     fontSize: 15,
     color: t.primary,
     fontWeight: '600' as const,
+  },
+
+  radarButton: {
+    marginTop: 12,
+    marginBottom: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: t.rainBlue,
+    backgroundColor: t.primaryLight,
+    alignItems: 'center' as const,
+  },
+  radarButtonText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: t.primary,
   },
 });

@@ -17,7 +17,9 @@
       "bundleIdentifier": "com.truthcenteredtech.pingweather",
       "buildNumber": "1",
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"],
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
         "NSLocationWhenInUseUsageDescription": "PingWeather uses your location to monitor weather conditions at sites you care about and alert you when they match your rules.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "PingWeather uses your location to monitor weather conditions at sites you care about and alert you when they match your rules."
       },
@@ -65,7 +67,8 @@
           "isAndroidBackgroundLocationEnabled": false
         }
       ],
-      "expo-build-properties"
+      "expo-build-properties",
+      ["@rnmapbox/maps", { "RNMapboxMapsDownloadToken": "$MAPBOX_DOWNLOAD_TOKEN" }]
     ],
     "extra": {
       "router": {},
