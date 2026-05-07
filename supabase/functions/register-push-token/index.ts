@@ -13,6 +13,8 @@ const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // Single admin client — used for both user validation and profile update.
 const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+const EXPO_TOKEN_REGEX = /^ExponentPushToken\[.+\]$/;
+
 Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
@@ -43,6 +45,13 @@ Deno.serve(async (req) => {
     if (!push_token || typeof push_token !== "string") {
       return new Response(
         JSON.stringify({ error: "push_token is required" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!EXPO_TOKEN_REGEX.test(push_token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid push token format" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
