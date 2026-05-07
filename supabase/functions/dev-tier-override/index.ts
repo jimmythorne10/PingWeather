@@ -15,7 +15,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const DEV_ACCOUNT_EMAIL = 'jimmy@truthcenteredtech.com'
-const VALID_TIERS = ['free', 'basic', 'pro']
+const VALID_TIERS = ['free', 'pro', 'premium']
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
@@ -29,13 +29,12 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-  // Validate the user's JWT
-  const userClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authHeader } },
-  })
-  const { data: { user }, error: userError } = await userClient.auth.getUser()
+  const adminClient = createClient(supabaseUrl, serviceRoleKey)
+
+  // Validate the user's JWT using the correct pattern (adminClient.auth.getUser(jwt))
+  const jwt = authHeader.replace('Bearer ', '')
+  const { data: { user }, error: userError } = await adminClient.auth.getUser(jwt)
 
   if (userError || !user) {
     return new Response('Unauthorized', { status: 401 })
@@ -58,7 +57,6 @@ Deno.serve(async (req) => {
   }
 
   // Service role bypasses RLS
-  const adminClient = createClient(supabaseUrl, serviceRoleKey)
   const { error } = await adminClient
     .from('profiles')
     .update({ subscription_tier: tier })
