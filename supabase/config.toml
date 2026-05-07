@@ -36,7 +36,8 @@ verify_jwt = true
 
 [functions.subscription-webhook]
 # Called by RevenueCat servers, not the mobile app.
-# Handles its own auth via REVENUECAT_WEBHOOK_SECRET bearer token.
+# Handles its own auth via HMAC-SHA256 X-RevenueCat-Signature header
+# (with Bearer token fallback during transition). No Supabase JWT involved.
 verify_jwt = false
 
 [functions.delete-account]
@@ -50,10 +51,17 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.fcm-keepalive]
-# Called by pg_cron. No user-level auth needed.
+# Called by pg_cron with the service_role key. Bearer auth enforced inside
+# the function. No Supabase gateway JWT verification needed.
 verify_jwt = false
 
 [functions.get-forecast]
 # Called by the mobile app with the authenticated user's JWT.
 # Supabase gateway validates the JWT before the function runs.
 verify_jwt = true
+
+[functions.dev-tier-override]
+# Called from the app with the developer account's JWT. verify_jwt = false
+# so the function can inspect the JWT itself and enforce the email allowlist.
+# The function validates the JWT via userClient.auth.getUser() internally.
+verify_jwt = false

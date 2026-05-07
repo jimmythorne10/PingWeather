@@ -34,6 +34,7 @@ export default function SettingsScreen() {
   const profile = useAuthStore((s) => s.profile);
   const signOut = useAuthStore((s) => s.signOut);
   const updateProfile = useAuthStore((s) => s.updateProfile);
+  const fetchProfile = useAuthStore((s) => s.fetchProfile);
   const settings = useSettingsStore();
   const { themeName, setTheme } = useThemeStore();
   const { registerForPushNotifications } = usePushNotifications();
@@ -116,7 +117,22 @@ export default function SettingsScreen() {
   const handleTierOverride = async (tier: SubscriptionTier) => {
     if (tier === currentTier || tierSwitching) return;
     setTierSwitching(tier);
-    await updateProfile({ subscription_tier: tier });
+    try {
+      const { error } = await supabase.functions.invoke('dev-tier-override', {
+        body: { tier },
+      });
+      if (error) {
+        console.error('Tier override failed:', error);
+        Alert.alert('Error', 'Failed to update tier. Check console.');
+      } else {
+        // Re-fetch profile so the store reflects the new tier written by service role
+        await fetchProfile();
+        Alert.alert('Success', `Tier set to ${tier}`);
+      }
+    } catch (err) {
+      console.error('Tier override error:', err);
+      Alert.alert('Error', 'Failed to update tier. Check console.');
+    }
     setTierSwitching(null);
   };
 
@@ -199,7 +215,7 @@ export default function SettingsScreen() {
             <Text style={styles.devBadge}>DEV</Text>
             <Text style={styles.label}>Tier Override</Text>
             <Text style={styles.devHint}>
-              Switch tiers instantly for testing. This writes directly to your profile in Supabase.
+              Switch tiers instantly for testing. Uses a service-role Edge Function to bypass RLS.
               Only visible to the developer account.
             </Text>
             <View style={styles.tierRow}>

@@ -10,8 +10,12 @@
  * WITH CHECK blocks any user-JWT UPDATE that changes subscription_tier. The
  * subscription-webhook Edge Function (service_role) is the only write path.
  *
- * The RevenueCat API key is stored as EXPO_PUBLIC_REVENUECAT_API_KEY in
- * .env.local. It's a public key (safe to ship in the app binary) — the
+ * Android key lookup order:
+ *   1. EXPO_PUBLIC_REVENUECAT_ANDROID_KEY (EAS env var — preferred, not committed)
+ *   2. app.json extra.revenueCatAndroidApiKey (fallback until EAS env var is set)
+ * After setting the EAS env var in all profiles, remove the key from app.json.
+ *
+ * The RevenueCat API key is a public key (safe to ship in the app binary) — the
  * secret webhook key is stored server-side only.
  *
  * Until the API key is configured, all functions no-op and return safe
@@ -71,12 +75,15 @@ export const TIER_PACKAGE_MAP: Record<Exclude<SubscriptionTier, 'free'>, string>
 
 const API_KEY = Platform.select({
   ios:
-    Constants.expoConfig?.extra?.revenueCatIosApiKey ??
     process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ??
+    Constants.expoConfig?.extra?.revenueCatIosApiKey ??
     '',
   default:
+    // Prefer the EAS env var (not committed to git) over the app.json fallback.
+    // Once EXPO_PUBLIC_REVENUECAT_ANDROID_KEY is set in all EAS profiles,
+    // remove revenueCatAndroidApiKey from app.json.
+    process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ??
     Constants.expoConfig?.extra?.revenueCatAndroidApiKey ??
-    process.env.EXPO_PUBLIC_REVENUECAT_API_KEY ??
     '',
 });
 

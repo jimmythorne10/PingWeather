@@ -63,6 +63,14 @@ async function sendBatch(tokens: string[]): Promise<string[]> {
 }
 
 Deno.serve(async (req) => {
+  // Bearer auth — accepts SUPABASE_SERVICE_ROLE_KEY (called by pg_cron via
+  // vault-held service role key or internal service-to-service calls).
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const expectedToken = `Bearer ${serviceRoleKey}`;
+  if (authHeader !== expectedToken) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   if (req.method !== "POST") {
     return new Response(
       JSON.stringify({ error: "Method not allowed" }),

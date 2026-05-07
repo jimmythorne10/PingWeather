@@ -4,7 +4,10 @@
 // Receives RevenueCat webhook events when a user's subscription
 // status changes. Updates profiles.subscription_tier accordingly.
 //
-// Auth: Bearer token matching REVENUECAT_WEBHOOK_SECRET env var.
+// Auth: HMAC-SHA256 of raw request body, verified against the
+// X-RevenueCat-Signature header using REVENUECAT_WEBHOOK_SECRET.
+// Falls back to plain Bearer token comparison if the signature
+// header is absent (transition period for existing webhook config).
 // JWT verification is OFF (called by RevenueCat servers, not app).
 // ────────────────────────────────────────────────────────────
 
@@ -61,26 +64,74 @@ Deno.serve(async (req) => {
     );
   }
 
-  // 2. Authenticate via webhook secret
-  const webhookSecret = Deno.env.get("REVENUECAT_WEBHOOK_SECRET");
-  const authHeader = req.headers.get("Authorization");
-  const token = authHeader?.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : null;
+  // 2. Read raw body FIRST before any parsing — required for HMAC verification
+  const rawBody = await req.text();
 
-  if (!token || token !== webhookSecret) {
-    console.error(
-      "subscription-webhook auth failure: invalid or missing webhook secret",
-    );
+  // 3. Authenticate via HMAC-SHA256 or bearer token fallback
+  const webhookSecret = Deno.env.get("REVENUECAT_WEBHOOK_SECRET");
+  if (!webhookSecret) {
+    console.error("subscription-webhook: REVENUECAT_WEBHOOK_SECRET not configured");
     return new Response(
       JSON.stringify({ error: "Unauthorized" }),
       { status: 401, headers: { "Content-Type": "application/json" } },
     );
   }
 
+  const receivedSig = req.headers.get("X-RevenueCat-Signature") ?? "";
+
+  if (receivedSig !== "") {
+    // RevenueCat is sending HMAC-SHA256 — verify it
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(webhookSecret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    const sigBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(rawBody));
+    const computedSig = Array.from(new Uint8Array(sigBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    if (computedSig !== receivedSig) {
+      console.error("subscription-webhook auth failure: HMAC signature mismatch");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      );
+    }
+  } else {
+    // No HMAC signature header — fall back to plain Bearer token comparison
+    // (transition period: RevenueCat may not send the signature on all webhooks yet)
+    const authHeader = req.headers.get("Authorization");
+    const token = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : null;
+
+    if (!token || token !== webhookSecret) {
+      console.error(
+        "subscription-webhook auth failure: invalid or missing webhook secret",
+      );
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      );
+    }
+  }
+
   try {
-    // 3. Parse the RevenueCat event payload
-    const body = await req.json();
+    // 4. Parse the RevenueCat event payload (already read as text above)
+    let body: { event?: { type?: unknown; app_user_id?: unknown; product_id?: unknown } };
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return new Response(
+        JSON.stringify({ received: true, action: "malformed_payload" }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     const event = body?.event;
 
     if (!event) {
@@ -123,10 +174,10 @@ Deno.serve(async (req) => {
       `subscription-webhook: type=${type} user=${app_user_id} product=${product_id}`,
     );
 
-    // 4. Determine what action to take
+    // 5. Determine what action to take
     const { action, newTier } = determineAction(type, product_id ?? "");
 
-    // 5. Update the database if there's a tier change
+    // 6. Update the database if there's a tier change
     if (newTier !== null) {
       const supabase = createClient(
         Deno.env.get("SUPABASE_URL")!,
@@ -169,7 +220,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 6. Acknowledge receipt
+    // 7. Acknowledge receipt
     return new Response(
       JSON.stringify({ received: true, action }),
       { status: 200, headers: { "Content-Type": "application/json" } },
