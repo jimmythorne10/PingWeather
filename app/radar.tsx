@@ -1,17 +1,16 @@
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useLocalSearchParams, Stack } from 'expo-router';
 import MapboxGL from '@rnmapbox/maps';
 import { useTokens } from '../src/theme';
 import { useRadarTiles } from '../src/hooks/useRadarTiles';
 
-MapboxGL.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? '');
+const _mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? '';
+if (_mapboxToken) MapboxGL.setAccessToken(_mapboxToken);
 
 const RADAR_OPACITY = 0.75;
 const DEFAULT_ZOOM = 7;
 
 export default function RadarScreen() {
-  const router = useRouter();
   const tokens = useTokens();
   const { lat, lng, locationName } = useLocalSearchParams<{
     lat: string;
@@ -21,13 +20,11 @@ export default function RadarScreen() {
 
   const latitude = parseFloat(lat ?? '39.5');
   const longitude = parseFloat(lng ?? '-98.35');
-  const apiKey = process.env.EXPO_PUBLIC_RAINBOW_API_KEY ?? '';
 
-  const { frames, currentFrame, frameIndex, totalFrames, isPlaying, setFrameIndex, play, pause, goToNow } =
-    useRadarTiles(apiKey);
+  const { frames, frameIndex, totalFrames, isPlaying,
+          setFrameIndex, play, pause, goToNow } = useRadarTiles();
 
   const nowIndex = frames.findIndex(f => f.isCurrent);
-
   const styles = createStyles(tokens);
 
   return (
@@ -56,33 +53,26 @@ export default function RadarScreen() {
           animationDuration={0}
         />
 
-        {currentFrame ? (
+        {frames.map((frame, i) => (
           <MapboxGL.RasterSource
-            id="radar-source"
-            tileUrlTemplates={[currentFrame.tileUrlTemplate]}
+            key={frame.tileUrlTemplate}
+            id={`radar-source-${i}`}
+            tileUrlTemplates={[frame.tileUrlTemplate]}
             tileSize={256}
-            minZoomLevel={0}
-            maxZoomLevel={12}
           >
             <MapboxGL.RasterLayer
-              id="radar-layer"
-              style={{ rasterOpacity: RADAR_OPACITY }}
-              layerIndex={1}
+              id={`radar-layer-${i}`}
+              style={{ rasterOpacity: i === frameIndex ? RADAR_OPACITY : 0 }}
+              aboveLayerID="waterway-label"
             />
           </MapboxGL.RasterSource>
-        ) : null}
+        ))}
       </MapboxGL.MapView>
-
-      {!apiKey ? (
-        <View style={styles.apiWarning}>
-          <Text style={styles.apiWarningText}>Radar unavailable — API key not configured</Text>
-        </View>
-      ) : null}
 
       <View style={[styles.controls, { backgroundColor: tokens.card }]}>
         <View style={styles.frameInfo}>
           <Text style={[styles.frameLabel, { color: tokens.textPrimary }]}>
-            {currentFrame?.label ?? ''}
+            {frames[frameIndex]?.label ?? ''}
           </Text>
           <Text style={[styles.frameCount, { color: tokens.textTertiary }]}>
             {frameIndex + 1} / {totalFrames}
@@ -138,15 +128,15 @@ export default function RadarScreen() {
 
           <Pressable
             style={[styles.controlBtn, { borderColor: tokens.borderLight }]}
-            onPress={() => setFrameIndex(nowIndex >= 0 ? nowIndex + 1 : frameIndex + 1 < totalFrames ? frameIndex + 1 : frameIndex)}
+            onPress={() => setFrameIndex(frameIndex > 0 ? frameIndex - 1 : frameIndex)}
           >
-            <Text style={[styles.controlBtnText, { color: tokens.rainBlue }]}>Fcst →</Text>
+            <Text style={[styles.controlBtnText, { color: tokens.rainBlue }]}>← Hist</Text>
           </Pressable>
         </View>
 
         <View style={styles.attribution}>
           <Text style={[styles.attributionText, { color: tokens.textTertiary }]}>
-            © Mapbox · Powered by Rainbow.ai
+            © Mapbox · NOAA/NWS Radar via IEM
           </Text>
         </View>
       </View>
@@ -162,20 +152,6 @@ const createStyles = (t: ReturnType<typeof useTokens>) =>
     },
     map: {
       flex: 1,
-    },
-    apiWarning: {
-      position: 'absolute',
-      top: 16,
-      left: 16,
-      right: 16,
-      backgroundColor: t.errorLight,
-      borderRadius: 8,
-      padding: 12,
-    },
-    apiWarningText: {
-      color: t.error,
-      fontSize: 13,
-      textAlign: 'center',
     },
     controls: {
       paddingHorizontal: 16,

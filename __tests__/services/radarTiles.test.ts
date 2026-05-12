@@ -1,161 +1,124 @@
-import {
-  roundToTenMinutes,
-  getSnapshotTimestamp,
-  buildTileUrlTemplate,
-  getAnimationFrames,
-} from '../../src/services/radarTiles';
+import { buildRadarFrames } from '../../src/services/radarTiles';
 
-describe('roundToTenMinutes', () => {
-  it('rounds down from the middle of an interval', () => {
-    expect(roundToTenMinutes(new Date('2026-05-06T14:37:00Z')))
-      .toEqual(new Date('2026-05-06T14:30:00Z'));
-  });
+// Pin "now" to a clean 5-minute UTC boundary so assertions on timestamps are deterministic
+const PINNED_NOW = new Date('2026-05-08T18:00:00.000Z').getTime(); // exactly on a 5-min boundary
 
-  it('returns unchanged when already on a 10-minute boundary', () => {
-    const d = new Date('2026-05-06T14:30:00Z');
-    expect(roundToTenMinutes(d)).toEqual(d);
-  });
-
-  it('rounds down from 1 second before the next boundary', () => {
-    expect(roundToTenMinutes(new Date('2026-05-06T14:39:59Z')))
-      .toEqual(new Date('2026-05-06T14:30:00Z'));
-  });
-
-  it('rounds down from 1 second after a boundary', () => {
-    expect(roundToTenMinutes(new Date('2026-05-06T14:30:01Z')))
-      .toEqual(new Date('2026-05-06T14:30:00Z'));
-  });
+beforeEach(() => {
+  jest.spyOn(Date, 'now').mockReturnValue(PINNED_NOW);
 });
 
-describe('getSnapshotTimestamp', () => {
-  it('returns Unix seconds for the 10-minute-rounded time', () => {
-    const now = new Date('2026-05-06T14:37:00Z');
-    const expected = new Date('2026-05-06T14:30:00Z').getTime() / 1000;
-    expect(getSnapshotTimestamp(now)).toBe(expected);
-  });
-
-  it('returns an integer', () => {
-    expect(Number.isInteger(getSnapshotTimestamp(new Date('2026-05-06T14:37:45Z')))).toBe(true);
-  });
+afterEach(() => {
+  jest.restoreAllMocks();
 });
 
-describe('buildTileUrlTemplate', () => {
-  const snapshot = 1746538200;
-  const apiKey = 'test-key-abc';
-
-  it('builds the exact correct URL', () => {
-    expect(buildTileUrlTemplate(1746538200, 600, 'mykey')).toBe(
-      'https://api.rainbow.ai/v1/tiles/precip/1746538200/600/{z}/{x}/{y}?apikey=mykey'
-    );
+describe('buildRadarFrames', () => {
+  it('returns 12 frames total (11 past + 1 current)', () => {
+    expect(buildRadarFrames().length).toBe(12);
   });
 
-  it('embeds forecast offset 0 for current conditions', () => {
-    const url = buildTileUrlTemplate(snapshot, 0, apiKey);
-    expect(url).toContain('/0/{z}');
+  it('has exactly one frame marked isCurrent=true', () => {
+    expect(buildRadarFrames().filter(f => f.isCurrent).length).toBe(1);
   });
 
-  it('embeds the snapshot timestamp in the path', () => {
-    expect(buildTileUrlTemplate(snapshot, 0, apiKey)).toContain('1746538200');
+  it('current frame is the last frame (most recent)', () => {
+    const frames = buildRadarFrames();
+    expect(frames[frames.length - 1].isCurrent).toBe(true);
   });
 
-  it('appends the API key as a query parameter', () => {
-    expect(buildTileUrlTemplate(snapshot, 0, apiKey)).toContain('apikey=test-key-abc');
+  it('current frame label is "Now"', () => {
+    expect(buildRadarFrames().find(f => f.isCurrent)?.label).toBe('Now');
   });
 
-  it('contains Mapbox tile coordinate placeholders', () => {
-    const url = buildTileUrlTemplate(snapshot, 0, apiKey);
-    expect(url).toContain('{z}');
-    expect(url).toContain('{x}');
-    expect(url).toContain('{y}');
+  it('no forecast frames exist (IEM has no forecast radar)', () => {
+    expect(buildRadarFrames().every(f => !f.isForecast)).toBe(true);
   });
 
-  it('targets the Rainbow.ai API domain', () => {
-    expect(buildTileUrlTemplate(snapshot, 0, apiKey)).toContain('api.rainbow.ai');
-  });
-});
-
-describe('getAnimationFrames', () => {
-  const now = new Date('2026-05-06T14:37:00Z');
-
-  it('returns 7 frames for 30 past + current + 30 future minutes', () => {
-    expect(getAnimationFrames({ now, pastMinutes: 30, futureMinutes: 30 }).length).toBe(7);
+  it('all non-current frames have isPast=true', () => {
+    buildRadarFrames().filter(f => !f.isCurrent).forEach(f => {
+      expect(f.isPast).toBe(true);
+    });
   });
 
-  it('returns 1 frame when past and future are both 0', () => {
-    const frames = getAnimationFrames({ now, pastMinutes: 0, futureMinutes: 0 });
-    expect(frames.length).toBe(1);
-    expect(frames[0].isCurrent).toBe(true);
+  it('past frame labels match -Xmin pattern', () => {
+    buildRadarFrames().filter(f => f.isPast).forEach(f => {
+      expect(f.label).toMatch(/^-\d+min$/);
+    });
   });
 
-  it('marks exactly one frame as current', () => {
-    const frames = getAnimationFrames({ now });
-    expect(frames.filter(f => f.isCurrent).length).toBe(1);
-  });
-
-  it('labels the current frame "Now"', () => {
-    const frames = getAnimationFrames({ now });
-    expect(frames.find(f => f.isCurrent)?.label).toBe('Now');
-  });
-
-  it('marks past frames with isPast = true', () => {
-    const frames = getAnimationFrames({ now, pastMinutes: 30, futureMinutes: 0 });
-    frames.filter(f => !f.isCurrent).forEach(f => expect(f.isPast).toBe(true));
-  });
-
-  it('marks future frames with isForecast = true', () => {
-    const frames = getAnimationFrames({ now, pastMinutes: 0, futureMinutes: 30 });
-    frames.filter(f => !f.isCurrent).forEach(f => expect(f.isForecast).toBe(true));
-  });
-
-  it('frames are in strict chronological order', () => {
-    const frames = getAnimationFrames({ now, pastMinutes: 60, futureMinutes: 60 });
+  it('frames are in strict chronological order 5 minutes apart', () => {
+    const frames = buildRadarFrames();
     for (let i = 1; i < frames.length; i++) {
-      expect(frames[i].offsetSeconds).toBeGreaterThan(frames[i - 1].offsetSeconds);
+      expect(frames[i].timestamp - frames[i - 1].timestamp).toBe(5 * 60 * 1000);
     }
   });
 
-  it('current frame has offsetSeconds of 0', () => {
-    expect(getAnimationFrames({ now }).find(f => f.isCurrent)?.offsetSeconds).toBe(0);
+  it('oldest frame is -55min relative to now', () => {
+    const frames = buildRadarFrames();
+    expect(frames[0].timestamp).toBe(PINNED_NOW - 55 * 60 * 1000);
+    expect(frames[0].label).toBe('-55min');
   });
 
-  it('current frame tile URL has zero forecast offset in the path', () => {
-    const frames = getAnimationFrames({ now }, 'key');
-    expect(frames.find(f => f.isCurrent)?.tileUrlTemplate).toMatch(/\/0\/\{z\}/);
+  it('most recent past frame is -5min', () => {
+    const frames = buildRadarFrames();
+    const lastPast = frames[frames.length - 2];
+    expect(lastPast.isPast).toBe(true);
+    expect(lastPast.label).toBe('-5min');
   });
 
-  it('every frame has a non-empty tileUrlTemplate', () => {
-    getAnimationFrames({ now }, 'key').forEach(f =>
-      expect(f.tileUrlTemplate.length).toBeGreaterThan(0)
-    );
+  it('current frame timestamp equals pinned now', () => {
+    const current = buildRadarFrames().find(f => f.isCurrent)!;
+    expect(current.timestamp).toBe(PINNED_NOW);
   });
 
-  it('past frame labels start with "-"', () => {
-    const frames = getAnimationFrames({ now, pastMinutes: 30, futureMinutes: 0 });
-    frames.filter(f => f.isPast).forEach(f => expect(f.label).toMatch(/^-/));
+  it('tile URLs use IEM NEXRAD CDN', () => {
+    buildRadarFrames().forEach(f => {
+      expect(f.tileUrlTemplate).toContain('mesonet.agron.iastate.edu');
+    });
   });
 
-  it('future frame labels start with "+"', () => {
-    const frames = getAnimationFrames({ now, pastMinutes: 0, futureMinutes: 30 });
-    frames.filter(f => f.isForecast).forEach(f => expect(f.label).toMatch(/^\+/));
+  it('tile URLs contain Mapbox XYZ placeholders', () => {
+    buildRadarFrames().forEach(f => {
+      expect(f.tileUrlTemplate).toContain('{z}');
+      expect(f.tileUrlTemplate).toContain('{x}');
+      expect(f.tileUrlTemplate).toContain('{y}');
+    });
   });
 
-  it('uses "min" suffix for intervals under 60 minutes', () => {
-    const frames = getAnimationFrames({ now, pastMinutes: 30, futureMinutes: 0 });
-    expect(frames[0].label).toBe('-30min');
+  it('current frame uses nexrad-n0q layer (no time suffix)', () => {
+    const current = buildRadarFrames().find(f => f.isCurrent)!;
+    expect(current.tileUrlTemplate).toContain('/nexrad-n0q/');
+    expect(current.tileUrlTemplate).not.toContain('nexrad-n0q-m');
   });
 
-  it('uses "hr" suffix for exact hour multiples', () => {
-    const frames = getAnimationFrames({ now, pastMinutes: 60, futureMinutes: 0 });
-    expect(frames[0].label).toBe('-1hr');
+  it('past frames use timed nexrad-n0q-mXXm layer names', () => {
+    buildRadarFrames().filter(f => f.isPast).forEach(f => {
+      expect(f.tileUrlTemplate).toMatch(/nexrad-n0q-m\d{2}m/);
+    });
   });
 
-  it('uses combined hr+min format for non-exact hours', () => {
-    const frames = getAnimationFrames({ now, pastMinutes: 70, futureMinutes: 0 });
-    expect(frames[0].label).toBe('-1hr10min');
+  it('oldest past frame uses -m55m layer', () => {
+    expect(buildRadarFrames()[0].tileUrlTemplate).toContain('nexrad-n0q-m55m');
   });
 
-  it('+2hr label for 120-minute future frame', () => {
-    const frames = getAnimationFrames({ now, pastMinutes: 0, futureMinutes: 120 });
-    expect(frames[frames.length - 1].label).toBe('+2hr');
+  it('second oldest past frame uses -m50m layer', () => {
+    expect(buildRadarFrames()[1].tileUrlTemplate).toContain('nexrad-n0q-m50m');
+  });
+
+  it('-5min frame uses -m05m layer (zero-padded)', () => {
+    const frames = buildRadarFrames();
+    const fiveMin = frames[frames.length - 2];
+    expect(fiveMin.tileUrlTemplate).toContain('nexrad-n0q-m05m');
+  });
+
+  it('uses 5-minute cache endpoint', () => {
+    buildRadarFrames().forEach(f => {
+      expect(f.tileUrlTemplate).toContain('/cache/tile.py/');
+    });
+  });
+
+  it('timestamps round down to 5-minute boundaries when now is off-boundary', () => {
+    jest.spyOn(Date, 'now').mockReturnValue(PINNED_NOW + 2.5 * 60 * 1000); // 2.5 min past boundary
+    const frames = buildRadarFrames();
+    expect(frames[frames.length - 1].timestamp).toBe(PINNED_NOW); // still pinned to boundary
   });
 });

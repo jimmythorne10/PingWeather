@@ -1,6 +1,6 @@
 # Project Memory — PingWeather
 
-> Last updated: 2026-05-04 (session 11 — inHg pressure unit, summary card fixes, alphabetical metrics, pressure tendency UX, snow in precipitation history, favicon)
+> Last updated: 2026-05-07 (session 14 — full security audit + Mapbox radar + 3 EAS preview builds, 3rd succeeded; uploaded to Play Console for closed testing)
 
 ## Project Identity
 
@@ -14,22 +14,23 @@
 
 ## Current Status
 
-**Play Store internal testing: LIVE — versionCode 7 installed**
-**OTA LIVE — preview channel, update group `96876e3e-d284-476a-8cfc-94a11b04e00d`, commit `d6d18cb`**
-**Supabase migrations: 00001–00017 applied**
-**Tests: 696/696 logic tests passing**
-**Edge Functions: poll-weather + get-forecast redeployed 2026-05-03 (new hourly params)**
-**Next milestone: closed testing (12+ testers, 14 days)**
-**Closed testing: RECRUITING — tester list in progress. Jimmy posted Discord pitch 2026-04-29. Play Console track created.**
+**Play Store: versionCode 8 AAB built (preview profile, 2026-05-07) — being uploaded for closed testing**
+**Supabase migrations: 00001–00019 applied**
+**Tests: 715/715 logic tests passing**
+**Edge Functions deployed (session 14): fcm-keepalive (auth hardened), subscription-webhook (HMAC-SHA256), register-push-token (token format validation), dev-tier-override (new)**
+**Closed testing: Alpha track submitted 2026-05-05. versionCode 8 being uploaded 2026-05-07. Opt-in URL: https://play.google.com/apps/testing/com.truthcenteredtech.pingweather. Google Group: pingweather-betagooglegroupscom@truthcenteredtech.com. Recruitment posts pending Google approval.**
 **Apple Developer enrollment: Company (Truth Centered Tech) submitted 2026-04-29 — awaiting approval.**
-**Open-Meteo key rotation: COMPLETE — new key `y8A63e8V82EPsr7j` set in Supabase secrets 2026-05-03. Old key `eNFRDFntQmSudB7E` revoked. `EXPO_PUBLIC_OPEN_METEO_API_KEY` removed from EAS preview + production.**
+**Open-Meteo key rotation: COMPLETE — new key `y8A63e8V82EPsr7j` set in Supabase secrets 2026-05-03. Old key `eNFRDFntQmSudB7E` revoked.**
 
 ### Jimmy's required manual actions (still pending)
 
-1. **Check Apple Developer approval** — Submitted 2026-04-29 (now 5+ days). Check developer.apple.com portal / email. Approval unlocks iOS build path.
-2. **After Apple approval: `eas credentials --platform ios`** — Upload APNs `.p8` auth key. Without it, push notifications don't reach iOS devices.
-3. **After Apple approval: Create app in App Store Connect** — Get `ascAppId` (numeric App Store app ID) and `appleTeamId`, then fill them into `eas.json` submit config (currently `PLACEHOLDER_*`).
-4. **Before iOS launch: `revenueCatIosApiKey`** — Fill in `app.json` extra field. RevenueCat silently no-ops on iOS until this is set.
+1. **Recruit 12+ closed testers** — Post to r/betatesting, Discord, Facebook groups. Opt-in URL: https://play.google.com/apps/testing/com.truthcenteredtech.pingweather. 14-day clock starts at tester #12. Do NOT move to open testing until device-verified.
+2. **Device verify versionCode 8** — Core flows: login, add location, create rule, receive notification. Many features pending device verification (see Completed table notes).
+3. **Move EXPO_PUBLIC_REVENUECAT_ANDROID_KEY to EAS env var** — Currently hardcoded in `app.json` extra. Should be `sensitive` EAS var + `process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` in purchases.ts. Low urgency but is a key hygiene issue.
+4. **Check Apple Developer approval** — Submitted 2026-04-29 (now 8+ days). Check developer.apple.com portal / email. Approval unlocks iOS build path.
+5. **After Apple approval: `eas credentials --platform ios`** — Upload APNs `.p8` auth key. Without it, push notifications don't reach iOS devices.
+6. **After Apple approval: Create app in App Store Connect** — Get `ascAppId` (numeric App Store app ID) and `appleTeamId`, then fill them into `eas.json` submit config (currently `PLACEHOLDER_*`).
+7. **Before iOS launch: `revenueCatIosApiKey`** — Fill in `app.json` extra field. RevenueCat silently no-ops on iOS until this is set.
 
 ### Completed — do not re-propose
 
@@ -73,7 +74,14 @@
 | FCM keepalive token pruning | `fcm-keepalive` now prunes DeviceNotRegistered tokens in a single batch UPDATE |
 | 7 new alert metrics | precipitation_amount, barometric_pressure, snowfall, snow_depth, soil_temperature, weather_code, moon_phase — in weatherEngine + types + rule builder + 5 new presets. Shipped OTA `53231720` 2026-05-03. **Device verification pending.** |
 | WMO emoji in notifications | `weatherCodeToEmoji()` in weatherEngine; prepended to poll-weather push body. Shipped same OTA. |
-| 3-day digest | send-digest shows Today/Tomorrow/DayName with Hi/Lo/emoji/rain%. Deployed 2026-05-03. **Live invocation verification pending.** |
+| Account deletion web page | `truthcenteredtech.com/pingweather-delete-account` — created 2026-05-05 for Google Play Data Safety form requirement |
+| Data Safety form | Updated 2026-05-05: purchase history added, account deletion URL corrected, advertising ID declared No. Submitted with 17-change review. |
+| Multi-line digest notification | send-digest shows uniform `Weekday M/D — Hi/Lo · rain%` format (3 days for daily, 5 for weekly), emoji prefix from WMO code, rain only when ≥20%. `getDayLabel(isoDate)` uses UTC to avoid timezone drift. `formatDigestNotification` in `src/services/digestFormatter.ts`. **Device verified by Jimmy 2026-05-04.** |
+| Push token auto-refresh on launch | `refreshPushToken()` called in `app/_layout.tsx` startup (when session exists). Fixes `DeviceNotRegistered` errors after APK reinstall rotates FCM token. 20 digestFormatter tests. |
+| Notification channels at every launch | `setupNotificationChannels()` called at app startup (not just onboarding). Ensures `forecast-digest` Android channel exists after fresh installs / APK upgrades. |
+| Temperature unit conversion in evaluateCondition | `poll-weather` fetches with `temperature_unit=fahrenheit` hardcoded. Celsius users' thresholds were compared against raw °F values (false positives). Fixed: `applyTemperatureUnit()` in `weatherEngine.ts` converts °F→°C for all temp metrics when `unit='celsius'`. Same fix in `_shared/weatherEngine.ts`. 9 new tests in `__tests__/engine/temperatureUnit.test.ts`. |
+| OTA `9452f087` | push token refresh + notification channels fix deployed 2026-05-04 |
+| OTA `f8043ecc` | temperature unit conversion fix deployed 2026-05-04 |
 | Branded OTA update screen | `UpdateCheckScreen.tsx` — navy background, animated pulse, 5s timeout/fallback. `checkAutomatically: NEVER` in app.json. Shipped same OTA. **Device verification pending (preview/production build only).** |
 | Moon phase chip picker + unit bugs fixed | Rule builder: moon_phase shows 🌑🌒🌓🌔🌕 phase chips (not raw %). soil_temperature unit fixed (was hardcoded celsius; now follows user's temperatureUnit). snow_depth unit was also wrong. `src/utils/metricHelpers.ts` extracted. 62 tests were silently skipped (wrong __tests__ subdirectory) — moved to `__tests__/engine/` where logic project picks them up. 524 → 586 tests. |
 | Forecast UI — new metrics display | forecasts.tsx daily cards: moon emoji + UV index (≥3) + baro pressure (noon reading). day-detail hourly rows: surface_pressure, snowfall, snow_depth, soil_temperature with user unit. **Device verification pending.** |
@@ -90,6 +98,10 @@
 | Snow in Precipitation History | `rainfallApi.ts`: `HourlyRaw.snowfall?`, `DailyRaw.snowfall_sum?`, `RainfallData` snow fields. Both fetch functions request snowfall. Open-Meteo applies `precipitation_unit` to snowfall so no manual cm→in conversion. `RainfallCard.tsx` renamed to "PRECIPITATION HISTORY"; snow section shown when `snowTotal > 0` with `freezeBlue` color + SNOWFALL sub-label. RAINFALL sub-label shown only when snow section also present. |
 | Favicon | `assets/favicon.png` replaced with PingWeather branded icon (copy of `assets/icon.png` — navy/orange raindrop+wifi). |
 | OTA `96876e3e` | Session 11 work deployed 2026-05-04: inHg pressure unit, pressure tendency direction UI, rule builder summary/grammar/alphabetical fixes, NumericInput backspace fix, snow in precipitation history, favicon. **Device verification pending.** |
+| Security hardening (session 13) | M02: dropped `forecast_cache` authenticated SELECT policy (migration 00018). M03: push token format regex in `register-push-token`. M04: alert_rules + locations input length CHECK constraints (migration 00019). LOW-04: removed `RECEIVE_BOOT_COMPLETED` + `WAKE_LOCK` from `app.json`. LOW-01: `@xmldom/xmldom` HIGH resolved via `npm audit fix`. LOW-02: `send_digest_auth_token` rotated; old value scrubbed from MEMORY.md. |
+| Security audit session 14 | Full 11-issue audit for open testing. H01: `fcm-keepalive` bearer auth added. H03: `subscription-webhook` HMAC-SHA256 body verification (`X-RevenueCat-Signature`, raw body with `req.text()`). M01: `dev-tier-override` Edge Function created + two bugs fixed (wrong JWT pattern → `adminClient.auth.getUser(jwt)`; wrong VALID_TIERS `['free','basic','pro']` → `['free','pro','premium']`). Settings screen wired to invoke it. All Edge Functions redeployed. |
+| Mapbox animated radar screen | `@rnmapbox/maps` 10.3.0 + RainViewer radar tiles (real NEXRAD data, free with attribution). EAS env vars: `EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN` + `RNMAPBOX_MAPS_DOWNLOAD_TOKEN` (preview + production, sensitive). No radar API key needed — RainViewer public endpoint. Attribution: "Radar by RainViewer". RainViewer ToC: free tier OK for commercial use with attribution; revisit paid tier at production scale. Rainbow.ai was removed (it was an ML precipitation model, not real radar). `EXPO_PUBLIC_RAINBOW_API_KEY` scrubbed from .env.local; still present in EAS preview + production envs — remove with `eas env:delete`. |
+| EAS preview build versionCode 8 | Build succeeded 2026-05-07 after two 401 failures (see Mapbox EAS gotcha in Known Bugs). Uploaded to Play Console for closed testing. |
 
 ### Backlog — nice to have, not blocking
 
@@ -97,12 +109,12 @@ _(none)_
 
 ### Not done — gates production
 
-1. **Closed testing (12+ testers, 14 days)** — IN PROGRESS recruiting. Track created in Play Console, tester list being built. Jimmy posted Discord pitch 2026-04-29. Clock starts at tester #12 opt-in.
+1. **Closed testing (12+ testers, 14 days)** — versionCode 8 being uploaded 2026-05-07. Once live in Play Console: verify Google Group allows external members (incognito test pending), then post recruitment to r/betatesting + Discord + Facebook groups. Clock starts at tester #12 opt-in.
 2. **RevenueCat iOS** — blocked on Apple Developer approval
 3. **Real SMTP (Resend)** — deferred
 4. **Maestro E2E suite** — deferred
 5. **Integration test: timezone backfill** — `SUPABASE_SERVICE_ROLE_KEY=<key> npx ts-node scripts/test-timezone-backfill.ts`
-6. **Jimmy device verification** — RainfallCard accordion and forecast tap auto-expand confirmed session 6. Notification day label still pending. From session 8: 7 new metrics in rule builder, 5 new presets, branded OTA screen (preview build only), 3-day digest (verify via SQL editor invocation). From session 9+10: moon phase chip picker, unit fixes, forecast UI new metrics display, wind direction compass picker, pressure tendency, AsyncStorage migration — all in OTA `e5cce15f`. From session 10/11 (OTA `96876e3e`): inHg display in forecasts/day-detail, alphabetical metric ordering, pressure tendency direction UI (Falling ↓/Rising ↑), snow in precipitation history — all deployed, pending Jimmy on-device confirmation.
+6. **Jimmy device verification** — RainfallCard accordion and forecast tap auto-expand confirmed session 6. Digest multi-line notification confirmed session 12. Still pending: 7 new metrics in rule builder (5 new presets), branded OTA screen, moon phase chip picker, forecast UI new metrics, wind direction compass, pressure tendency, AsyncStorage migration (OTA `e5cce15f`). From session 10/11 (OTA `96876e3e`): inHg display in forecasts/day-detail, alphabetical metric ordering, pressure tendency direction UI, snow in precipitation history — all pending Jimmy on-device. Radar screen + all session 14 security changes also pending device verification.
 
 ---
 
@@ -170,9 +182,11 @@ Always use `adminClient.auth.getUser(jwt)` where `adminClient = createClient(url
 
 `npx supabase db query "select name from vault.decrypted_secrets" --linked` to see what's actually in vault.
 
-Existing secrets: `poll_weather_function_url`, `poll_weather_service_role_key`.
+Existing secrets: `poll_weather_function_url`, `poll_weather_service_role_key`, `send_digest_auth_token`.
 Wrong names (migration 00009/00011 used these — they return NULL): `supabase_url`, `service_role_key`.
 Migration 00016 fixes the digest/keepalive cron jobs by deriving their URLs from `poll_weather_function_url` via regexp_replace.
+
+`send_digest_auth_token` — the value is stored in the Supabase Vault only and must NEVER be documented in source, memory files, or chat. To rotate: generate a new value with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` and update the vault secret at Dashboard -> Project Settings -> Vault -> send_digest_auth_token.
 
 ### Location timezone — required for digest
 
@@ -229,6 +243,29 @@ DO NOT re-attempt without concrete UX research.
 - `logic` project — node env, all stores/services/helpers. Acceptable verification.
 - `components` project — jsdom, text-presence only. **FRAUDULENT VERIFICATION** — never cite as proof UI works.
 - jest-expo preset NOT used (winter runtime bug)
+
+### EAS env var substitution — critical gotcha (burned 2 build credits)
+
+EAS substitutes `$VAR` patterns in top-level `app.json` string values (e.g. `extra`, `name`). **It does NOT substitute inside plugin configuration objects.** So:
+```json
+["@rnmapbox/maps", { "RNMapboxMapsDownloadToken": "$MAPBOX_DOWNLOAD_TOKEN" }]
+```
+…passes the literal string `$MAPBOX_DOWNLOAD_TOKEN` to the plugin, not the actual token. The plugin then writes `MAPBOX_DOWNLOADS_TOKEN=$MAPBOX_DOWNLOAD_TOKEN` to `gradle.properties`, and Gradle sends that literal string as the Maven password → 401.
+
+**The correct pattern for native build-time tokens:** Set the env var directly (e.g. `RNMAPBOX_MAPS_DOWNLOAD_TOKEN` as `sensitive`). The Gradle template reads it via `System.getenv()`. Don't route it through the plugin config.
+
+**Visibility rules:** `sensitive` = encrypted, substituted in top-level app.json strings, available as env var in build environment. `secret` = secure vault, NOT substituted anywhere, available as env var.
+
+### Pre-OTA verification gate — non-negotiable (burned 2 production pushes 2026-05-07)
+
+Two broken OTA updates were shipped on 2026-05-07 (radar crash, then crash fix that may also be broken).
+Root failures: (1) `tdd-guard.yaml` was missing — TDD hook was unarmed, never fired. (2) OTA was pushed immediately after `tsc --noEmit` clean, without hot-reload on device.
+
+**Rules enforced from 2026-05-07 onward:**
+- `tdd-guard.yaml` is now in `.claude/` — any Edit/Write to `src/**`, `app/**`, or `supabase/functions/**` without a referencing test file will be blocked.
+- `bash-gate.yaml` now has an `eas update` warn gate — reminder fires before every OTA push.
+- Pre-OTA checklist: (1) make change, (2) tell Jimmy to hot-reload via `npx expo start --dev-client`, (3) Jimmy confirms on device in chat, (4) THEN run `eas update`.
+- Native component crashes (rnmapbox, etc.) are NOT caught by jsdom render tests — mocks hide them. Only device verification or Maestro E2E catches these. Never claim a native UI change is verified by Jest alone.
 
 ### eas update requires --platform android
 `eas update` without `--platform` tries to export web bundle → fails with missing `react-native-web` dependency. Always run: `eas update --platform android --channel preview --message "..."`.

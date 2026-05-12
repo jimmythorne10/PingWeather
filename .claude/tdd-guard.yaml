@@ -1,0 +1,24 @@
+# TDD Guard config — PingWeather
+# Blocks Edit/Write to source files when no test file references the target.
+# Absent = hook is a no-op. This file arms it for PingWeather.
+
+watched:
+  - "src/**"
+  - "app/**"
+  - "supabase/functions/**"
+
+excluded:
+  - "**/*.d.ts"
+  - "**/*.config.ts"
+  - "**/*.config.js"
+  - "**/generated/**"
+  - "supabase/migrations/**"
+  - "supabase/_shared/**"     # verbatim copies of weatherEngine — tested via src/ copy
+  - "app/legal/**"            # static content, no logic
+  - "app/onboarding/**"       # wizard screens, verified on device only
+  - "plugins/**"              # Expo config plugins
+
+test_patterns:
+  - "__tests__/**/*.test.ts"
+  - "__tests__/**/*.test.tsx"
+  - "e2e/**/*.spec.ts"
