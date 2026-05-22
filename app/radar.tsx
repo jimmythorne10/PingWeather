@@ -33,6 +33,7 @@ export default function RadarScreen() {
         options={{
           headerShown: true,
           title: locationName ? `Radar — ${locationName}` : 'Radar',
+          headerBackTitle: 'Forecasts',
           headerStyle: { backgroundColor: tokens.headerBackground },
           headerTintColor: tokens.headerTint,
         }}

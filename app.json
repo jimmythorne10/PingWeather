@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "PingWeather",
+    "name": "WeatherBeacon",
     "slug": "pingweather",
     "scheme": "pingweather",
     "version": "1.0.0",
@@ -13,15 +13,17 @@
       "backgroundColor": "#1E3A5F"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.truthcenteredtech.pingweather",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "buildNumber": "1",
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification"
         ],
-        "NSLocationWhenInUseUsageDescription": "PingWeather uses your location to monitor weather conditions at sites you care about and alert you when they match your rules.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "PingWeather uses your location to monitor weather conditions at sites you care about and alert you when they match your rules."
+        "NSLocationWhenInUseUsageDescription": "WeatherBeacon uses your location to monitor weather conditions at sites you care about and alert you when they match your rules.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "WeatherBeacon uses your location to monitor weather conditions at sites you care about and alert you when they match your rules.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {
         "aps-environment": "production"
@@ -60,8 +62,8 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "PingWeather uses your location to monitor weather conditions at sites you care about and alert you when they match your rules.",
-          "locationWhenInUsePermission": "PingWeather uses your location to show weather for places near you.",
+          "locationAlwaysAndWhenInUsePermission": "WeatherBeacon uses your location to monitor weather conditions at sites you care about and alert you when they match your rules.",
+          "locationWhenInUsePermission": "WeatherBeacon uses your location to show weather for places near you.",
           "isAndroidBackgroundLocationEnabled": false
         }
       ],
@@ -74,7 +76,7 @@
         "projectId": "6456b66e-6e5a-4881-984f-20e2f3b477f4"
       },
       "revenueCatAndroidApiKey": "goog_XykDmtoZwUNDfBgswNJaIkDLjNC",
-      "revenueCatIosApiKey": ""
+      "revenueCatIosApiKey": "appl_DeIxqgxLsLaIeIrHALmieFljZFS"
     },
     "runtimeVersion": {
       "policy": "sdkVersion"
