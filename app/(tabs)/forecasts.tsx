@@ -8,9 +8,15 @@ import { useSettingsStore } from '../../src/stores/settingsStore';
 import { fetchForecast } from '../../src/services/weatherApi';
 import { weatherCodeToEmoji, degreesToCardinal } from '../../src/services/weatherIcon';
 import { getMoonIlluminationForDate, getMoonEmoji } from '../../src/utils/moonPhase';
+import { ruleWouldTrigger } from '../../src/utils/forecastRulePreview';
 import { RainfallCard } from '../../src/components/RainfallCard';
 import type { ThemeTokens } from '../../src/theme';
 import type { HourlyForecast, DailyForecast, AlertRule } from '../../src/types';
+
+// Radar tile coverage (RainViewer/NEXRAD) is US-only in v1.
+// Intl.DateTimeFormat is available in Hermes — no extra package needed.
+const deviceLocale = Intl.DateTimeFormat().resolvedOptions().locale; // e.g. "en-US"
+const isUSDevice = /[-_]US$/i.test(deviceLocale);
 
 interface LocationForecast {
   hourly: HourlyForecast;
@@ -34,6 +40,7 @@ export default function ForecastsScreen() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [forecasts, setForecasts] = useState<Record<string, LocationForecast>>({});
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
+  const [forecastErrors, setForecastErrors] = useState<Record<string, string>>({});
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -56,6 +63,12 @@ export default function ForecastsScreen() {
   const loadForecastFor = async (locationId: string, lat: number, lon: number) => {
     if (forecasts[locationId]) return;
     setLoadingIds((prev) => new Set(prev).add(locationId));
+    setForecastErrors((prev) => {
+      if (!prev[locationId]) return prev;
+      const next = { ...prev };
+      delete next[locationId];
+      return next;
+    });
     try {
       const data = await fetchForecast({
         latitude: lat,
@@ -69,7 +82,10 @@ export default function ForecastsScreen() {
         [locationId]: { hourly: data.hourly, daily: data.daily },
       }));
     } catch {
-      // fail silently
+      setForecastErrors((prev) => ({
+        ...prev,
+        [locationId]: 'Failed to load forecast. Tap to retry.',
+      }));
     } finally {
       setLoadingIds((prev) => {
         const next = new Set(prev);
@@ -109,55 +125,23 @@ export default function ForecastsScreen() {
     if (index === 0) return 'Today';
     if (index === 1) return 'Tomorrow';
     const [y, m, d] = date.split('-').map(Number);
-    return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
+    return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' });
   };
 
   const formatHourLabel = (time: string) => {
     const d = new Date(time);
-    return d.toLocaleTimeString('en-US', { hour: 'numeric' });
+    return d.toLocaleTimeString(undefined, { hour: 'numeric' });
   };
 
-  // Evaluate if a rule would trigger based on current forecast
-  const ruleWouldTrigger = (rule: AlertRule, forecast: LocationForecast): { triggered: boolean; detail: string } => {
-    const now = new Date();
-    const cutoff = new Date(now.getTime() + rule.lookahead_hours * 60 * 60 * 1000);
-
-    for (const condition of rule.conditions) {
-      let values: number[] = [];
-      if (condition.metric === 'temperature_low') {
-        values = forecast.daily.temperature_2m_min.filter((_, i) => {
-          const d = new Date(forecast.daily.time[i]);
-          return d >= now && d <= cutoff;
-        });
-      } else if (condition.metric === 'temperature_high') {
-        values = forecast.daily.temperature_2m_max.filter((_, i) => {
-          const d = new Date(forecast.daily.time[i]);
-          return d >= now && d <= cutoff;
-        });
-      } else if (condition.metric === 'precipitation_probability') {
-        values = forecast.daily.precipitation_probability_max.filter((_, i) => {
-          const d = new Date(forecast.daily.time[i]);
-          return d >= now && d <= cutoff;
-        });
-      } else if (condition.metric === 'wind_speed') {
-        values = forecast.daily.wind_speed_10m_max.filter((_, i) => {
-          const d = new Date(forecast.daily.time[i]);
-          return d >= now && d <= cutoff;
-        });
-      }
-
-      for (const val of values) {
-        let matched = false;
-        if (condition.operator === 'gt' && val > condition.value) matched = true;
-        if (condition.operator === 'gte' && val >= condition.value) matched = true;
-        if (condition.operator === 'lt' && val < condition.value) matched = true;
-        if (condition.operator === 'lte' && val <= condition.value) matched = true;
-        if (matched) {
-          return { triggered: true, detail: `${condition.metric.replace(/_/g, ' ')} ${val}` };
-        }
-      }
-    }
-    return { triggered: false, detail: 'Clear' };
+  const formatSunTime = (isoDateTime: string | undefined | null): string => {
+    if (!isoDateTime || isoDateTime.length < 16) return '';
+    const timePart = isoDateTime.slice(11, 16);
+    const [hhStr, mm] = timePart.split(':');
+    const hh = parseInt(hhStr, 10);
+    if (isNaN(hh)) return '';
+    const period = hh >= 12 ? 'pm' : 'am';
+    const h12 = hh % 12 === 0 ? 12 : hh % 12;
+    return `${h12}:${mm}${period}`;
   };
 
   if (activeLocations.length === 0) {
@@ -193,6 +177,8 @@ export default function ForecastsScreen() {
         const loading = loadingIds.has(loc.id);
         const locationRules = rules.filter((r) => r.location_id === loc.id && r.is_active);
 
+        const forecastError = forecastErrors[loc.id];
+
         return (
           <View key={loc.id} style={styles.locationCard}>
             <Pressable
@@ -219,28 +205,46 @@ export default function ForecastsScreen() {
                   <ActivityIndicator color={tokens.primary} style={{ marginVertical: 24 }} />
                 ) : forecast ? (
                   <>
-                    {/* Radar */}
-                    <Pressable
-                      style={styles.radarButton}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/radar',
-                          params: {
-                            lat: String(loc.latitude),
-                            lng: String(loc.longitude),
-                            locationName: loc.name,
-                          },
-                        })
-                      }
-                    >
-                      <Text style={styles.radarButtonText}>🌧 View Radar →</Text>
-                    </Pressable>
+                    {/* Radar — US only (RainViewer coverage) */}
+                    {isUSDevice && (
+                      <Pressable
+                        style={styles.radarButton}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/radar',
+                            params: {
+                              lat: String(loc.latitude),
+                              lng: String(loc.longitude),
+                              locationName: loc.name,
+                            },
+                          })
+                        }
+                      >
+                        <Text style={styles.radarButtonText}>🌧 View Radar →</Text>
+                      </Pressable>
+                    )}
 
                     {/* Hourly scroll */}
                     <Text style={styles.sectionLabel}>Next 24 hours</Text>
                     <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourlyRow}>
                       {forecast.hourly.time.slice(0, 24).map((time, i) => (
-                        <View key={time} style={styles.hourlyItem}>
+                        // Tapping an hourly item navigates to the day-detail screen for today.
+                        // We use forecast.daily.time[0] (already YYYY-MM-DD) for the date param —
+                        // same pattern used by the daily rows below.
+                        <Pressable
+                          key={time}
+                          style={({ pressed }) => [styles.hourlyItem, pressed && { opacity: 0.6 }]}
+                          onPress={() =>
+                            router.push({
+                              pathname: '/day-detail',
+                              params: {
+                                locationId: loc.id,
+                                date: forecast.daily.time[0],
+                                locationName: loc.name,
+                              },
+                            })
+                          }
+                        >
                           <Text style={styles.hourlyTime}>{formatHourLabel(time)}</Text>
                           <Text style={styles.hourlyTemp}>
                             {Math.round(forecast.hourly.temperature_2m[i])}{unitSymbol}
@@ -250,7 +254,7 @@ export default function ForecastsScreen() {
                               {forecast.hourly.precipitation_probability[i]}%
                             </Text>
                           )}
-                        </View>
+                        </Pressable>
                       ))}
                     </ScrollView>
 
@@ -259,6 +263,7 @@ export default function ForecastsScreen() {
                       locationId={loc.id}
                       latitude={loc.latitude}
                       longitude={loc.longitude}
+                      timezone={loc.timezone ?? 'UTC'}
                     />
 
                     {/* Daily list */}
@@ -312,7 +317,7 @@ export default function ForecastsScreen() {
                               {Math.round(forecast.daily.wind_speed_10m_max[i])} {windSpeedUnit}
                             </Text>
                           </View>
-                          {/* Secondary row: moon phase / UV / pressure */}
+                          {/* Secondary row: moon phase / UV / pressure / sun & moon times */}
                           <View style={styles.dailySecondaryRow}>
                             <Text style={styles.dailyMeta}>{moonEmoji}</Text>
                             {uvMax >= 3 && (
@@ -324,6 +329,12 @@ export default function ForecastsScreen() {
                                   ? (pressureHPa / 33.8639).toFixed(2)
                                   : Math.round(pressureHPa)}{' '}{pressureUnit}
                               </Text>
+                            )}
+                            {!!forecast.daily.sunrise?.[i] && (
+                              <Text style={styles.dailyMeta}>☀ {formatSunTime(forecast.daily.sunrise[i])}</Text>
+                            )}
+                            {!!forecast.daily.sunset?.[i] && (
+                              <Text style={styles.dailyMeta}>🌇 {formatSunTime(forecast.daily.sunset[i])}</Text>
                             )}
                           </View>
                         </Pressable>
@@ -360,6 +371,16 @@ export default function ForecastsScreen() {
                       </>
                     )}
                   </>
+                ) : forecastError ? (
+                  <View style={styles.forecastErrorBlock}>
+                    <Text style={styles.forecastErrorText}>{forecastError}</Text>
+                    <Pressable
+                      style={({ pressed }) => [styles.retryButton, pressed && { opacity: 0.7 }]}
+                      onPress={() => loadForecastFor(loc.id, loc.latitude, loc.longitude)}
+                    >
+                      <Text style={styles.retryButtonText}>Retry</Text>
+                    </Pressable>
+                  </View>
                 ) : (
                   <Text style={styles.emptyBody}>Unable to load forecast.</Text>
                 )}
@@ -378,7 +399,7 @@ export default function ForecastsScreen() {
 
 const createStyles = (t: ThemeTokens) => ({
   container: { flex: 1 as const, backgroundColor: t.background },
-  content: { padding: 16, paddingBottom: 40, paddingTop: 20 },
+  content: { padding: 16, paddingBottom: 40, paddingTop: 20, maxWidth: 680, alignSelf: 'center' as const, width: '100%' as const },
 
   emptyCard: {
     backgroundColor: t.card,
@@ -497,6 +518,7 @@ const createStyles = (t: ThemeTokens) => ({
   },
   dailySecondaryRow: {
     flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
     alignItems: 'center' as const,
     marginTop: 2,
     marginLeft: 26,
@@ -554,5 +576,27 @@ const createStyles = (t: ThemeTokens) => ({
     fontSize: 14,
     fontWeight: '600' as const,
     color: t.primary,
+  },
+
+  forecastErrorBlock: {
+    paddingVertical: 20,
+    alignItems: 'center' as const,
+  },
+  forecastErrorText: {
+    fontSize: 14,
+    color: t.error,
+    marginBottom: 12,
+    textAlign: 'center' as const,
+  },
+  retryButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    backgroundColor: t.primary,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: t.textOnPrimary,
   },
 });

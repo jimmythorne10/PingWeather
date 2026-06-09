@@ -1,6 +1,7 @@
 import { View, Text, ScrollView, Pressable, Switch, Alert, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import { useStyles, useTokens } from '../../src/theme';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
@@ -16,7 +17,7 @@ import type { ThemeTokens } from '../../src/theme';
 import type { ThemeName } from '../../src/theme/tokens';
 import type { SubscriptionTier } from '../../src/types';
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = Constants.expoConfig?.version ?? '0.0.0';
 
 const DAY_LABELS = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -73,17 +74,33 @@ export default function SettingsScreen() {
             style: 'destructive',
             onPress: async () => {
               setDigestSaving(true);
-              await updateProfile(updates);
-              setDigestSaving(false);
+              try {
+                const ok = await updateProfile(updates);
+                if (!ok) {
+                  Alert.alert('Save Failed', useAuthStore.getState().error ?? 'Could not save. Please try again.');
+                }
+              } finally {
+                setDigestSaving(false);
+              }
             },
           },
         ]
       );
       return;
     }
+    const effectiveUpdates = { ...updates };
+    if (updates.digest_enabled === true && !digestLocationId && locations.length > 0) {
+      effectiveUpdates.digest_location_id = locations[0].id;
+    }
     setDigestSaving(true);
-    await updateProfile(updates);
-    setDigestSaving(false);
+    try {
+      const ok = await updateProfile(effectiveUpdates);
+      if (!ok) {
+        Alert.alert('Save Failed', useAuthStore.getState().error ?? 'Could not save. Please try again.');
+      }
+    } finally {
+      setDigestSaving(false);
+    }
   };
 
   const handleRegisterPush = async () => {
@@ -95,6 +112,27 @@ export default function SettingsScreen() {
       setPushResult(`✓ Registered: ${token.slice(0, 32)}…`);
     } else {
       setPushResult(`✗ ${regError ?? 'Registration failed (check logs).'}`);
+    }
+  };
+
+  const handleNotificationToggle = async (enabled: boolean) => {
+    if (!enabled) {
+      settings.setNotificationsEnabled(false);
+      return;
+    }
+    setPushRegistering(true);
+    const { token, error: regError } = await registerForPushNotifications();
+    setPushRegistering(false);
+    if (token) {
+      settings.setNotificationsEnabled(true);
+    } else {
+      Alert.alert(
+        'Notifications Unavailable',
+        regError?.toLowerCase().includes('denied')
+          ? 'WeatherBeacon needs notification permission. Go to iPhone Settings → WeatherBeacon → Notifications and enable them, then try again.'
+          : (regError ?? 'Could not enable notifications. Please try again.'),
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -243,34 +281,6 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          <View style={[styles.card, styles.devCard, { marginTop: 12 }]}>
-            <Text style={styles.devBadge}>DEV</Text>
-            <Text style={styles.label}>Push Token</Text>
-            <Text style={styles.devHint}>
-              Re-request notification permission and push the latest Expo token to your Supabase
-              profile. Useful after a fresh install or if notifications aren't arriving.
-            </Text>
-            <Pressable
-              style={[styles.pushRegisterButton, { borderColor: tokens.primary }]}
-              onPress={handleRegisterPush}
-              disabled={pushRegistering}
-            >
-              <Text style={[styles.pushRegisterText, { color: tokens.primary }]}>
-                {pushRegistering ? 'Registering…' : 'Register / Refresh Push Token'}
-              </Text>
-            </Pressable>
-            {pushResult && (
-              <Text
-                selectable
-                style={[
-                  styles.pushResult,
-                  { color: pushResult.startsWith('✓') ? tokens.success : tokens.error },
-                ]}
-              >
-                {pushResult}
-              </Text>
-            )}
-          </View>
         </>
       )}
 
@@ -315,7 +325,7 @@ export default function SettingsScreen() {
               <Pressable
                 key={unit}
                 style={[styles.toggleButton, settings.pressureUnit === unit && styles.toggleActive]}
-                onPress={() => settings.setPressureUnit(unit)}
+                onPress={() => { settings.setPressureUnit(unit); void updateProfile({ pressure_unit: unit }); }}
               >
                 <Text style={[styles.toggleText, settings.pressureUnit === unit && styles.toggleTextActive]}>{unit}</Text>
               </Pressable>
@@ -344,11 +354,40 @@ export default function SettingsScreen() {
           <Text style={styles.label}>Push Notifications</Text>
           <Switch
             value={settings.notificationsEnabled}
-            onValueChange={settings.setNotificationsEnabled}
+            onValueChange={handleNotificationToggle}
+            disabled={pushRegistering}
             trackColor={{ false: tokens.border, true: tokens.primaryLight }}
             thumbColor={settings.notificationsEnabled ? tokens.primary : tokens.textTertiary}
           />
         </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.label}>Refresh Push Token</Text>
+        <Text style={styles.devHint}>
+          Tap this if alerts or forecast digest notifications aren't arriving. Re-registers your
+          device for push notifications.
+        </Text>
+        <Pressable
+          style={[styles.pushRegisterButton, { borderColor: tokens.primary }]}
+          onPress={handleRegisterPush}
+          disabled={pushRegistering}
+        >
+          <Text style={[styles.pushRegisterText, { color: tokens.primary }]}>
+            {pushRegistering ? 'Registering…' : 'Refresh Push Token'}
+          </Text>
+        </Pressable>
+        {pushResult && (
+          <Text
+            selectable
+            style={[
+              styles.pushResult,
+              { color: pushResult.startsWith('✓') ? tokens.success : tokens.error },
+            ]}
+          >
+            {pushResult}
+          </Text>
+        )}
       </View>
 
       {/* Forecast Digest */}
@@ -358,7 +397,7 @@ export default function SettingsScreen() {
           <View style={{ flex: 1, marginRight: 12 }}>
             <Text style={styles.label}>Daily or weekly forecast summary</Text>
             <Text style={[styles.devHint, { marginTop: 2, marginBottom: 0 }]}>
-              Keeps alerts working reliably on Android and gives you a weather heads-up even on quiet days.
+              {Platform.select({ android: 'Keeps alerts working reliably and gives you a weather heads-up even on quiet days.', default: 'Gives you a daily weather heads-up even when no alert conditions are met.' })}
             </Text>
           </View>
           <Switch
@@ -512,7 +551,7 @@ export default function SettingsScreen() {
 
       {/* Version */}
       <View style={styles.versionContainer}>
-        <Text style={styles.versionText}>{`PingWeather v${APP_VERSION}`}</Text>
+        <Text style={styles.versionText}>{`WeatherBeacon v${APP_VERSION}`}</Text>
         <Text style={styles.versionSubtext}>by Truth Centered Tech</Text>
       </View>
 
@@ -523,7 +562,7 @@ export default function SettingsScreen() {
 
 const createStyles = (t: ThemeTokens) => ({
   container: { flex: 1 as const, backgroundColor: t.background },
-  content: { padding: 20, paddingBottom: 60 },
+  content: { padding: 20, paddingBottom: 60, maxWidth: 600, alignSelf: 'center' as const, width: '100%' as const },
   sectionTitle: {
     fontSize: 12,
     fontWeight: '700' as const,

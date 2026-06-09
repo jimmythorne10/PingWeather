@@ -1,10 +1,10 @@
-# Project Memory — PingWeather
+# Project Memory — WeatherBeacon
 
-> Last updated: 2026-05-07 (session 14 — full security audit + Mapbox radar + 3 EAS preview builds, 3rd succeeded; uploaded to Play Console for closed testing)
+> Last updated: 2026-06-04 (session 24 — iOS buildNumber 4 built + submitted to App Store Connect: UIRequiresFullScreen:true (Stage Manager fix), supportsTablet:true. Back button fix (create-rule Stack.Screen gestureEnabled+headerBackVisible) OTA'd to iOS production. Forecast 400 bug fixed: (1) get-forecast now uses repeated params (daily=a&daily=b not daily=a,b), (2) moonrise/moonset removed AGAIN — never valid Open-Meteo fields; DO NOT re-add. snowfall_sum added to DAILY_ALLOWLIST. 881/881 logic tests. Both iOS + Android OTAs deployed to production channel.)
 
 ## Project Identity
 
-- **Name:** PingWeather (rebrand from "WeatherWatch" — DO NOT reintroduce old name)
+- **Name:** WeatherBeacon (rebranded from "WeatherWatch" → "PingWeather" → "WeatherBeacon" — DO NOT reintroduce old names)
 - **Entity:** Truth Centered Tech, Virginia, US
 - **Stack:** Expo SDK 54 + React Native + TypeScript strict + Zustand v5 + Expo Router v6 + Supabase
 - **Supabase project:** `ziyxkgbrdliwvztotxli`
@@ -14,23 +14,34 @@
 
 ## Current Status
 
-**Play Store: versionCode 8 AAB built (preview profile, 2026-05-07) — being uploaded for closed testing**
-**Supabase migrations: 00001–00019 applied**
-**Tests: 715/715 logic tests passing**
+**Play Store: versionCode 11 live (launcher name still "PingWeather" — built from b3fae76 before rename). New build from HEAD (WeatherBeacon name) required.**
+**Supabase migrations: 00001–00020 applied and registered.**
+**send-digest: 401 fixed 2026-05-28 (SEND_DIGEST_SECRET synced to vault). Confirmed 200 responses hourly. Digest for jimmy@truthcenteredtech.com fires at 9AM Eastern (13:00 UTC).**
+**Tests: 748/748 logic tests passing**
 **Edge Functions deployed (session 14): fcm-keepalive (auth hardened), subscription-webhook (HMAC-SHA256), register-push-token (token format validation), dev-tier-override (new)**
-**Closed testing: Alpha track submitted 2026-05-05. versionCode 8 being uploaded 2026-05-07. Opt-in URL: https://play.google.com/apps/testing/com.truthcenteredtech.pingweather. Google Group: pingweather-betagooglegroupscom@truthcenteredtech.com. Recruitment posts pending Google approval.**
-**Apple Developer enrollment: Company (Truth Centered Tech) submitted 2026-04-29 — awaiting approval.**
-**Open-Meteo key rotation: COMPLETE — new key `y8A63e8V82EPsr7j` set in Supabase secrets 2026-05-03. Old key `eNFRDFntQmSudB7E` revoked.**
+**Closed testing: Alpha track submitted 2026-05-05. versionCode 8 live. Opt-in URL: https://play.google.com/apps/testing/com.truthcenteredtech.pingweather. Google Group: pingweather-betagooglegroupscom@truthcenteredtech.com.**
+**Apple Developer: CLEARED. iOS setup complete.**
+**iOS Build 2 (1.0.0, buildNumber 2): Built 2026-05-21, submitted to ASC. supportsTablet:false, dedup UIBackgroundModes, WeatherBeacon branding, ITSAppUsesNonExemptEncryption:false. Build 1 superseded.**
+**iOS credentials: Distribution Certificate + Provisioning Profile + APNs key — all active, expire May 2027.**
+**Open-Meteo key rotation: COMPLETE — new key `y8A63e8V82EPsr7j` set in Supabase secrets 2026-05-03.**
 
 ### Jimmy's required manual actions (still pending)
 
-1. **Recruit 12+ closed testers** — Post to r/betatesting, Discord, Facebook groups. Opt-in URL: https://play.google.com/apps/testing/com.truthcenteredtech.pingweather. 14-day clock starts at tester #12. Do NOT move to open testing until device-verified.
-2. **Device verify versionCode 8** — Core flows: login, add location, create rule, receive notification. Many features pending device verification (see Completed table notes).
-3. **Move EXPO_PUBLIC_REVENUECAT_ANDROID_KEY to EAS env var** — Currently hardcoded in `app.json` extra. Should be `sensitive` EAS var + `process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` in purchases.ts. Low urgency but is a key hygiene issue.
-4. **Check Apple Developer approval** — Submitted 2026-04-29 (now 8+ days). Check developer.apple.com portal / email. Approval unlocks iOS build path.
-5. **After Apple approval: `eas credentials --platform ios`** — Upload APNs `.p8` auth key. Without it, push notifications don't reach iOS devices.
-6. **After Apple approval: Create app in App Store Connect** — Get `ascAppId` (numeric App Store app ID) and `appleTeamId`, then fill them into `eas.json` submit config (currently `PLACEHOLDER_*`).
-7. **Before iOS launch: `revenueCatIosApiKey`** — Fill in `app.json` extra field. RevenueCat silently no-ops on iOS until this is set.
+**ANDROID**
+1. **Build new Android binary** — `eas build --platform android --profile production`. Fixes launcher name "PingWeather" → "WeatherBeacon" (app.json HEAD has "WeatherBeacon" since b8b68a2; versionCode 11 was built from b3fae76 which still had "PingWeather"). Upload to Play Console.
+2. **Switch to open testing** — After uploading versionCode 9, promote the track to open testing. Share the public opt-in URL on r/betatesting, Discord, Facebook groups. 14-day clock starts at first opt-in.
+3. **Update Google Play screenshots** — Current screenshots show old branding. Need WeatherBeacon name + radar feature.
+4. **Move EXPO_PUBLIC_REVENUECAT_ANDROID_KEY to EAS env var** — Currently hardcoded in `app.json` extra. Low urgency but is a key hygiene issue.
+
+**iOS — ORDERED FOR SUBMISSION**
+5. **Deploy iOS OTA** — `eas update --platform ios --channel production --message "fix: iOS paywall platform text"`. Fixes App Store-rejection upgrade.tsx text (Google Play → Apple). Hot-reload on iPhone to confirm paywall shows Apple IAP text.
+6. **App Store Connect subscription metadata** — Verify: (a) Premium Monthly has English localization matching Pro Monthly format, (b) both subs have all-country availability (was "1 of 175"), (c) $3.99/$7.99 price tiers confirmed set. "Missing Metadata" badge clears at submission — expected.
+7. **Verify iOS push notification toggle on device** — Toggle Push Notifications ON in Settings, confirm Supabase push_token updates to iOS ExponentPushToken value.
+8. **Verify radar US gate on iPhone** — Confirm "🌧 View Radar →" visible in Forecasts tab on US-locale iPhone.
+9. **App Store screenshots — BLOCKING SUBMISSION** — Force-close/reopen WeatherBeacon on iPhone AFTER step 5 OTA (so paywall shows Apple text in screenshots). Take 6 in this order: (1) Home with forecast data, (2) Forecasts tab 14-day expanded, (3) Radar screen with tiles loaded, (4) Alerts tab with active rules, (5) Create Rule screen mid-build, (6) Upgrade screen. AirDrop/email to PC. Upload to App Store Connect → Distribution → App Store → iPhone Screenshots.
+10. **Apply migration 00020** — PREREQUISITE: in Supabase Dashboard → Vault → `send_digest_auth_token`, confirm the value matches the `SEND_DIGEST_SECRET` function secret. Then `npx supabase db push`. Fixes digest never firing on schedule.
+11. **App Store submission** — After screenshots + metadata complete: Distribution → Add Build (select **Build 2**, buildNumber 2) → Add In-App Purchases (attach both Pro Monthly + Premium Monthly) → Submit for Review. Answer: age rating 4+, export compliance No (ITSAppUsesNonExemptEncryption=false already in Info.plist so may be skipped), content rights Yes (has rights to Open-Meteo + RainViewer + Mapbox).
+12. **Update truthcenteredtech.com** — Still references "PingWeather". Update app page to WeatherBeacon (keep `/pingweather-privacy` and `/pingweather-delete-account` URL paths unchanged).
 
 ### Completed — do not re-propose
 
@@ -40,6 +51,7 @@
 | Open-Meteo commercial license + key rotation | Supabase secret `OPEN_METEO_API_KEY` set to new key `y8A63e8V82EPsr7j` 2026-05-03. Old key `eNFRDFntQmSudB7E` revoked. `EXPO_PUBLIC_OPEN_METEO_API_KEY` removed from EAS preview + production. |
 | Privacy policy | `truthcenteredtech.com/pingweather-privacy` |
 | Play Store internal testing | versionCode 7 live |
+| upgrade.tsx iOS paywall text | `Platform.select()` on downgrade dialog + legal footer. Android text unchanged. iOS shows Apple IAP required language. OTA to iOS production channel pending. |
 | Play Store listing | Screenshots, short/full description, data safety form — all complete. Store listing fully populated as of session ~5. |
 | Apple Developer Program | Company enrollment submitted 2026-04-29 — awaiting approval (1–3 business days). Personal account showed "Enroll today" — enrollment is for Truth Centered Tech entity, not personal. |
 | Edge Functions | poll-weather, evaluate-alerts, register-push-token, send-digest, fcm-keepalive, delete-account, subscription-webhook, get-forecast — all deployed |
@@ -96,12 +108,31 @@
 | Pressure tendency direction UI | Direction chips (Falling ↓ / Rising ↑) replace raw operator chips for pressure_tendency metric. Magnitude input (always positive). Internal storage unchanged: lte/negative for falling, gte/positive for rising. Summary prose: "the pressure drops/rises by at least X unit". |
 | NumericInput wrapper | `NumericInput` component with local string state buffer in `create-rule.tsx`. Fixes backspace freeze where `value={number.toString()}` overwrote intermediate empty/partial states. |
 | Snow in Precipitation History | `rainfallApi.ts`: `HourlyRaw.snowfall?`, `DailyRaw.snowfall_sum?`, `RainfallData` snow fields. Both fetch functions request snowfall. Open-Meteo applies `precipitation_unit` to snowfall so no manual cm→in conversion. `RainfallCard.tsx` renamed to "PRECIPITATION HISTORY"; snow section shown when `snowTotal > 0` with `freezeBlue` color + SNOWFALL sub-label. RAINFALL sub-label shown only when snow section also present. |
-| Favicon | `assets/favicon.png` replaced with PingWeather branded icon (copy of `assets/icon.png` — navy/orange raindrop+wifi). |
+| Favicon | `assets/favicon.png` replaced with WeatherBeacon branded icon (copy of `assets/icon.png` — navy/orange raindrop+wifi). |
 | OTA `96876e3e` | Session 11 work deployed 2026-05-04: inHg pressure unit, pressure tendency direction UI, rule builder summary/grammar/alphabetical fixes, NumericInput backspace fix, snow in precipitation history, favicon. **Device verification pending.** |
+| App renamed WeatherBeacon | Full codebase rename from "PingWeather" → "WeatherBeacon" 2026-05-11. Slug/scheme/bundle ID/AsyncStorage keys unchanged. 735/735 tests passing. Play Store listing updated. |
+| iOS Firebase setup | iOS app registered in Firebase (`PingWeather iOS`, `com.truthcenteredtech.pingweather`). APNs Authentication Key (.p8) uploaded to Firebase for both dev + production. `GoogleService-Info.plist` in project root, wired in `app.json` as `ios.googleServicesFile`. |
+| eas.json iOS config | `appleTeamId: "28JXRYMM75"` and `ascAppId: "6768505407"` filled in. |
+| App Store Connect subscriptions created | Pro Monthly ($3.99/mo) and Premium Monthly ($7.99/mo) created under WeatherBeacon Subscriptions group. Product IDs set during creation — confirm exact IDs in App Store Connect before adding to RevenueCat. |
+| RevenueCat iOS fully wired | In-App Purchase key uploaded. `revenueCatIosApiKey: appl_DeIxqgxLsLaIeIrHALmieFljZFS` in app.json. Products added: `com.truthcenteredtech.pingweather.{pro,premium}_monthly`. Default offering packages `$rc_pro_monthly` + `$rc_premium_monthly` each have both Android + iOS products attached. |
+| App Store listing text | Category: Weather. Description, subtitle ("Custom Weather Alerts"), keywords, support URL, privacy URL all filled. Session 17. |
+| Radar US-only gate | `forecasts.tsx` — `Intl.DateTimeFormat().resolvedOptions().locale` checked against `/[-_]US$/i`. "🌧 View Radar →" button hidden for non-US device locale. OTA pushed android preview `772696b7` + ios production `3e61182e`. Device verification pending. |
+| iOS build + TestFlight | Build 1 (1.0.0) built with `eas build --platform ios --profile production` and submitted via `eas submit --platform ios`. Live in TestFlight. Installed on Jimmy's iPhone. |
+| iOS credentials | Distribution Certificate (serial 1132B611..., exp May 2027) + Provisioning Profile (9U2D5C76RT, active) + APNs push key — all in EAS, valid until May 2027. |
+| PRODUCT_TIER_MAP iOS fix | Added fully-qualified iOS product IDs to `purchases.ts` and `subscription-webhook/index.ts` PRODUCT_TIER_MAP. Keys: `com.truthcenteredtech.pingweather.{pro,premium}_monthly` (+ `:monthly` variants). subscription-webhook redeployed. 15/15 purchase tests passing. |
+| iOS push notification permission fix | `requestPermissionsAsync` now passes explicit iOS options `{ ios: { allowAlert, allowBadge, allowSound } }` instead of empty `{}` — fixes "Cannot convert Optional(nil) to notification permission record" native bridge error. |
+| Notification toggle fix | Settings Push Notifications toggle now calls `registerForPushNotifications()` on enable instead of just toggling local state. Shows actionable alert if permissions denied. `disabled={pushRegistering}` prevents double-tap. |
+| OTA to iOS production channel | Both notification fixes deployed: `eas update --platform ios --channel production`. Pending Jimmy device verification on test account. |
+| Apple Identifier registered | `com.truthcenteredtech.pingweather` registered in Apple Developer Certificates, Identifiers & Profiles with Push Notifications capability enabled. |
 | Security hardening (session 13) | M02: dropped `forecast_cache` authenticated SELECT policy (migration 00018). M03: push token format regex in `register-push-token`. M04: alert_rules + locations input length CHECK constraints (migration 00019). LOW-04: removed `RECEIVE_BOOT_COMPLETED` + `WAKE_LOCK` from `app.json`. LOW-01: `@xmldom/xmldom` HIGH resolved via `npm audit fix`. LOW-02: `send_digest_auth_token` rotated; old value scrubbed from MEMORY.md. |
 | Security audit session 14 | Full 11-issue audit for open testing. H01: `fcm-keepalive` bearer auth added. H03: `subscription-webhook` HMAC-SHA256 body verification (`X-RevenueCat-Signature`, raw body with `req.text()`). M01: `dev-tier-override` Edge Function created + two bugs fixed (wrong JWT pattern → `adminClient.auth.getUser(jwt)`; wrong VALID_TIERS `['free','basic','pro']` → `['free','pro','premium']`). Settings screen wired to invoke it. All Edge Functions redeployed. |
 | Mapbox animated radar screen | `@rnmapbox/maps` 10.3.0 + RainViewer radar tiles (real NEXRAD data, free with attribution). EAS env vars: `EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN` + `RNMAPBOX_MAPS_DOWNLOAD_TOKEN` (preview + production, sensitive). No radar API key needed — RainViewer public endpoint. Attribution: "Radar by RainViewer". RainViewer ToC: free tier OK for commercial use with attribution; revisit paid tier at production scale. Rainbow.ai was removed (it was an ML precipitation model, not real radar). `EXPO_PUBLIC_RAINBOW_API_KEY` scrubbed from .env.local; still present in EAS preview + production envs — remove with `eas env:delete`. |
 | EAS preview build versionCode 8 | Build succeeded 2026-05-07 after two 401 failures (see Mapbox EAS gotcha in Known Bugs). Uploaded to Play Console for closed testing. |
+| Radar back button iOS label | `radar.tsx` `Stack.Screen` options: `headerBackTitle: 'Forecasts'`. Fixed globally in session 19 via `title: ''` on `(tabs)` Stack.Screen in `_layout.tsx` — any screen pushed from tabs now shows no "(tabs)" label on iOS. OTA live (2e3ed6eb iOS / 6a061c8c Android). |
+| Sunrise/sunset (moonrise/moonset removed — TWICE) | Sunrise + sunset added to all forecast surfaces: Home screen day cards (☀/🌇), Forecasts tab secondary row (flexWrap added), Day Detail summary card (SUNRISE/SUNSET row), digest notifications (second line). `moonrise`/`moonset` were added but caused a 400 from Open-Meteo (not valid forecast API daily vars) — removed from all fetch params 2026-05-14. **Re-added erroneously as "BUG-007" — caused same 400 again 2026-06-04. Removed again. DO NOT add moonrise/moonset to the Open-Meteo daily request — they are not valid ForecastVariableDaily values.** UI guards (`?.`) handle absent fields silently. formatSunTime() is defensive (null/empty/NaN safe). |
+| sendPush fixed in send-digest | `sendPush()` now reads Expo response body and returns `{sent, isInvalidToken}` — matching poll-weather pattern. Previously only checked HTTP status (Expo always returns 200; errors live in body). Invalid tokens now pruned. send-digest redeployed 2026-05-17. |
+| Token refresh button for all users | "Refresh Push Token" button moved from DEV-only block to Notifications section in settings.tsx — available to all users. OTA deployed 2026-05-17. |
+| Digest location auto-assign | `handleDigestUpdate` in settings.tsx now auto-assigns `locations[0].id` as `digest_location_id` when enabling digest with no location set. Prevents silent failure where digest fires 0 users due to null location. OTA deployed 2026-05-17. |
 
 ### Backlog — nice to have, not blocking
 
@@ -143,6 +174,8 @@ pg_cron hourly
 **Cache key must be `gridKey(lat, lon)` everywhere.** Both poll-weather write and send-digest read use the shared `gridKey()` function from `_shared/weatherEngine.ts` — rounds to 0.1°. Any mismatch causes permanent cache miss.
 
 ### get-forecast — supported extra params
+
+**Open-Meteo requires repeated URL params, NOT comma-joined.** Use `params.append("daily", v)` in a loop — NOT `params.set("daily", vars.join(","))`. URLSearchParams encodes commas as %2C; Open-Meteo parses the entire value as a single ForecastVariableDaily name and returns 400. Fixed 2026-06-04.
 
 Beyond the default 7-day forecast, `get-forecast` forwards these optional body params to Open-Meteo:
 - `past_days` — integer 0-92; used by `rainfallApi.ts` for precipitation history
@@ -216,6 +249,15 @@ See `evaluateConditions.test.ts`, `processInBatches.test.ts`, `pollWeatherTimezo
 ---
 
 ## Known Bugs & Workarounds
+
+### send-digest cron still 401 — vault key mismatch (needs migration fix)
+
+The `send-digest-hourly` pg_cron job sends `Authorization: Bearer <poll_weather_service_role_key>` from vault. The `send-digest` function validates against `SUPABASE_SERVICE_ROLE_KEY` (Supabase built-in env var). These don't match for unknown reasons — manual test with `SEND_DIGEST_SECRET` function secret works, but the scheduled cron still returns 401 every hour.
+
+**Fix:** Write migration `00020_fix_send_digest_cron_auth.sql` that updates the cron command to read from vault `send_digest_auth_token` instead of `poll_weather_service_role_key`. Then sync the vault `send_digest_auth_token` value to match the `SEND_DIGEST_SECRET` function secret. **This migration is NOT yet written — digest will never fire automatically until it is.**
+
+### Open-Meteo: moonrise/moonset NOT supported in standard forecast API
+`moonrise` and `moonset` are not valid daily variables for `api.open-meteo.com/v1/forecast` or `customer-api.open-meteo.com`. Requesting them returns a 400 error which causes get-forecast to throw and ALL forecast screens to fail. `sunrise` and `sunset` ARE valid. If moon times are needed in the future, requires a different data source.
 
 ### Day-detail hourly screen — TZ gotcha (DO NOT REFACTOR)
 `getHourlyForDay` uses `.startsWith(isoDate)` — `new Date("YYYY-MM-DD")` gives UTC midnight, drifts to previous day west of UTC.

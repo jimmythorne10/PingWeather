@@ -13,7 +13,7 @@
       "backgroundColor": "#1E3A5F"
     },
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "com.truthcenteredtech.pingweather",
       "googleServicesFile": "./GoogleService-Info.plist",
       "buildNumber": "1",
@@ -21,8 +21,8 @@
         "UIBackgroundModes": [
           "remote-notification"
         ],
-        "NSLocationWhenInUseUsageDescription": "WeatherBeacon uses your location to monitor weather conditions at sites you care about and alert you when they match your rules.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "WeatherBeacon uses your location to monitor weather conditions at sites you care about and alert you when they match your rules.",
+        "UIRequiresFullScreen": true,
+        "NSLocationWhenInUseUsageDescription": "WeatherBeacon uses your location to show weather for places near you.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {
@@ -62,7 +62,6 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "WeatherBeacon uses your location to monitor weather conditions at sites you care about and alert you when they match your rules.",
           "locationWhenInUsePermission": "WeatherBeacon uses your location to show weather for places near you.",
           "isAndroidBackgroundLocationEnabled": false
         }

@@ -7,11 +7,13 @@ import { useLocationsStore } from '../../src/stores/locationsStore';
 import { useAlertRulesStore } from '../../src/stores/alertRulesStore';
 import { useAlertHistoryStore } from '../../src/stores/alertHistoryStore';
 import { fetchForecast } from '../../src/services/weatherApi';
+import { getCurrentTemperature } from '../../src/services/currentTemp';
+import { weatherCodeToEmoji } from '../../src/services/weatherIcon';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useWalkthrough } from '../../src/hooks/useWalkthrough';
 import { WalkthroughModal } from '../../src/components/WalkthroughModal';
 import type { ThemeTokens } from '../../src/theme';
-import type { DailyForecast, WatchLocation } from '../../src/types';
+import type { DailyForecast, HourlyForecast, WatchLocation } from '../../src/types';
 
 export default function HomeScreen() {
   const styles = useStyles(createStyles);
@@ -24,13 +26,12 @@ export default function HomeScreen() {
   const temperatureUnit = useSettingsStore((s) => s.temperatureUnit);
   const windSpeedUnit = useSettingsStore((s) => s.windSpeedUnit);
 
-  const [weather, setWeather] = useState<{ daily: DailyForecast } | null>(null);
+  const [weather, setWeather] = useState<{ daily: DailyForecast; hourly: HourlyForecast } | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
+  const [weatherError, setWeatherError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-
-  const FORECAST_DAYS = 14;
 
   useEffect(() => {
     loadLocations();
@@ -47,17 +48,18 @@ export default function HomeScreen() {
 
   const fetchWeatherForLocation = async (location: WatchLocation | undefined) => {
     if (!location) return;
+    setWeatherError(null);
     try {
       const data = await fetchForecast({
         latitude: location.latitude,
         longitude: location.longitude,
-        forecastDays: FORECAST_DAYS,
+        forecastDays: 4, // today + 3 upcoming days
         temperatureUnit,
         windSpeedUnit,
       });
-      setWeather({ daily: data.daily });
+      setWeather({ daily: data.daily, hourly: data.hourly });
     } catch {
-      // fail silently
+      setWeatherError('Unable to load weather. Pull down to retry.');
     }
   };
 
@@ -85,11 +87,30 @@ export default function HomeScreen() {
   const recentAlerts = entries.slice(0, 5);
   const unitSymbol = temperatureUnit === 'fahrenheit' ? '°F' : '°C';
 
+  // Finds the current-hour index in hourly.time using the same local-time
+  // prefix approach as getCurrentTemperature (Intl.DateTimeFormat, not
+  // toISOString which is UTC). Falls back to UTC when timezone is unknown.
+  const getCurrentHourIndex = (hourly: HourlyForecast, tz: string): number => {
+    const localPrefix = new Intl.DateTimeFormat('sv', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      hour12: false,
+    })
+      .format(new Date())
+      .replace(' ', 'T')
+      .slice(0, 13);
+    return hourly.time.findIndex((t) => t.slice(0, 13) === localPrefix);
+  };
+
+  // "Thu 5/29" — used for the 3-day section rows (indices 1-3)
   const formatDayLabel = (date: string, index: number) => {
     if (index === 0) return 'Today';
     if (index === 1) return 'Tomorrow';
     const [y, m, d] = date.split('-').map(Number);
-    return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
+    return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' });
   };
 
   return (
@@ -98,7 +119,7 @@ export default function HomeScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
     >
-      {/* Forecast card — no Pressable wrapper (blocks horizontal scroll) */}
+      {/* ─── Forecast card ─────────────────────────────────────── */}
       <View style={styles.card}>
         <View style={styles.cardHeaderRow}>
           <Text style={styles.cardTitle}>Forecast</Text>
@@ -122,45 +143,112 @@ export default function HomeScreen() {
           </>
         ) : weatherLoading ? (
           <ActivityIndicator color={tokens.primary} style={{ marginVertical: 16 }} />
+        ) : !weather && weatherError ? (
+          <>
+            <Text style={styles.cardBody}>{weatherError}</Text>
+          </>
         ) : weather ? (
-          <ScrollView
-            horizontal
-            nestedScrollEnabled
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.forecastRow}
-          >
-            {weather.daily.time.slice(0, FORECAST_DAYS).map((date, i) => {
-              const high = Math.round(weather.daily.temperature_2m_max[i]);
-              const low = Math.round(weather.daily.temperature_2m_min[i]);
-              const rain = weather.daily.precipitation_probability_max[i];
-              const wind = Math.round(weather.daily.wind_speed_10m_max[i]);
+          <>
+            {/* ── Part 1: Today's conditions ───────────────────── */}
+            {(() => {
+              const tz = selectedLocation?.timezone ?? 'UTC';
+              const currentTemp = getCurrentTemperature(weather.hourly, tz);
+              const hourIdx = getCurrentHourIndex(weather.hourly, tz);
+              const currentWind =
+                hourIdx !== -1 ? Math.round(weather.hourly.wind_speed_10m[hourIdx]) : null;
+              const maxWind = Math.round(weather.daily.wind_speed_10m_max[0]);
+              const high = Math.round(weather.daily.temperature_2m_max[0]);
+              const low = Math.round(weather.daily.temperature_2m_min[0]);
+              const rain = weather.daily.precipitation_probability_max[0];
+              const weatherEmoji = weatherCodeToEmoji(weather.daily.weather_code[0]);
+
               return (
-                <Pressable
-                  key={date}
-                  style={({ pressed }) => [styles.forecastDay, pressed && { opacity: 0.7 }]}
-                  onPress={() => {
-                    if (selectedLocation) {
-                      router.navigate({
-                        pathname: '/(tabs)/forecasts',
-                        params: { expandLocationId: selectedLocation.id },
-                      });
-                    }
-                  }}
-                >
-                  <Text style={styles.forecastDayLabel}>{formatDayLabel(date, i)}</Text>
-                  <Text style={styles.forecastHigh}>{high}{unitSymbol}</Text>
-                  <Text style={styles.forecastLow}>{low}{unitSymbol}</Text>
-                  {rain > 0 && <Text style={styles.forecastRain}>{rain}%</Text>}
-                  <Text style={styles.forecastWind}>{wind} {windSpeedUnit}</Text>
-                </Pressable>
+                <View style={styles.todayBlock}>
+                  {/* Top row: big emoji + Now temp + High/Low */}
+                  <View style={styles.todayTopRow}>
+                    <Text style={styles.todayEmoji}>{weatherEmoji}</Text>
+
+                    <View style={styles.todayTempGroup}>
+                      {currentTemp !== null ? (
+                        <Text style={styles.todayNow}>Now: {currentTemp}{unitSymbol}</Text>
+                      ) : null}
+                      <View style={styles.todayHiLoRow}>
+                        <Text style={styles.todayHigh}>↑ {high}{unitSymbol}</Text>
+                        <Text style={styles.todayLow}>↓ {low}{unitSymbol}</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Details row: rain + wind */}
+                  <View style={styles.todayDetailsRow}>
+                    <Text style={styles.todayDetail}>
+                      🌧 {rain}%
+                    </Text>
+                    <Text style={styles.todayDetail}>
+                      {currentWind !== null
+                        ? `💨 ${currentWind} → ${maxWind} ${windSpeedUnit}`
+                        : `💨 max ${maxWind} ${windSpeedUnit}`}
+                    </Text>
+                  </View>
+
+                  {/* Sunrise / sunset */}
+                  {!!weather.daily.sunrise?.[0] && (
+                    <Text style={styles.todaySunRow}>
+                      ☀ {formatSunTime(weather.daily.sunrise[0])} · 🌇 {formatSunTime(weather.daily.sunset?.[0])}
+                    </Text>
+                  )}
+                </View>
               );
-            })}
-          </ScrollView>
+            })()}
+
+            {/* ── Part 2: Next 3 days (indices 1, 2, 3) ────────── */}
+            {weather.daily.time.length > 1 && (
+              <View style={styles.nextDaysBlock}>
+                <View style={styles.nextDaysDivider} />
+                {[1, 2, 3].filter((i) => i < weather.daily.time.length).map((i) => {
+                  const date = weather.daily.time[i];
+                  const high = Math.round(weather.daily.temperature_2m_max[i]);
+                  const low = Math.round(weather.daily.temperature_2m_min[i]);
+                  const rain = weather.daily.precipitation_probability_max[i];
+                  const wind = Math.round(weather.daily.wind_speed_10m_max[i]);
+                  const emoji = weatherCodeToEmoji(weather.daily.weather_code[i]);
+                  return (
+                    <Pressable
+                      key={date}
+                      style={({ pressed }) => [styles.nextDayRow, pressed && { opacity: 0.7 }]}
+                      onPress={() => {
+                        if (selectedLocation) {
+                          router.navigate({
+                            pathname: '/day-detail',
+                            params: {
+                              locationId: selectedLocation.id,
+                              date,
+                              locationName: selectedLocation.name,
+                            },
+                          });
+                        }
+                      }}
+                    >
+                      <Text style={styles.nextDayLabel}>{formatDayLabel(date, i)}</Text>
+                      <Text style={styles.nextDayEmoji}>{emoji}</Text>
+                      <View style={styles.nextDayTemps}>
+                        <Text style={styles.nextDayHigh}>↑{high}{unitSymbol}</Text>
+                        <Text style={styles.nextDayLow}>↓{low}{unitSymbol}</Text>
+                      </View>
+                      <Text style={styles.nextDayRain}>🌧 {rain}%</Text>
+                      <Text style={styles.nextDayWind}>💨 {wind} {windSpeedUnit}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+          </>
         ) : (
           <Text style={styles.cardBody}>Unable to load weather data.</Text>
         )}
       </View>
 
+      {/* ─── Location picker modal ─────────────────────────────── */}
       <Modal
         visible={pickerOpen}
         transparent
@@ -191,7 +279,7 @@ export default function HomeScreen() {
         </Pressable>
       </Modal>
 
-      {/* Active alerts — tappable card, tappable rows */}
+      {/* ─── Active alerts ─────────────────────────────────────── */}
       <Pressable style={styles.card} onPress={() => router.push('/(tabs)/alerts')}>
         <View style={styles.cardHeaderRow}>
           <Text style={styles.cardTitle}>Active Alerts</Text>
@@ -236,7 +324,7 @@ export default function HomeScreen() {
         )}
       </Pressable>
 
-      {/* Recent notifications */}
+      {/* ─── Recent notifications ──────────────────────────────── */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Recent Notifications</Text>
         {recentAlerts.length === 0 ? (
@@ -251,7 +339,10 @@ export default function HomeScreen() {
                 <Text style={styles.historySummary}>{entry.conditions_met}</Text>
               </View>
               <Text style={styles.historyTime}>
-                {new Date(entry.triggered_at).toLocaleDateString()}
+                {(() => {
+                  const [y, mo, d] = entry.triggered_at.slice(0, 10).split('-').map(Number);
+                  return new Date(y, mo - 1, d).toLocaleDateString();
+                })()}
               </Text>
             </View>
           ))
@@ -270,9 +361,20 @@ export default function HomeScreen() {
   );
 }
 
+function formatSunTime(isoDateTime: string | undefined | null): string {
+  if (!isoDateTime || isoDateTime.length < 16) return '';
+  const timePart = isoDateTime.slice(11, 16);
+  const [hhStr, mm] = timePart.split(':');
+  const hh = parseInt(hhStr, 10);
+  if (isNaN(hh)) return '';
+  const period = hh >= 12 ? 'pm' : 'am';
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  return `${h12}:${mm}${period}`;
+}
+
 const createStyles = (t: ThemeTokens) => ({
   container: { flex: 1 as const, backgroundColor: t.background },
-  content: { padding: 16, paddingBottom: 40, paddingTop: 20 },
+  content: { padding: 16, paddingBottom: 40, paddingTop: 20, maxWidth: 600, alignSelf: 'center' as const, width: '100%' as const },
 
   card: {
     backgroundColor: t.card, borderRadius: 12, padding: 16, marginBottom: 12,
@@ -310,23 +412,118 @@ const createStyles = (t: ThemeTokens) => ({
   },
   locationPickerText: { fontSize: 13, color: t.primary, fontWeight: '600' as const },
 
-  forecastRow: {
+  // ── Today's conditions block ──────────────────────────────────
+  todayBlock: {
+    marginBottom: 4,
+    alignItems: 'center' as const,
+  },
+  todayTopRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 12,
+    marginBottom: 8,
+  },
+  todayEmoji: {
+    fontSize: 48,
+    lineHeight: 56,
+  },
+  todayTempGroup: {
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  },
+  todayNow: {
+    fontSize: 28,
+    fontWeight: '700' as const,
+    color: t.textPrimary,
+    lineHeight: 34,
+  },
+  todayHiLoRow: {
+    flexDirection: 'row' as const,
+    gap: 12,
+    marginTop: 2,
+  },
+  todayHigh: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: t.textPrimary,
+  },
+  todayLow: {
+    fontSize: 15,
+    color: t.textTertiary,
+  },
+  todayDetailsRow: {
     flexDirection: 'row' as const,
     gap: 16,
-    paddingHorizontal: 4,
-    paddingVertical: 4,
+    marginBottom: 6,
+    justifyContent: 'center' as const,
   },
-  forecastDay: {
-    alignItems: 'center' as const,
-    gap: 4,
-    minWidth: 60,
+  todayDetail: {
+    fontSize: 14,
+    color: t.textSecondary,
   },
-  forecastDayLabel: { fontSize: 12, fontWeight: '600' as const, color: t.textSecondary, textAlign: 'center' as const },
-  forecastHigh: { fontSize: 20, fontWeight: '700' as const, color: t.textPrimary },
-  forecastLow: { fontSize: 14, color: t.textTertiary },
-  forecastRain: { fontSize: 11, color: t.rainBlue, fontWeight: '500' as const },
-  forecastWind: { fontSize: 10, color: t.textTertiary },
+  todaySunRow: {
+    fontSize: 13,
+    color: t.textTertiary,
+    textAlign: 'center' as const,
+  },
 
+  // ── Next 3 days block ─────────────────────────────────────────
+  nextDaysBlock: {
+    marginTop: 4,
+  },
+  nextDaysDivider: {
+    height: 1,
+    backgroundColor: t.borderLight,
+    marginBottom: 8,
+  },
+  nextDayRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: t.divider,
+    gap: 8,
+  },
+  nextDayLabel: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: t.textSecondary,
+    width: 80,
+  },
+  nextDayEmoji: {
+    fontSize: 20,
+    width: 28,
+    textAlign: 'center' as const,
+  },
+  nextDayTemps: {
+    flexDirection: 'row' as const,
+    gap: 6,
+    flex: 1 as const,
+  },
+  nextDayHigh: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: t.textPrimary,
+  },
+  nextDayLow: {
+    fontSize: 14,
+    color: t.textTertiary,
+  },
+  nextDayRain: {
+    fontSize: 12,
+    color: t.rainBlue,
+    width: 48,
+    textAlign: 'right' as const,
+  },
+  nextDayWind: {
+    fontSize: 12,
+    color: t.textTertiary,
+    width: 72,
+    textAlign: 'right' as const,
+  },
+
+  // ── Modal ─────────────────────────────────────────────────────
   modalOverlay: {
     flex: 1 as const,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -345,6 +542,7 @@ const createStyles = (t: ThemeTokens) => ({
   modalOption: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: t.divider },
   modalOptionText: { fontSize: 16, color: t.textPrimary },
 
+  // ── Alert rules ───────────────────────────────────────────────
   ruleRow: {
     flexDirection: 'row' as const, justifyContent: 'space-between' as const,
     alignItems: 'center' as const, paddingVertical: 10,
@@ -353,6 +551,7 @@ const createStyles = (t: ThemeTokens) => ({
   ruleName: { fontSize: 15, color: t.textPrimary, fontWeight: '500' as const },
   ruleInterval: { fontSize: 13, color: t.textTertiary },
 
+  // ── History rows ──────────────────────────────────────────────
   historyRow: {
     flexDirection: 'row' as const, justifyContent: 'space-between' as const,
     alignItems: 'flex-start' as const, paddingVertical: 8,

@@ -1,4 +1,4 @@
-// Legal content for PingWeather
+// Legal content for WeatherBeacon
 // Centralized, versioned EULA and Privacy Policy text.
 // Adapted from SocialUplink (Truth Centered Tech)
 
@@ -18,37 +18,37 @@ export interface LegalDocument {
 // EULA (End User License Agreement / Terms of Use)
 // ────────────────────────────────────────────────────────────
 export const EULA_CONTENT: LegalDocument = {
-  version: '1.0.0',
-  effectiveDate: 'April 1, 2026',
+  version: '1.1.0',
+  effectiveDate: 'June 8, 2026',
   title: 'Terms of Use (EULA)',
   sections: [
     {
       title: 'Introduction',
-      body: 'Welcome to PingWeather\u2122. These Terms of Use ("Agreement") are a legal agreement between you ("User") and Truth Centered Tech ("Company," "we," "us," or "our"). By using the PingWeather mobile application and related services (the "Service"), you agree to be bound by these terms. If you do not agree, do not use the Service.',
+      body: 'Welcome to WeatherBeacon\u2122. These Terms of Use ("Agreement") are a legal agreement between you ("User") and Truth Centered Tech ("Company," "we," "us," or "our"). By using the WeatherBeacon mobile application and related services (the "Service"), you agree to be bound by these terms. If you do not agree, do not use the Service.',
     },
     {
       title: 'License Grant',
-      body: 'We grant you a limited, non-exclusive, non-transferable, revocable license to use the PingWeather application on your personal devices for your own personal or business use, subject to these terms. This license does not include the right to sublicense, modify, distribute, or create derivative works of the application. We reserve all rights not expressly granted to you.',
+      body: 'We grant you a limited, non-exclusive, non-transferable, revocable license to use the WeatherBeacon application on your personal devices for your own personal or business use, subject to these terms. This license does not include the right to sublicense, modify, distribute, or create derivative works of the application. We reserve all rights not expressly granted to you.',
     },
     {
       title: 'Acceptable Use',
-      body: 'You agree to use PingWeather only for lawful purposes and in accordance with these terms. You may not: (a) use the Service for any illegal purpose; (b) interfere with or disrupt the Service or its servers; (c) attempt to gain unauthorized access to any part of the Service; (d) use automated tools to access the Service except as provided by us; (e) reverse engineer, decompile, or disassemble any part of the Service; or (f) violate any applicable local, state, national, or international law.',
+      body: 'You agree to use WeatherBeacon only for lawful purposes and in accordance with these terms. You may not: (a) use the Service for any illegal purpose; (b) interfere with or disrupt the Service or its servers; (c) attempt to gain unauthorized access to any part of the Service; (d) use automated tools to access the Service except as provided by us; (e) reverse engineer, decompile, or disassemble any part of the Service; or (f) violate any applicable local, state, national, or international law.',
     },
     {
       title: 'Subscription Tiers',
-      body: 'PingWeather offers multiple subscription tiers:\n\nFree Tier: Includes 1 monitored location, 2 alert rules, 12-hour minimum polling interval, 7-day alert history, and single-condition alerts.\n\nPro Tier ($3.99/month): Includes 3 monitored locations, 5 alert rules, 4-hour minimum polling interval, 30-day alert history, and compound condition alerts (AND/OR logic).\n\nPremium Tier ($7.99/month): Includes 10 monitored locations, unlimited alert rules, 1-hour minimum polling interval, 90-day alert history, compound condition alerts, and SMS alerts (when available).\n\nPricing and features are subject to change. We will notify you of any changes before your next billing cycle.',
+      body: 'WeatherBeacon offers multiple subscription tiers:\n\nFree Tier: Includes 1 monitored location, 2 alert rules, 12-hour minimum polling interval, 7-day alert history, and single-condition alerts.\n\nPro Tier: Includes 3 monitored locations, 5 alert rules, 4-hour minimum polling interval, 30-day alert history, and compound condition alerts (AND/OR logic). Subscription renews monthly at the current price displayed in the app.\n\nPremium Tier: Includes 10 monitored locations, unlimited alert rules, 1-hour minimum polling interval, 90-day alert history, and compound condition alerts. Subscription renews monthly at the current price displayed in the app.\n\nPricing is determined by the App Store or Google Play in your local currency. Prices are subject to change; we will notify you before your next billing cycle.',
     },
     {
       title: 'Weather Data Disclaimer',
-      body: 'PingWeather provides weather forecasts and alerts based on data from third-party weather services. WEATHER FORECASTS ARE INHERENTLY UNCERTAIN AND SHOULD NOT BE RELIED UPON AS THE SOLE BASIS FOR DECISIONS AFFECTING LIFE, SAFETY, OR PROPERTY. We do not guarantee the accuracy, completeness, or timeliness of any weather data or alerts. You acknowledge that weather conditions can change rapidly and that forecast accuracy decreases with longer time horizons. PingWeather is a supplementary notification tool, not a replacement for official weather warnings from the National Weather Service or equivalent authorities in your jurisdiction.',
+      body: 'WeatherBeacon provides weather forecasts and alerts based on data from third-party weather services. WEATHER FORECASTS ARE INHERENTLY UNCERTAIN AND SHOULD NOT BE RELIED UPON AS THE SOLE BASIS FOR DECISIONS AFFECTING LIFE, SAFETY, OR PROPERTY. We do not guarantee the accuracy, completeness, or timeliness of any weather data or alerts. You acknowledge that weather conditions can change rapidly and that forecast accuracy decreases with longer time horizons. WeatherBeacon is a supplementary notification tool, not a replacement for official weather warnings from the National Weather Service or equivalent authorities in your jurisdiction.',
     },
     {
       title: 'Notification Delivery',
-      body: 'While we make reasonable efforts to deliver notifications promptly, we do not guarantee that notifications will be delivered within any specific timeframe or at all. Notification delivery depends on factors outside our control, including your device settings, network connectivity, battery optimization settings, and push notification service availability. You are responsible for ensuring your device is configured to receive push notifications from PingWeather. We strongly recommend keeping official weather alert channels (NWS, emergency broadcasts) enabled as a backup.',
+      body: 'While we make reasonable efforts to deliver notifications promptly, we do not guarantee that notifications will be delivered within any specific timeframe or at all. Notification delivery depends on factors outside our control, including your device settings, network connectivity, battery optimization settings, and push notification service availability. You are responsible for ensuring your device is configured to receive push notifications from WeatherBeacon. We strongly recommend keeping official weather alert channels (NWS, emergency broadcasts) enabled as a backup.',
     },
     {
       title: 'Intellectual Property',
-      body: 'The PingWeather application, including its design, code, logos, trademarks, and documentation, is owned by Truth Centered Tech and protected by intellectual property laws. "PingWeather" and the PingWeather logo are trademarks of the Company. You may not use our trademarks without prior written permission.',
+      body: 'The WeatherBeacon application, including its design, code, logos, trademarks, and documentation, is owned by Truth Centered Tech and protected by intellectual property laws. "WeatherBeacon" and the WeatherBeacon logo are trademarks of the Company. You may not use our trademarks without prior written permission.',
     },
     {
       title: 'Limitation of Liability',
@@ -60,7 +60,7 @@ export const EULA_CONTENT: LegalDocument = {
     },
     {
       title: 'Termination',
-      body: 'We may suspend or terminate your access to the Service at any time, with or without cause, with or without notice. You may terminate your account at any time by contacting us. Upon termination: (a) your license to use the Service ends immediately; (b) your alert configurations and history will be deleted within 30 days; and (c) your obligations under these terms survive termination where applicable.',
+      body: 'We may suspend or terminate your access to the Service at any time, with or without cause, with or without notice. You may delete your account at any time using the Delete Account option in the app Settings, which immediately and permanently removes your profile, locations, alert rules, history, and device tokens. Upon termination: (a) your license to use the Service ends immediately; (b) your data is deleted immediately upon account deletion or within 30 days if requested by email; and (c) your obligations under these terms survive termination where applicable.',
     },
     {
       title: 'Dispute Resolution',
@@ -75,8 +75,12 @@ export const EULA_CONTENT: LegalDocument = {
       body: 'We may update these terms from time to time. We will notify you of material changes by posting the updated terms within the app and updating the version number and effective date. Your continued use of the Service after such changes constitutes acceptance of the new terms.',
     },
     {
+      title: 'App Store Terms',
+      body: 'If you downloaded WeatherBeacon from the Apple App Store, the following additional terms apply:\n\n1. Acknowledgment: This Agreement is between you and Truth Centered Tech only, not Apple Inc. Apple is not responsible for the App or its content.\n\n2. Scope of License: The license granted to you is a limited, non-transferable license to use WeatherBeacon on any Apple-branded products you own or control, as permitted by the App Store Terms of Service.\n\n3. Maintenance and Support: Truth Centered Tech is solely responsible for providing maintenance and support for WeatherBeacon. Apple has no obligation to provide any maintenance or support for WeatherBeacon.\n\n4. Warranty: Truth Centered Tech is solely responsible for any product warranties, whether express or implied by law, to the extent not effectively disclaimed. In the event of any failure to conform to any applicable warranty, you may notify Apple and Apple will refund the purchase price for WeatherBeacon. Apple has no other warranty obligation with respect to WeatherBeacon.\n\n5. Product Claims: Truth Centered Tech, not Apple, is responsible for addressing any claims by you or any third party relating to WeatherBeacon or your possession and/or use of WeatherBeacon, including: (i) product liability claims; (ii) any claim that WeatherBeacon fails to conform to any applicable legal or regulatory requirement; and (iii) claims arising under consumer protection, privacy, or similar legislation.\n\n6. Intellectual Property: In the event of any third-party claim that WeatherBeacon or your possession and use of WeatherBeacon infringes that third party\'s intellectual property rights, Truth Centered Tech, not Apple, will be solely responsible for the investigation, defense, settlement and discharge of any such claim.\n\n7. Third-Party Beneficiary: Apple and Apple\'s subsidiaries are third-party beneficiaries of this Agreement. Upon your acceptance of these terms, Apple will have the right (and will be deemed to have accepted the right) to enforce this Agreement against you as a third-party beneficiary.',
+    },
+    {
       title: 'Contact Us',
-      body: 'If you have questions about these Terms of Use, please contact us at:\n\nEmail: legal@truthcenteredtech.com\nWebsite: https://truthcenteredtech.com',
+      body: 'If you have questions about these Terms of Use, please contact us at:\n\nEmail: legal@truthcenteredtech.com\nTerms of Use: https://www.truthcenteredtech.com/terms-weatherbeacon\nWebsite: https://truthcenteredtech.com',
     },
   ],
 };
@@ -85,13 +89,13 @@ export const EULA_CONTENT: LegalDocument = {
 // Privacy Policy
 // ────────────────────────────────────────────────────────────
 export const PRIVACY_POLICY_CONTENT: LegalDocument = {
-  version: '1.0.0',
-  effectiveDate: 'April 1, 2026',
+  version: '1.1.0',
+  effectiveDate: 'June 8, 2026',
   title: 'Privacy Policy',
   sections: [
     {
       title: 'Introduction',
-      body: 'Truth Centered Tech ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use the PingWeather mobile application and related services. Please read this policy carefully. If you do not agree with the terms of this Privacy Policy, please do not use the Service.',
+      body: 'Truth Centered Tech ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use the WeatherBeacon mobile application and related services. Please read this policy carefully. If you do not agree with the terms of this Privacy Policy, please do not use the Service.',
     },
     {
       title: 'Data Collection',
@@ -99,15 +103,11 @@ export const PRIVACY_POLICY_CONTENT: LegalDocument = {
     },
     {
       title: 'How We Use Your Data',
-      body: 'We use the information we collect to:\n\n- Monitor weather conditions at your specified locations based on your alert rules.\n- Send push notifications when your alert conditions are met.\n- Maintain your alert history for the duration specified by your subscription tier.\n- Improve the Service, fix bugs, and develop new features.\n- Communicate with you about your account, billing, and service updates.\n\nWe do not use your data for advertising, marketing to third parties, or any purpose unrelated to providing the PingWeather Service.',
+      body: 'We use the information we collect to:\n\n- Monitor weather conditions at your specified locations based on your alert rules.\n- Send push notifications when your alert conditions are met.\n- Maintain your alert history for the duration specified by your subscription tier.\n- Improve the Service, fix bugs, and develop new features.\n- Communicate with you about your account, billing, and service updates.\n\nWe do not use your data for advertising, marketing to third parties, or any purpose unrelated to providing the WeatherBeacon Service.',
     },
     {
-      title: 'Weather Data Sources',
-      body: 'PingWeather retrieves forecast data from third-party weather APIs (currently Open-Meteo). Your location coordinates are sent to these services to retrieve local weather forecasts. These services receive only the coordinates, not your identity or account information. Please review the privacy policies of these services for information about how they handle location data.',
-    },
-    {
-      title: 'Push Notification Services',
-      body: 'We use Firebase Cloud Messaging (FCM) for Android and Apple Push Notification Service (APNs) for iOS to deliver notifications. Your device push token is stored on our servers and shared with these services solely for notification delivery. These services are operated by Google and Apple respectively and are subject to their privacy policies.',
+      title: 'Third-Party Services and Data Processors',
+      body: 'WeatherBeacon uses the following third-party services that may receive your data:\n\nSupabase (supabase.com): Our database and authentication provider. Stores your account information, location data, alert rules, and alert history on servers in the United States. Supabase Privacy Policy: https://supabase.com/privacy\n\nOpen-Meteo (open-meteo.com): Weather forecast API. Receives your location coordinates to retrieve local weather data. Does not receive your identity or account information. Open-Meteo is free and open-source; see their privacy policy for details.\n\nMapbox (mapbox.com): Mapping service used for radar visualization. When you view the radar screen, your map coordinates are sent to Mapbox servers to load map tiles. We disable Mapbox telemetry in our implementation. Mapbox Privacy Policy: https://www.mapbox.com/legal/privacy\n\nRevenueCat (revenuecat.com): Subscription and payment management. Receives your device identifier, a non-personally-identifiable user ID, and subscription/purchase transaction data to manage your subscription status. RevenueCat Privacy Policy: https://www.revenuecat.com/privacy\n\nFirebase Cloud Messaging / Apple Push Notification Service: Notification delivery services operated by Google and Apple. Your device push token is shared with these services solely for notification delivery.',
     },
     {
       title: 'Data Retention',
@@ -119,11 +119,11 @@ export const PRIVACY_POLICY_CONTENT: LegalDocument = {
     },
     {
       title: 'Analytics and Usage Data',
-      body: 'We collect anonymized analytics data to improve the Service:\n\n- Feature usage statistics (e.g., most common alert types, average polling intervals).\n- Error rates and performance metrics.\n- We do not track individual user behavior across sessions beyond what is necessary for the Service to function.\n- Analytics data is aggregated and cannot be used to identify individual users.',
+      body: 'We collect server-side aggregate metrics to improve the Service:\n\n- Error rates and performance metrics from our backend infrastructure.\n- Aggregate counts of feature usage (e.g., number of alerts triggered system-wide).\n\nWe do not use any third-party analytics SDKs (such as Firebase Analytics, Amplitude, or Mixpanel). We do not track individual user behavior across sessions. All metrics are aggregated at the server level and cannot be used to identify individual users.',
     },
     {
       title: "Children's Privacy (COPPA Compliance)",
-      body: 'PingWeather is not intended for children under the age of 13 (or the applicable age of digital consent in your jurisdiction). We do not knowingly collect personal information from children. If you are a parent or guardian and believe your child has provided us with personal information, please contact us at privacy@truthcenteredtech.com and we will promptly delete such information.',
+      body: 'WeatherBeacon is not intended for children under the age of 13 (or the applicable age of digital consent in your jurisdiction). We do not knowingly collect personal information from children. If you are a parent or guardian and believe your child has provided us with personal information, please contact us at privacy@truthcenteredtech.com and we will promptly delete such information.',
     },
     {
       title: 'Your Rights Under GDPR (European Users)',
@@ -135,11 +135,11 @@ export const PRIVACY_POLICY_CONTENT: LegalDocument = {
     },
     {
       title: 'Data Deletion Requests',
-      body: 'You may request deletion of your account and all associated data at any time:\n\n- Contact us at privacy@truthcenteredtech.com with your account email.\n- We will process deletion requests within 30 days.\n- Upon deletion: your profile, locations, alert rules, alert history, and device tokens will be permanently removed.\n- We may retain anonymized, aggregated data that cannot identify you for statistical purposes.',
+      body: 'You may delete your account and all associated data at any time:\n\n- Use the Delete Account option in the app Settings for immediate, permanent deletion.\n- Upon deletion, your profile, locations, alert rules, alert history, and device tokens are permanently and immediately removed from our systems.\n- Alternatively, contact us at privacy@truthcenteredtech.com with your account email; we will process email deletion requests within 30 days.\n- We may retain anonymized, aggregated data that cannot identify you for statistical purposes.',
     },
     {
       title: 'International Data Transfers',
-      body: 'PingWeather processes data using servers located in the United States. If you are located outside the United States, your data may be transferred to and processed in the United States.\n\nWe ensure appropriate safeguards for international transfers through: (a) Standard Contractual Clauses approved by the European Commission; (b) compliance with applicable data protection frameworks; and (c) contractual obligations with our infrastructure providers that require them to protect your data.',
+      body: 'WeatherBeacon processes data using servers located in the United States. If you are located outside the United States, your data may be transferred to and processed in the United States.\n\nWe ensure appropriate safeguards for international transfers through: (a) Standard Contractual Clauses approved by the European Commission; (b) compliance with applicable data protection frameworks; and (c) contractual obligations with our infrastructure providers that require them to protect your data.',
     },
     {
       title: 'Changes to This Privacy Policy',

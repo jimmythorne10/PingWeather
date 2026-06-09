@@ -37,7 +37,7 @@ export default function NotificationSetupScreen() {
         <Text style={[styles.subtitle, { color: t.textSecondary }]}>
           {done
             ? "You're all set to receive weather alerts."
-            : 'PingWeather needs push notifications to alert you when weather conditions match your rules. This is the core of what the app does.'}
+            : 'WeatherBeacon needs push notifications to alert you when weather conditions match your rules. This is the core of what the app does.'}
         </Text>
 
         {!done && (
@@ -63,7 +63,7 @@ export default function NotificationSetupScreen() {
               <ActivityIndicator color={t.textOnPrimary} />
             ) : (
               <Text style={[styles.enableButtonText, { color: t.textOnPrimary }]}>
-                Enable Notifications
+                Continue
               </Text>
             )}
           </Pressable>
@@ -95,14 +95,14 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 48,
   },
-  content: { alignItems: 'center' },
+  content: { alignItems: 'center', maxWidth: 480, alignSelf: 'center', width: '100%' },
   icon: { fontSize: 64, marginBottom: 16 },
   title: { fontSize: 24, fontWeight: '700', marginBottom: 8, textAlign: 'center' },
   subtitle: { fontSize: 15, textAlign: 'center', lineHeight: 22, marginBottom: 24 },
   card: { borderRadius: 12, padding: 16, borderWidth: 1, width: '100%' },
   cardText: { fontSize: 14, lineHeight: 20, textAlign: 'center' },
   errorText: { fontSize: 13, marginTop: 12 },
-  buttons: { gap: 12 },
+  buttons: { gap: 12, maxWidth: 480, alignSelf: 'center', width: '100%' },
   enableButton: { paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
   enableButtonText: { fontSize: 18, fontWeight: '700' },
   skipButton: { alignItems: 'center', paddingVertical: 12 },

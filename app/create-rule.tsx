@@ -1,6 +1,6 @@
-import { View, Text, ScrollView, Pressable, TextInput, StyleSheet, Alert } from 'react-native';
-import { useState, useEffect } from 'react';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { View, Text, ScrollView, Pressable, TextInput, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { useTokens } from '../src/theme';
 import { useAlertRulesStore } from '../src/stores/alertRulesStore';
 import { useLocationsStore } from '../src/stores/locationsStore';
@@ -10,6 +10,7 @@ import { TIER_LIMITS } from '../src/types';
 import type { AlertCondition, WeatherMetric, ComparisonOperator, LogicalOperator } from '../src/types';
 import { getUnitForMetric, getUnitLabel, MOON_PHASE_PRESETS, nearestMoonPhasePreset } from '../src/utils/metricHelpers';
 import { weatherCodeLabel, weatherCodeToEmoji } from '../src/services/weatherIcon';
+import { deriveRuleForm, NOT_READY } from '../src/utils/deriveRuleForm';
 
 // Sorted alphabetically by label so users can scan predictably.
 const METRICS: { value: WeatherMetric; label: string; summaryLabel?: string; defaultUnit: string }[] = [
@@ -169,51 +170,59 @@ export default function CreateRuleScreen() {
   const tier = profile?.subscription_tier ?? 'free';
   const limits = TIER_LIMITS[tier];
 
-  // Find source rule for edit/clone modes
-  const sourceRule = (mode === 'edit' || mode === 'clone') && ruleId
-    ? rules.find((r) => r.id === ruleId)
-    : undefined;
-
-  const [name, setName] = useState(() => {
-    if (sourceRule && mode === 'clone') return `${sourceRule.name} (copy)`;
-    if (sourceRule && mode === 'edit') return sourceRule.name;
-    return '';
-  });
-  const [selectedLocationId, setSelectedLocationId] = useState(() =>
-    sourceRule ? sourceRule.location_id : ''
-  );
-  const [conditions, setConditions] = useState<AlertCondition[]>(() =>
-    sourceRule
-      ? sourceRule.conditions
-      : [{ metric: 'temperature_low', operator: 'lt', value: 32, unit: 'fahrenheit' }]
-  );
-  const [logicalOp, setLogicalOp] = useState<LogicalOperator>(
-    sourceRule ? sourceRule.logical_operator : 'AND'
-  );
-  const [lookaheadHours, setLookaheadHours] = useState(
-    sourceRule ? sourceRule.lookahead_hours : 24
-  );
-  const [pollingHours, setPollingHours] = useState(
-    sourceRule ? sourceRule.polling_interval_hours : limits.minPollingIntervalHours
-  );
-  const [cooldownHours, setCooldownHours] = useState(
-    sourceRule ? sourceRule.cooldown_hours : 12
-  );
-  const [saving, setSaving] = useState(false);
-  // Category filter state — one entry per condition, defaults to 'all'
-  const [conditionCategories, setConditionCategories] = useState<MetricCategory[]>(() =>
-    (sourceRule?.conditions ?? [{ metric: 'temperature_low' }]).map(() => 'all' as MetricCategory)
-  );
+  // BUG-004 fix: Gate the form on explicit loaded flags set after async calls
+  // resolve. useState initialisers run once — if rules/locations aren't loaded
+  // yet they get stale defaults that never update. Instead we wait here.
+  const [rulesLoaded, setRulesLoaded] = useState(false);
+  const [locationsLoaded, setLocationsLoaded] = useState(false);
 
   useEffect(() => {
-    // FIX 12: Load both locations and rules on mount. On a cold-start deep
-    // link into this screen (e.g., tapping "edit" from a notification), the
-    // Zustand store may be empty. Without loadRules() here, sourceRule is
-    // undefined, all useState initialisers get their default values, and the
-    // form opens blank instead of pre-populated.
-    loadLocations();
-    loadRules();
+    void loadLocations().then(() => setLocationsLoaded(true));
+    void loadRules().then(() => setRulesLoaded(true));
   }, []);
+
+  // Derive form values from the store via useMemo so they react when rules
+  // populates (rather than one-shot useState initialisers). NOT_READY is
+  // returned until the required rule is present.
+  const derivedForm = useMemo(
+    () => deriveRuleForm(rules, ruleId, mode),
+    [rules, ruleId, mode]
+  );
+
+  // Form state — initialised from derivedForm once it is ready. Using separate
+  // useState fields (rather than a single object) preserves the fine-grained
+  // update callbacks used throughout the component.
+  const ready = rulesLoaded && locationsLoaded && derivedForm !== NOT_READY;
+
+  const [name, setName] = useState('');
+  const [selectedLocationId, setSelectedLocationId] = useState('');
+  const [conditions, setConditions] = useState<AlertCondition[]>([
+    { metric: 'temperature_low', operator: 'lt', value: 32, unit: 'fahrenheit' },
+  ]);
+  const [logicalOp, setLogicalOp] = useState<LogicalOperator>('AND');
+  const [lookaheadHours, setLookaheadHours] = useState(24);
+  const [pollingHours, setPollingHours] = useState(limits.minPollingIntervalHours);
+  const [cooldownHours, setCooldownHours] = useState(12);
+  const [saving, setSaving] = useState(false);
+  const [conditionCategories, setConditionCategories] = useState<MetricCategory[]>(['all']);
+  // Track whether we've seeded form state from derivedForm so we only do it once.
+  const [formSeeded, setFormSeeded] = useState(false);
+
+  useEffect(() => {
+    if (formSeeded || derivedForm === NOT_READY) return;
+    // Both stores are loaded and derivedForm has real values — seed form state.
+    setName(derivedForm.name);
+    setSelectedLocationId(derivedForm.selectedLocationId);
+    setConditions(derivedForm.conditions);
+    setLogicalOp(derivedForm.logicalOp);
+    setLookaheadHours(derivedForm.lookaheadHours);
+    setPollingHours(
+      Math.max(derivedForm.pollingHours, limits.minPollingIntervalHours)
+    );
+    setCooldownHours(derivedForm.cooldownHours);
+    setConditionCategories(derivedForm.conditions.map(() => 'all' as MetricCategory));
+    setFormSeeded(true);
+  }, [derivedForm, formSeeded, limits.minPollingIntervalHours]);
 
   useEffect(() => {
     if (locations.length > 0 && !selectedLocationId) {
@@ -255,8 +264,9 @@ export default function CreateRuleScreen() {
     }
 
     setSaving(true);
+    let ok: boolean;
     if (mode === 'edit' && ruleId && updateRule) {
-      await updateRule(ruleId, {
+      ok = await updateRule(ruleId, {
         location_id: selectedLocationId,
         name: name.trim(),
         conditions,
@@ -266,7 +276,7 @@ export default function CreateRuleScreen() {
         cooldown_hours: cooldownHours,
       });
     } else {
-      await createRule({
+      ok = await createRule({
         location_id: selectedLocationId,
         name: name.trim(),
         conditions,
@@ -277,6 +287,10 @@ export default function CreateRuleScreen() {
       });
     }
     setSaving(false);
+    if (!ok) {
+      Alert.alert('Save Failed', useAlertRulesStore.getState().error ?? 'Could not save. Please try again.');
+      return;
+    }
     router.back();
   };
 
@@ -288,7 +302,23 @@ export default function CreateRuleScreen() {
   const saveButtonLabel =
     mode === 'edit' ? 'Save Changes' : 'Create Alert Rule';
 
+  // BUG-004: Show spinner until rules + locations are both hydrated and the
+  // form state has been seeded. Without this gate the form renders blank and
+  // never updates because useState initialisers are one-shot.
+  if (!ready || !formSeeded) {
+    return (
+      <>
+        <Stack.Screen options={{ title: screenTitle, gestureEnabled: true, headerBackVisible: true }} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={t.primary} />
+        </View>
+      </>
+    );
+  }
+
   return (
+    <>
+    <Stack.Screen options={{ title: screenTitle, gestureEnabled: true, headerBackVisible: true }} />
     <ScrollView style={[styles.container, { backgroundColor: t.background }]} contentContainerStyle={styles.content}>
       <Text style={[styles.title, { color: t.textPrimary }]}>{screenTitle}</Text>
 
@@ -338,13 +368,13 @@ export default function CreateRuleScreen() {
           {index > 0 && (
             <View style={styles.logicalRow}>
               <Pressable
-                style={[styles.logicalChip, logicalOp === 'AND' && { backgroundColor: t.primary }]}
+                style={[styles.logicalChip, { borderColor: t.border }, logicalOp === 'AND' && { backgroundColor: t.primary }]}
                 onPress={() => setLogicalOp('AND')}
               >
                 <Text style={{ color: logicalOp === 'AND' ? t.textOnPrimary : t.textSecondary, fontSize: 13 }}>AND</Text>
               </Pressable>
               <Pressable
-                style={[styles.logicalChip, logicalOp === 'OR' && { backgroundColor: t.primary }]}
+                style={[styles.logicalChip, { borderColor: t.border }, logicalOp === 'OR' && { backgroundColor: t.primary }]}
                 onPress={() => setLogicalOp('OR')}
               >
                 <Text style={{ color: logicalOp === 'OR' ? t.textOnPrimary : t.textSecondary, fontSize: 13 }}>OR</Text>
@@ -773,12 +803,14 @@ export default function CreateRuleScreen() {
         <Text style={{ color: t.textTertiary, fontSize: 16 }}>Cancel</Text>
       </Pressable>
     </ScrollView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 20, paddingBottom: 60 },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  content: { padding: 20, paddingBottom: 60, maxWidth: 640, alignSelf: 'center', width: '100%' },
   title: { fontSize: 24, fontWeight: '700', marginBottom: 20 },
   label: { fontSize: 12, fontWeight: '600', letterSpacing: 0.5, marginTop: 20, marginBottom: 4 },
   helperText: { fontSize: 13, lineHeight: 18, marginBottom: 10 },

@@ -6,6 +6,7 @@ import { useRadarTiles } from '../src/hooks/useRadarTiles';
 
 const _mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? '';
 if (_mapboxToken) MapboxGL.setAccessToken(_mapboxToken);
+MapboxGL.setTelemetryEnabled(false);
 
 const RADAR_OPACITY = 0.75;
 const DEFAULT_ZOOM = 7;
@@ -42,8 +43,6 @@ export default function RadarScreen() {
       <MapboxGL.MapView
         style={styles.map}
         styleURL={MapboxGL.StyleURL.Dark}
-        logoEnabled={false}
-        attributionEnabled={false}
         compassEnabled={false}
         scaleBarEnabled={false}
       >

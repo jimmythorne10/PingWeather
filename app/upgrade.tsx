@@ -1,10 +1,10 @@
-import { View, Text, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-import { useState } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator, Platform, Linking } from 'react-native';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useTokens } from '../src/theme';
 import { useAuthStore } from '../src/stores/authStore';
 import { TIER_LIMITS } from '../src/types';
-import { purchasePackage as doPurchase, restorePurchases as doRestore, TIER_PACKAGE_MAP } from '../src/services/purchases';
+import { purchasePackage as doPurchase, restorePurchases as doRestore, TIER_PACKAGE_MAP, getOfferings } from '../src/services/purchases';
 import type { SubscriptionTier } from '../src/types';
 
 interface TierCard {
@@ -52,7 +52,6 @@ const TIERS: TierCard[] = [
       '1-hour polling',
       '90-day alert history',
       'Compound conditions (AND/OR)',
-      'SMS alerts (coming soon)',
     ],
   },
 ];
@@ -66,17 +65,35 @@ export default function UpgradeScreen() {
   const currentTier = profile?.subscription_tier ?? 'free';
   const [purchasing, setPurchasing] = useState<SubscriptionTier | null>(null);
   const [restoring, setRestoring] = useState(false);
+  const [tierPrices, setTierPrices] = useState<Partial<Record<string, string>>>({});
+
+  useEffect(() => {
+    getOfferings().then((offering) => {
+      if (!offering) return;
+      const prices: Partial<Record<string, string>> = {};
+      for (const pkg of offering.packages) {
+        if (pkg.tier && pkg.tier !== 'free') prices[pkg.tier] = pkg.priceString;
+      }
+      setTierPrices(prices);
+    });
+  }, []);
+
+  const getDisplayPrice = (tier: string) => {
+    if (tier === 'free') return '$0';
+    const staticCard = TIERS.find((c) => c.tier === tier);
+    return tierPrices[tier] ?? staticCard?.price ?? '';
+  };
 
   const handleSubscribe = async (tier: SubscriptionTier) => {
     if (tier === currentTier || purchasing) return;
 
-    // For "free" downgrade — use the store's manage subscription flow
+    // For "free" downgrade — direct user to platform subscription management
     if (tier === 'free') {
-      Alert.alert(
-        'Downgrade',
-        'To downgrade, cancel your subscription in Google Play Store → Subscriptions. Your current plan stays active until the end of the billing period.',
-        [{ text: 'OK' }]
-      );
+      const message = Platform.select({
+        ios: 'To downgrade, go to iPhone Settings → [Your Name] → Subscriptions, then cancel WeatherBeacon. Your current plan stays active until the end of the billing period.',
+        default: 'To downgrade, cancel your subscription in Google Play Store → Subscriptions. Your current plan stays active until the end of the billing period.',
+      });
+      Alert.alert('Downgrade', message, [{ text: 'OK' }]);
       return;
     }
 
@@ -91,7 +108,7 @@ export default function UpgradeScreen() {
       // Refresh profile to pick up the new tier
       await fetchProfile();
       Alert.alert(
-        'Welcome to PingWeather ' + (tier === 'pro' ? 'Pro' : 'Premium') + '!',
+        'Welcome to WeatherBeacon ' + (tier === 'pro' ? 'Pro' : 'Premium') + '!',
         'Your plan has been upgraded. Enjoy the additional features.',
         [{ text: 'OK', onPress: () => router.back() }]
       );
@@ -149,7 +166,7 @@ export default function UpgradeScreen() {
                 <Text style={[styles.tierLabel, { color: t.textPrimary }]}>{card.label}</Text>
                 <Text style={[styles.tierTagline, { color: t.textTertiary }]}>{card.tagline}</Text>
               </View>
-              <Text style={[styles.tierPrice, { color: t.primary }]}>{card.price}</Text>
+              <Text style={[styles.tierPrice, { color: t.primary }]}>{getDisplayPrice(card.tier)}</Text>
             </View>
 
             {card.highlights.map((line) => (
@@ -176,7 +193,7 @@ export default function UpgradeScreen() {
                   <ActivityIndicator color={t.textOnPrimary} />
                 ) : (
                   <Text style={[styles.subscribeButtonText, { color: t.textOnPrimary }]}>
-                    {card.tier === 'free' ? 'Downgrade' : `Subscribe — ${card.price}`}
+                    {card.tier === 'free' ? 'Downgrade' : `Subscribe — ${getDisplayPrice(card.tier)}`}
                   </Text>
                 )}
               </Pressable>
@@ -200,16 +217,28 @@ export default function UpgradeScreen() {
       </Pressable>
 
       <Text style={[styles.legalText, { color: t.textTertiary }]}>
-        Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period.
-        Manage or cancel in your Google Play account settings.
+        {Platform.select({
+          ios: 'Payment will be charged to your Apple Account at confirmation of purchase. Subscriptions automatically renew unless auto-renewal is turned off at least 24 hours before the end of the current period. Manage subscriptions in your App Store account settings.',
+          default: 'Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. Manage or cancel in your Google Play account settings.',
+        })}
       </Text>
+
+      <View style={styles.legalLinks}>
+        <Pressable onPress={() => Linking.openURL('https://www.truthcenteredtech.com/terms-weatherbeacon')}>
+          <Text style={[styles.legalLinkText, { color: t.primary }]}>Terms of Use</Text>
+        </Pressable>
+        <Text style={[styles.legalLinkSeparator, { color: t.textTertiary }]}> · </Text>
+        <Pressable onPress={() => Linking.openURL('https://www.truthcenteredtech.com/weatherbeacon-privacy')}>
+          <Text style={[styles.legalLinkText, { color: t.primary }]}>Privacy Policy</Text>
+        </Pressable>
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 20, paddingBottom: 60 },
+  content: { padding: 20, paddingBottom: 60, maxWidth: 560, alignSelf: 'center', width: '100%' },
   title: { fontSize: 26, fontWeight: '700', marginBottom: 4 },
   subtitle: { fontSize: 15, lineHeight: 22, marginBottom: 24 },
   tierCard: {
@@ -258,4 +287,13 @@ const styles = StyleSheet.create({
     marginTop: 20,
     lineHeight: 16,
   },
+  legalLinks: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  legalLinkText: { fontSize: 12, fontWeight: '500' },
+  legalLinkSeparator: { fontSize: 12 },
 });

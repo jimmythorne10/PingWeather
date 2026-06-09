@@ -8,6 +8,7 @@ import { useSettingsStore } from '../src/stores/settingsStore';
 import { fetchForecast } from '../src/services/weatherApi';
 import { weatherCodeToEmoji } from '../src/services/weatherIcon';
 import { getHourlyForDay } from '../src/services/hourlyForDay';
+import { findDayIndex } from '../src/services/dayDetailHelpers';
 import type { ThemeTokens } from '../src/theme';
 import type { HourlyForecast, DailyForecast } from '../src/types';
 
@@ -27,7 +28,8 @@ export default function DayDetailScreen() {
     date?: string;
     locationName?: string;
   }>();
-  const locationId = typeof params.locationId === 'string' ? params.locationId : '';
+  // Normalize params: undefined/non-string → null so guards below are explicit.
+  const locationId = typeof params.locationId === 'string' && params.locationId ? params.locationId : null;
   const date = typeof params.date === 'string' ? params.date : '';
   const locationName = typeof params.locationName === 'string' ? params.locationName : '';
 
@@ -41,13 +43,32 @@ export default function DayDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const location = locations.find((l) => l.id === locationId);
+  const location = locationId ? locations.find((l) => l.id === locationId) : undefined;
+
+  // Guard 1: missing locationId param — set error immediately, skip everything.
+  useEffect(() => {
+    if (!locationId) {
+      setError('No location specified. Please go back and try again.');
+      setLoading(false);
+    }
+  }, [locationId]);
 
   useEffect(() => {
     if (locations.length === 0) {
       loadLocations();
     }
   }, [locations.length, loadLocations]);
+
+  // Guard 2: locationId provided but not found after locations have loaded.
+  // Without this, loading stays true forever when the id is invalid/stale.
+  useEffect(() => {
+    if (!locationId) return; // Guard 1 already handled this
+    if (locations.length === 0) return; // Still loading locations
+    if (!location) {
+      setError('Location not found. It may have been deleted.');
+      setLoading(false);
+    }
+  }, [locationId, location, locations.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,9 +100,11 @@ export default function DayDetailScreen() {
     };
   }, [location, temperatureUnit, windSpeedUnit]);
 
+  // findDayIndex guards against empty date: startsWith('') matches every string,
+  // which would silently show day 0 instead of an error.
   const dailyIndex = useMemo(() => {
     if (!forecast) return -1;
-    return forecast.daily.time.findIndex((d) => d.startsWith(date));
+    return findDayIndex(forecast.daily.time, date);
   }, [forecast, date]);
 
   const hoursForDay = useMemo(() => {
@@ -103,6 +126,9 @@ export default function DayDetailScreen() {
         paddingTop: insets.top + 16,
         paddingBottom: Math.max(insets.bottom + 40, 80),
         paddingHorizontal: 16,
+        maxWidth: 640,
+        alignSelf: 'center' as const,
+        width: '100%' as const,
       }}
     >
       <View style={styles.header}>
@@ -129,6 +155,9 @@ export default function DayDetailScreen() {
           <Text style={styles.errorIcon}>⚠️</Text>
           <Text style={styles.errorTitle}>Unable to load forecast</Text>
           <Text style={styles.errorBody}>{error}</Text>
+          <Pressable onPress={() => router.back()} style={styles.errorBack} hitSlop={8}>
+            <Text style={styles.errorBackText}>← Go back</Text>
+          </Pressable>
         </View>
       )}
 
@@ -171,6 +200,25 @@ export default function DayDetailScreen() {
                 </Text>
               </View>
             </View>
+
+            {!!forecast.daily.sunrise?.[dailyIndex] && (
+              <View style={styles.summaryAstroRow}>
+                <View style={styles.summaryAstroMetric}>
+                  <Text style={styles.summaryMetricLabel}>SUNRISE</Text>
+                  <Text style={styles.summaryMetricValue}>
+                    ☀ {formatSunTime(forecast.daily.sunrise[dailyIndex]!)}
+                  </Text>
+                </View>
+                {!!forecast.daily.sunset?.[dailyIndex] && (
+                  <View style={styles.summaryAstroMetric}>
+                    <Text style={styles.summaryMetricLabel}>SUNSET</Text>
+                    <Text style={styles.summaryMetricValue}>
+                      🌇 {formatSunTime(forecast.daily.sunset[dailyIndex]!)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
           </View>
 
           {/* Hourly list */}
@@ -241,10 +289,17 @@ export default function DayDetailScreen() {
       {!loading && !error && forecast && dailyIndex < 0 && (
         <View style={styles.errorCard}>
           <Text style={styles.errorIcon}>📅</Text>
-          <Text style={styles.errorTitle}>Date not in forecast window</Text>
-          <Text style={styles.errorBody}>
-            The selected day is outside the 14-day forecast range.
+          <Text style={styles.errorTitle}>
+            {date ? 'Date not in forecast window' : 'No date specified'}
           </Text>
+          <Text style={styles.errorBody}>
+            {date
+              ? 'The selected day is outside the 14-day forecast range.'
+              : 'A date is required to show the day detail.'}
+          </Text>
+          <Pressable onPress={() => router.back()} style={styles.errorBack} hitSlop={8}>
+            <Text style={styles.errorBackText}>← Go back</Text>
+          </Pressable>
         </View>
       )}
     </ScrollView>
@@ -272,7 +327,7 @@ function formatDayLabel(isoDate: string): string {
   if (target.getTime() === today.getTime()) return 'Today';
   if (target.getTime() === tomorrow.getTime()) return 'Tomorrow';
 
-  return target.toLocaleDateString('en-US', {
+  return target.toLocaleDateString(undefined, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -287,6 +342,17 @@ function formatHourLabel(time: string): string {
   const period = hh >= 12 ? 'pm' : 'am';
   const h12 = hh % 12 === 0 ? 12 : hh % 12;
   return `${h12}${period}`;
+}
+
+function formatSunTime(isoDateTime: string | undefined | null): string {
+  if (!isoDateTime || isoDateTime.length < 16) return '';
+  const timePart = isoDateTime.slice(11, 16);
+  const [hhStr, mm] = timePart.split(':');
+  const hh = parseInt(hhStr, 10);
+  if (isNaN(hh)) return '';
+  const period = hh >= 12 ? 'pm' : 'am';
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  return `${h12}:${mm}${period}`;
 }
 
 function formatWindRange(winds: number[], unit: string): string {
@@ -362,6 +428,18 @@ const createStyles = (t: ThemeTokens) => ({
     textAlign: 'center' as const,
     lineHeight: 19,
   },
+  errorBack: {
+    marginTop: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: t.primary,
+  },
+  errorBackText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: t.textOnPrimary,
+  },
 
   summaryCard: {
     backgroundColor: t.card,
@@ -410,6 +488,18 @@ const createStyles = (t: ThemeTokens) => ({
     fontWeight: '600' as const,
     color: t.textPrimary,
   },
+  summaryAstroRow: {
+    flexDirection: 'row' as const,
+    width: '100%' as const,
+    justifyContent: 'space-around' as const,
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: t.divider,
+    flexWrap: 'wrap' as const,
+    gap: 12,
+  },
+  summaryAstroMetric: { alignItems: 'center' as const, minWidth: 70 as const },
 
   sectionLabel: {
     fontSize: 12,

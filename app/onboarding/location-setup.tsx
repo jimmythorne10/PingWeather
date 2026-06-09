@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useTokens } from '../../src/theme';
@@ -12,34 +12,43 @@ export default function LocationSetupScreen() {
   const { getLocation, loading: locLoading, error: locError } = useDeviceLocation();
   const addLocation = useLocationsStore((s) => s.addLocation);
   const [locationName, setLocationName] = useState('');
-  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [latStr, setLatStr] = useState('');
+  const [lonStr, setLonStr] = useState('');
+  const [gpsCoords, setGpsCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [timezone, setTimezone] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const parsedLat = parseFloat(latStr);
+  const parsedLon = parseFloat(lonStr);
+  const hasValidCoords = !isNaN(parsedLat) && !isNaN(parsedLon);
 
   const handleUseCurrentLocation = async () => {
     const result = await getLocation();
     if (result) {
-      setCoords(result);
+      setGpsCoords(result);
+      setLatStr(result.latitude.toFixed(6));
+      setLonStr(result.longitude.toFixed(6));
       setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
       if (!locationName) setLocationName('My Location');
     }
   };
 
   const handleNext = async () => {
-    if (coords && locationName) {
+    if (hasValidCoords && locationName.trim()) {
       setSaving(true);
-      const ok = await addLocation(locationName.trim(), coords.latitude, coords.longitude, timezone);
+      const ok = await addLocation(locationName.trim(), parsedLat, parsedLon, timezone);
       setSaving(false);
-      // FIX 7: Don't advance if the Supabase insert failed. The store already
-      // set its `error` field — the error display in the UI will surface it.
-      // Without this guard the user advances through onboarding with no
-      // location saved and hits the app in a broken state.
-      if (!ok) return;
+      // BUG-002: Surface save failure so the user is not left in a dead-end.
+      if (!ok) {
+        Alert.alert(
+          'Could not save location',
+          useLocationsStore.getState().error ?? 'Please try again.',
+        );
+        return;
+      }
     }
     router.push('/onboarding/notification-setup');
   };
-
-  const hasLocation = coords !== null && locationName.trim().length > 0;
 
   return (
     <View style={[styles.container, { backgroundColor: t.background }]}>
@@ -70,7 +79,9 @@ export default function LocationSetupScreen() {
         <LocationSearchInput
           onSelect={(result) => {
             setLocationName(result.name);
-            setCoords({ latitude: result.latitude, longitude: result.longitude });
+            setLatStr(result.latitude.toFixed(6));
+            setLonStr(result.longitude.toFixed(6));
+            setGpsCoords({ latitude: result.latitude, longitude: result.longitude });
             setTimezone(result.timezone ?? null);
           }}
           placeholder="Search place or address"
@@ -79,8 +90,8 @@ export default function LocationSetupScreen() {
         <Pressable
           style={[
             styles.locationButton,
-            { borderColor: coords ? t.success : t.primary },
-            coords && { backgroundColor: t.primaryLight },
+            { borderColor: gpsCoords ? t.success : t.primary },
+            gpsCoords && { backgroundColor: t.primaryLight },
           ]}
           onPress={handleUseCurrentLocation}
           disabled={locLoading}
@@ -88,10 +99,10 @@ export default function LocationSetupScreen() {
           {locLoading ? (
             <ActivityIndicator color={t.primary} />
           ) : (
-            <Text style={[styles.locationButtonText, { color: coords ? t.success : t.primary }]}>
-              {coords
-                ? `Location set (${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)})`
-                : 'Use My Current Location'}
+            <Text style={[styles.locationButtonText, { color: gpsCoords ? t.success : t.primary }]}>
+              {gpsCoords
+                ? `Location set (${gpsCoords.latitude.toFixed(4)}, ${gpsCoords.longitude.toFixed(4)})`
+                : 'Continue'}
             </Text>
           )}
         </Pressable>
@@ -113,11 +124,8 @@ export default function LocationSetupScreen() {
             placeholder="Latitude"
             placeholderTextColor={t.textTertiary}
             keyboardType="numeric"
-            value={coords?.latitude.toString() ?? ''}
-            onChangeText={(val) => {
-              const lat = parseFloat(val);
-              if (!isNaN(lat)) setCoords((c) => ({ latitude: lat, longitude: c?.longitude ?? 0 }));
-            }}
+            value={latStr}
+            onChangeText={setLatStr}
           />
           <TextInput
             style={[
@@ -127,30 +135,17 @@ export default function LocationSetupScreen() {
             placeholder="Longitude"
             placeholderTextColor={t.textTertiary}
             keyboardType="numeric"
-            value={coords?.longitude.toString() ?? ''}
-            onChangeText={(val) => {
-              const lon = parseFloat(val);
-              if (!isNaN(lon)) setCoords((c) => ({ latitude: c?.latitude ?? 0, longitude: lon }));
-            }}
+            value={lonStr}
+            onChangeText={setLonStr}
           />
         </View>
       </View>
 
       <View style={styles.buttons}>
         <Pressable
-          style={styles.skipButton}
-          onPress={() => router.push('/onboarding/notification-setup')}
-        >
-          <Text style={[styles.skipText, { color: t.textTertiary }]}>Skip for now</Text>
-        </Pressable>
-
-        <Pressable
-          style={[
-            styles.nextButton,
-            { backgroundColor: hasLocation ? t.primary : t.primaryDisabled },
-          ]}
+          style={[styles.nextButton, { backgroundColor: t.primary }]}
           onPress={handleNext}
-          disabled={!hasLocation || saving}
+          disabled={saving}
         >
           <Text style={[styles.nextButtonText, { color: t.textOnPrimary }]}>
             {saving ? 'Saving...' : 'Next'}
@@ -171,6 +166,9 @@ const styles = StyleSheet.create({
   },
   content: {
     alignItems: 'center',
+    maxWidth: 480,
+    alignSelf: 'center',
+    width: '100%',
   },
   icon: {
     fontSize: 48,
@@ -234,13 +232,9 @@ const styles = StyleSheet.create({
   },
   buttons: {
     gap: 12,
-  },
-  skipButton: {
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  skipText: {
-    fontSize: 15,
+    maxWidth: 480,
+    alignSelf: 'center',
+    width: '100%',
   },
   nextButton: {
     paddingVertical: 16,
