@@ -6,7 +6,7 @@ import { useStyles, useTokens } from '../src/theme';
 import { useLocationsStore } from '../src/stores/locationsStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { fetchForecast } from '../src/services/weatherApi';
-import { weatherCodeToEmoji } from '../src/services/weatherIcon';
+import { weatherCodeToEmoji, degreesToCardinal } from '../src/services/weatherIcon';
 import { getHourlyForDay } from '../src/services/hourlyForDay';
 import { findDayIndex } from '../src/services/dayDetailHelpers';
 import type { ThemeTokens } from '../src/theme';
@@ -254,6 +254,9 @@ export default function DayDetailScreen() {
                         {hoursForDay.precipitation_probability[i]}%
                       </Text>
                       <Text style={styles.hourWind}>
+                        {hoursForDay.wind_direction_10m?.[i] !== undefined
+                          ? `${degreesToCardinal(hoursForDay.wind_direction_10m[i])} `
+                          : ''}
                         {Math.round(hoursForDay.wind_speed_10m[i])} {windSpeedUnit}
                       </Text>
                     </View>

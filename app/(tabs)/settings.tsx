@@ -66,7 +66,7 @@ export default function SettingsScreen() {
     if (updates.digest_enabled === false) {
       Alert.alert(
         'Turn Off Digest?',
-        'Without a regular forecast digest, Android may put this app into deep sleep and delay or skip your weather alerts. Are you sure?',
+        'Without a regular forecast digest, your device may delay or skip weather alerts in the background. Are you sure?',
         [
           { text: 'Keep It On', style: 'cancel' },
           {
@@ -129,7 +129,11 @@ export default function SettingsScreen() {
       Alert.alert(
         'Notifications Unavailable',
         regError?.toLowerCase().includes('denied')
-          ? 'WeatherBeacon needs notification permission. Go to iPhone Settings → WeatherBeacon → Notifications and enable them, then try again.'
+          ? Platform.select({
+              ios: 'WeatherBeacon needs notification permission. Go to iPhone Settings → WeatherBeacon → Notifications and enable them, then try again.',
+              android: 'WeatherBeacon needs notification permission. Go to Settings → Apps → WeatherBeacon → Notifications and enable them, then try again.',
+              default: 'WeatherBeacon needs notification permission. Enable notifications for WeatherBeacon in your device settings, then try again.',
+            })
           : (regError ?? 'Could not enable notifications. Please try again.'),
         [{ text: 'OK' }]
       );
