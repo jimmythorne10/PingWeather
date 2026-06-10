@@ -57,11 +57,12 @@ rules:
   - "eas build | warn | | | DEPLOY ORDER CHECK: Have Edge Functions been deployed? Have migrations been pushed? Required sequence: supabase functions deploy → supabase db push → eas build. A build that references a stale backend causes silent runtime failures."
 
   # ── OTA DEPLOY GATES ───────────────────────────────────────────────────────
-  # OTA pushes go live immediately to all devices. Never push without Jimmy
-  # confirming the change works via hot-reload on device first.
-  # Two crashes were shipped to production (2026-05-07) by pushing OTA without
-  # device verification. This gate exists to prevent that from happening again.
-  - "eas update | warn | | | PRE-OTA CHECKLIST: (1) Have you tested this change via hot-reload on device? (2) Did Jimmy confirm it works in chat? OTA pushes are immediate and live — do NOT run eas update until Jimmy has said 'looks good' on the actual device."
+  # OTA pushes go live immediately to all devices. All four steps below are
+  # non-negotiable — each one has independently burned us before.
+  - "eas update | warn | | | OTA PRE-FLIGHT STEP 1/4 — EAS CLI VERSION: Run `eas --version` NOW. Must be >= 20.x. eas-cli 18.5.0 prints 'Skipping project fingerprints' but still attaches fingerprints, silently delivering OTA to zero devices. If outdated: `npm install -g eas-cli` BEFORE proceeding."
+  - "eas update | warn | | | OTA PRE-FLIGHT STEP 2/4 — WORKING TREE: Run `git status` NOW. Must be completely clean. Any modified or untracked file gets silently bundled into the OTA. The only warning is an asterisk on the commit hash in the EAS dashboard. If dirty: commit or stash first."
+  - "eas update | warn | | | OTA PRE-FLIGHT STEP 3/4 — BUILD CHANNEL: Run `eas build:list --platform android --limit 3` and `--platform ios --limit 3`. Read the Channel field on the latest production build for EACH platform. Push OTA to THAT channel. Do not assume from memory — channel mismatch caused Android to receive zero OTAs for months while targeting the wrong channel."
+  - "eas update | warn | | | OTA PRE-FLIGHT STEP 4/4 — DEVICE VERIFICATION: Has Jimmy confirmed this change works via hot-reload on device? OTA pushes are immediate and live. Do NOT run eas update until Jimmy has confirmed in chat."
 
   # ── SUPABASE DEPLOY GATES ──────────────────────────────────────────────────
   # Warn about the mandatory deploy order when pushing migrations.

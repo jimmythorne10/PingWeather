@@ -304,6 +304,27 @@ EAS substitutes `$VAR` patterns in top-level `app.json` string values (e.g. `ext
 
 **Visibility rules:** `sensitive` = encrypted, substituted in top-level app.json strings, available as env var in build environment. `secret` = secure vault, NOT substituted anywhere, available as env var.
 
+### eas-cli 18.5.0 — EAS_SKIP_AUTO_FINGERPRINT silently broken
+
+eas-cli **18.5.0** prints "Skipping project fingerprints" when `EAS_SKIP_AUTO_FINGERPRINT=1` is set but still attaches a fingerprint to the published update. That fingerprint is computed from the current working directory. When the build was made from a different commit, fingerprints don't match and the EAS server silently returns "no update available" — zero devices receive the OTA.
+
+**Fix:** Run `eas --version` before any OTA push. If < 20.x, run `npm install -g eas-cli` first.
+
+**How it burned us (2026-06-10):** Three OTA pushes from 18.5.0 all failed silently. No error, no warning, just zero delivery. Diagnosed by comparing build #5 fingerprint (`083f845a`) built from `5f8c164` vs OTA fingerprint computed from `44b79f44`.
+
+### Android OTA channel mismatch — production builds on `production`, not `preview`
+
+The Android production build (versionCode 12, profile: production) is on channel **`production`**. All prior Android OTAs were pushed to `preview`. Zero production OTAs reached production-profile Android users.
+
+**Rule:** Before any OTA push, run `eas build:list --platform android --limit 3` and read the `Channel` field. Push to THAT channel. Do not assume from memory — channel is locked at build time.
+
+**Current WeatherBeacon channel mapping:**
+- iOS production builds → `production` channel
+- Android production builds (profile: production, versionCode 12+) → `production` channel
+- Android internal builds (profile: preview, versionCode 11 and earlier) → `preview` channel
+
+When doing an OTA for all Android users: push to **both** `production` AND `preview` channels sequentially. The second push reuses the cached bundle (no re-upload overhead).
+
 ### Pre-OTA verification gate — non-negotiable (burned 2 production pushes 2026-05-07)
 
 Two broken OTA updates were shipped on 2026-05-07 (radar crash, then crash fix that may also be broken).
@@ -340,10 +361,26 @@ expo-router ~6.0.23, expo-notifications ~0.32.16, expo-location ~19.0.8, expo-co
 3. `eas build --platform android --profile preview`
 
 ### OTA deploy (JS-only changes)
+
+**Pre-flight every time (non-negotiable after 2026-06-10 incident):**
+1. `eas --version` → must be >= 20.x. Upgrade: `npm install -g eas-cli`
+2. `git status` → must be clean
+3. `eas build:list --platform android --limit 3` → read Channel field, push to that channel
+
+**iOS:**
 ```bash
-eas update --platform android --channel preview --message "<description>"
+EAS_SKIP_AUTO_FINGERPRINT=1 eas update --platform ios --channel production --message "<description>"
 ```
-Active since versionCode 7 installed. `--platform android` is required — see Known Bugs.
+**Android production builds (versionCode 12+, channel: production):**
+```bash
+EAS_SKIP_AUTO_FINGERPRINT=1 eas update --platform android --channel production --message "<description>"
+```
+**Android internal builds (versionCode 11, channel: preview) — push both when covering all users:**
+```bash
+EAS_SKIP_AUTO_FINGERPRINT=1 eas update --platform android --channel preview --message "<description>"
+```
+
+`--platform` is always required. Never run iOS and Android in parallel (shared `dist/` dir). See Known Bugs.
 
 ### RevenueCat products
 `src/services/purchases.ts` TIER_PACKAGE_MAP: `pro: '$rc_pro_monthly'`, `premium: '$rc_premium_monthly'`
