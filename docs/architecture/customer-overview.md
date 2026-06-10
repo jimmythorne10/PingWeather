@@ -1,10 +1,10 @@
-# PingWeather — Customer Overview
+# WeatherBeacon — Customer Overview
 
-This is a plain-English tour of what PingWeather does and how you use it. For the short version: PingWeather is a mobile app that sends you a push notification when the weather forecast hits conditions you care about — and otherwise stays silent.
+This is a plain-English tour of what WeatherBeacon does and how you use it. For the short version: WeatherBeacon is a mobile app that sends you a push notification when the weather forecast hits conditions you care about — and otherwise stays silent.
 
 ## The user journey, end to end
 
-**1. Install.** Download PingWeather from Google Play. (iOS is coming.)
+**1. Install.** Download WeatherBeacon from Google Play. (iOS is coming.)
 
 **2. Create your account.** Sign up with an email and password. No phone number, no social login gates. You'll see a brief privacy-highlights screen and a Terms of Use that you read and accept.
 
@@ -13,7 +13,7 @@ This is a plain-English tour of what PingWeather does and how you use it. For th
 - Type a place name — the app autocompletes as you type. Pick from the dropdown.
 - Enter latitude and longitude manually.
 
-**4. Enable push notifications.** PingWeather asks for permission to send you notifications. This is how alerts reach you — so if you skip this step, the app becomes an expensive weather viewer. Android also prompts you to turn off battery restrictions so alerts arrive reliably.
+**4. Enable push notifications.** WeatherBeacon asks for permission to send you notifications. This is how alerts reach you — so if you skip this step, the app becomes an expensive weather viewer. Android also prompts you to turn off battery restrictions so alerts arrive reliably.
 
 **5. Create your first alert.** Open the Alerts tab. You'll see a library of presets — "Freeze Warning", "Rain Likely", "High Wind", "Dangerous Wind", "Rain Delay Risk", "High UV Index", etc. Tap one. Pick the location it applies to. Confirm. That's it — the alert is active.
 
@@ -30,7 +30,7 @@ These are the "if this, then notify me" statements. Each rule has:
 - **A location** it watches.
 - **One or more conditions** — metric (temperature, rain chance, wind speed, humidity, feels-like, UV index), operator (above, below, at-or-above, etc.), and threshold value (e.g., `wind speed > 30 mph`).
 - **A lookahead window** — how far into the future to check. Options from 6 hours to 7 days.
-- **A polling interval** — how often PingWeather checks the forecast for this rule. Free: minimum 12 hours; Pro: 4 hours; Premium: 1 hour.
+- **A polling interval** — how often WeatherBeacon checks the forecast for this rule. Free: minimum 12 hours; Pro: 4 hours; Premium: 1 hour.
 - **A cooldown** — after the rule fires, how long before it can fire again. Prevents spamming you when conditions stay bad for a while.
 
 Pro and Premium can combine conditions — "rain chance above 60% **AND** wind speed above 20 mph" (both must be true) or "temperature above 95°F **OR** UV index above 9" (either triggers). Free-tier rules allow one condition at a time.
@@ -54,7 +54,7 @@ Three places to see the weather:
 - **Day Detail screen** — tap any day in the 14-day outlook to drill into hourly details for that day, plus high/low, rain chance, and wind range.
 
 ### Alert history
-Every time an alert fires, PingWeather logs it. The History screen shows the rule name, the location, the plain-English condition that was met ("Wind speed at or above 25 (forecast: 32)"), the timestamp, and whether the push notification was actually sent. History retention is tier-based:
+Every time an alert fires, WeatherBeacon logs it. The History screen shows the rule name, the location, the plain-English condition that was met ("Wind speed at or above 25 (forecast: 32)"), the timestamp, and whether the push notification was actually sent. History retention is tier-based:
 - Free: 7 days
 - Pro: 30 days
 - Premium: 90 days
@@ -62,7 +62,7 @@ Every time an alert fires, PingWeather logs it. The History screen shows the rul
 ### Forecast digest
 An opt-in daily or weekly push with a quick forecast summary for your chosen location. Enabled in Settings. Two reasons to turn it on:
 1. You like a quick weather heads-up every morning at 7 AM (or whatever hour you pick).
-2. Android is aggressive about silencing apps that don't do anything for a while. A daily digest keeps PingWeather in Android's active bucket so your *real* alerts arrive reliably.
+2. Android is aggressive about silencing apps that don't do anything for a while. A daily digest keeps WeatherBeacon in Android's active bucket so your *real* alerts arrive reliably.
 
 You pick:
 - Frequency: daily or weekly.
@@ -87,7 +87,7 @@ Everything configurable in one place:
 ### Subscription & billing
 Subscriptions are processed by Google Play (Billing by Google) and managed by a third-party subscription platform. In the app, tap "Upgrade" (or the plan CTA in Settings) to see the tier cards. Tap Subscribe → go through Google's normal purchase sheet → confirm. The app updates your plan in a few seconds (sometimes a minute) after a successful purchase.
 
-Moved to a new phone? Tap "Restore Purchases" on the Upgrade screen; PingWeather asks Google what you've bought and updates your plan accordingly.
+Moved to a new phone? Tap "Restore Purchases" on the Upgrade screen; WeatherBeacon asks Google what you've bought and updates your plan accordingly.
 
 Cancel or change your plan? Open Google Play → Subscriptions — that's where Google keeps renewal and cancellation controls. Your plan stays active through the end of the billing period.
 
@@ -111,8 +111,8 @@ We do not sell data. We do not show ads. We do not share location data with thir
 Account deletion is one button in Settings. Tap it, confirm, and your account + all locations + all rules + all history are permanently removed from our database.
 
 ## Known limitations / where to get support
-- **Weather data accuracy** — PingWeather supplements but never replaces official weather warnings (NWS in the US). Forecasts are inherently uncertain, especially beyond 48 hours.
-- **Notification delivery depends on your device settings.** Android battery-optimization whitelisting is critical; the app guides you through it during onboarding. If notifications aren't arriving, check Settings → Apps → PingWeather → Battery → Unrestricted.
+- **Weather data accuracy** — WeatherBeacon supplements but never replaces official weather warnings (NWS in the US). Forecasts are inherently uncertain, especially beyond 48 hours.
+- **Notification delivery depends on your device settings.** Android battery-optimization whitelisting is critical; the app guides you through it during onboarding. If notifications aren't arriving, check Settings → Apps → WeatherBeacon → Battery → Unrestricted.
 - **Single device per account.** Signing in on a second device replaces the first device's notification registration — only the most recently registered device gets pushes.
 - **iOS not yet shipped.**
 - **SMS alerts for Premium** — listed on the pricing page with a "coming soon" note.

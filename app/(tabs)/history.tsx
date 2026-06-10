@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, RefreshControl, Pressable } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useStyles, useTokens } from '../../src/theme';
 import { useAlertHistoryStore } from '../../src/stores/alertHistoryStore';
@@ -9,7 +9,7 @@ import type { ThemeTokens } from '../../src/theme';
 export default function HistoryScreen() {
   const styles = useStyles(createStyles);
   const tokens = useTokens();
-  const { entries, loading, loadHistory } = useAlertHistoryStore();
+  const { entries, loading, loadHistory, deleteEntry } = useAlertHistoryStore();
   const profile = useAuthStore((s) => s.profile);
   const tier = profile?.subscription_tier ?? 'free';
   const limits = TIER_LIMITS[tier];
@@ -61,9 +61,18 @@ export default function HistoryScreen() {
             </View>
             <Text style={styles.entryLocation}>{entry.location_name}</Text>
             <Text style={styles.entrySummary}>{entry.conditions_met}</Text>
-            <Text style={styles.entryTime}>
-              {new Date(entry.triggered_at).toLocaleString()}
-            </Text>
+            <View style={styles.entryFooter}>
+              <Text style={styles.entryTime}>
+                {entry.triggered_at ? new Date(entry.triggered_at).toLocaleString() : '—'}
+              </Text>
+              <Pressable
+                onPress={() => deleteEntry(entry.id)}
+                style={styles.deleteButton}
+                hitSlop={8}
+              >
+                <Text style={styles.deleteButtonText}>✕</Text>
+              </Pressable>
+            </View>
           </View>
         ))
       )}
@@ -73,7 +82,7 @@ export default function HistoryScreen() {
 
 const createStyles = (t: ThemeTokens) => ({
   container: { flex: 1 as const, backgroundColor: t.background },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: 20, paddingBottom: 40, maxWidth: 640, alignSelf: 'center' as const, width: '100%' as const },
   title: { fontSize: 24, fontWeight: '700' as const, color: t.textPrimary, marginBottom: 4 },
   subtitle: { fontSize: 13, color: t.textTertiary, marginBottom: 20 },
 
@@ -97,5 +106,13 @@ const createStyles = (t: ThemeTokens) => ({
   entryStatus: { fontSize: 12, fontWeight: '600' as const },
   entryLocation: { fontSize: 13, color: t.textTertiary, marginBottom: 4 },
   entrySummary: { fontSize: 14, color: t.textSecondary, lineHeight: 20, marginBottom: 6 },
+  entryFooter: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginTop: 4,
+  },
   entryTime: { fontSize: 12, color: t.textTertiary },
+  deleteButton: { paddingHorizontal: 6, paddingVertical: 2 },
+  deleteButtonText: { fontSize: 14, color: t.error, fontWeight: '600' as const },
 });

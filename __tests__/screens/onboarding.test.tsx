@@ -80,10 +80,10 @@ import CompleteScreen from '../../app/onboarding/complete';
 describe('Onboarding — Welcome', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  // FR-ONBOARD-002: App name displayed as "PingWeather"
-  it('displays app name "PingWeather" (not WeatherWatch)', () => {
+  // FR-ONBOARD-002: App name displayed as "WeatherBeacon"
+  it('displays app name "WeatherBeacon" (not WeatherWatch)', () => {
     render(<WelcomeScreen />);
-    expect(screen.getByText('PingWeather')).toBeTruthy();
+    expect(screen.getByText('WeatherBeacon')).toBeTruthy();
     expect(screen.queryByText('WeatherWatch')).toBeNull();
   });
 
@@ -187,10 +187,10 @@ describe('Onboarding — Notification Setup', () => {
 describe('Onboarding — Complete', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  // FR-ONBOARD-007: "Start Using PingWeather" button present
-  it('shows "Start Using PingWeather" button (not WeatherWatch)', () => {
+  // FR-ONBOARD-007: "Start Using WeatherBeacon" button present
+  it('shows "Start Using WeatherBeacon" button (not WeatherWatch)', () => {
     render(<CompleteScreen />);
-    expect(screen.getByText('Start Using PingWeather')).toBeTruthy();
+    expect(screen.getByText('Start Using WeatherBeacon')).toBeTruthy();
   });
 
   // FR-ONBOARD-007: sets onboarding_completed on complete

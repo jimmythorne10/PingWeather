@@ -2,7 +2,7 @@
  * Tests for legal content — EULA and Privacy Policy structure
  *
  * Validates that legal documents have all required sections per PRD.
- * TDD: current content uses "WeatherWatch" branding but PRD spec is "PingWeather".
+ * TDD: current content uses "WeatherWatch" branding but PRD spec is "WeatherBeacon".
  * Those tests SHOULD fail until the content is updated.
  */
 
@@ -65,10 +65,10 @@ describe('Legal content', () => {
       expect(allText).toMatch(/Truth Centered Tech/i);
     });
 
-    it('uses the PingWeather product name (not WeatherWatch)', () => {
-      // TDD: PRD says app name is "PingWeather" — current content still says "WeatherWatch"
+    it('uses the WeatherBeacon product name (not WeatherWatch)', () => {
+      // TDD: PRD says app name is "WeatherBeacon" — current content still says "WeatherWatch"
       const allText = EULA_CONTENT.sections.map((s) => `${s.title} ${s.body}`).join(' ');
-      expect(allText).toMatch(/PingWeather/);
+      expect(allText).toMatch(/WeatherBeacon/);
       expect(allText).not.toMatch(/WeatherWatch/);
     });
 
@@ -141,10 +141,10 @@ describe('Legal content', () => {
       expect(allText).toMatch(/Truth Centered Tech/);
     });
 
-    it('uses the PingWeather product name (not WeatherWatch)', () => {
+    it('uses the WeatherBeacon product name (not WeatherWatch)', () => {
       // TDD: rebrand needed
       const allText = PRIVACY_POLICY_CONTENT.sections.map((s) => `${s.title} ${s.body}`).join(' ');
-      expect(allText).toMatch(/PingWeather/);
+      expect(allText).toMatch(/WeatherBeacon/);
       expect(allText).not.toMatch(/WeatherWatch/);
     });
 

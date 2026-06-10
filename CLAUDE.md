@@ -1,14 +1,14 @@
-# PingWeather
+# WeatherBeacon
 
-> Rebrand note: this project was originally created as "WeatherWatch" and
-> rebranded on 2026-04-08 after market research surfaced trademark conflicts.
-> DO NOT reintroduce "WeatherWatch" anywhere user-facing. The Supabase project
-> is still internally labeled `WeatherWatch` in the dashboard (cosmetic, not
-> worth the migration) — that's the only exception.
+> Rebrand note: this project was originally created as "WeatherWatch", rebranded
+> to "PingWeather" on 2026-04-08, and rebranded again to "WeatherBeacon" on
+> 2026-05-11. DO NOT reintroduce "WeatherWatch" or "PingWeather" anywhere
+> user-facing. The Supabase project is still internally labeled `WeatherWatch`
+> in the dashboard (cosmetic, not worth the migration) — that's the only exception.
 
 ## Project Overview
 
-PingWeather is a mobile weather notification app (Android-first) that allows
+WeatherBeacon is a mobile weather notification app (Android-first) that allows
 users to configure custom conditional weather alerts. Users set locations,
 define alert criteria (temperature thresholds, precipitation probability, wind
 speed, etc.), and receive push notifications when conditions are met.
@@ -80,7 +80,7 @@ for testing gating without real payments.
 ## Project Structure
 
 ```
-PingWeather/
+WeatherBeacon/
 ├── app/                        # Expo Router screens
 │   ├── (tabs)/                 # Main tab navigator (5 visible tabs)
 │   │   ├── index.tsx           # Home — forecast card + active alerts + recent notifications
@@ -177,7 +177,7 @@ PingWeather/
 2. **Grid-square caching** — Cluster users by approximate location (0.1° = ~11km). One API call per grid per polling interval, then evaluate all matching users' rules against cached data.
 3. **Notification reliability** — Use FCM V1 via Expo Push for delivery. Never rely on on-device background tasks for critical alerts.
 4. **Tier enforcement** — Server-side logic is the authority; client shows limits for UX. `TIER_LIMITS` constant in `src/types/index.ts` is shared between client and server spec.
-5. **Weather disclaimer** — Always surface that forecasts are inherently uncertain. PingWeather supplements, not replaces, official weather warnings.
+5. **Weather disclaimer** — Always surface that forecasts are inherently uncertain. WeatherBeacon supplements, not replaces, official weather warnings.
 6. **Secure token storage** — JWTs in `expo-secure-store` (Keystore on Android); push tokens only in `profiles.push_token` via the `register-push-token` Edge Function.
 
 ## Development Commands
@@ -221,7 +221,7 @@ google-services.json              # Firebase config for FCM, in project root
 
 ## Testing Contract (per global CLAUDE.md §9 verification contract)
 
-PingWeather's verification strategy, by layer:
+WeatherBeacon's verification strategy, by layer:
 
 | Layer | Tool | Runs how |
 |---|---|---|
@@ -256,7 +256,7 @@ These rules emerged from real bugs this session. Treat as load-bearing:
 3. **Do NOT set `verify_jwt = true` on `poll-weather` or `evaluate-alerts` in `supabase/config.toml`.** They're internal, called by `pg_cron` (vault service_role) and by each other (service_role client). Setting JWT verification on would break the pipeline with 401 Unauthorized at the gateway, and the symptom is a silent `continue` in `poll-weather` that leaves `last_polled_at` unstamped. `register-push-token` is the only function that should have JWT verification on.
 4. **Do NOT use `.update(...).eq(...).order(...).limit(...)` in supabase-js.** The `.order()` and `.limit()` modifiers are silently ignored on UPDATE. If you need to update "only the latest matching row", either `SELECT max(id)` first and then `UPDATE WHERE id = ...`, or have the inserting code return the PK via `.select(...).single()` and update by id later. This is how BUG-007 happened.
 5. **Do NOT delete `src/services/parseRecoveryUrl.ts` even though it's unused.** It's the implicit-flow fallback parser that would be needed if we ever swap off PKCE. Kept intentionally.
-6. **Do NOT reintroduce the "WeatherWatch" name in user-facing copy.** Rebrand to PingWeather is load-bearing for trademark clearance. The Supabase dashboard project label is still "WeatherWatch" because renaming would break the project URL — that's the only permissible usage.
+6. **Do NOT reintroduce "WeatherWatch" or "PingWeather" in user-facing copy.** The current brand is WeatherBeacon. The Supabase dashboard project label is still "WeatherWatch" because renaming would break the project URL — that's the only permissible usage of the old name.
 7. **Android package is `com.truthcenteredtech.pingweather`.** Renaming this would invalidate the FCM credentials upload and require a new Firebase project + rebuild. Don't.
 
 ## Entity: Truth Centered Tech

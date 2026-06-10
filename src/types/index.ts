@@ -1,5 +1,5 @@
 // ────────────────────────────────────────────────────────────
-// PingWeather Core Types
+// WeatherBeacon Core Types
 // ────────────────────────────────────────────────────────────
 
 // Subscription tiers
@@ -59,6 +59,7 @@ export interface Profile {
   digest_last_sent_at: string | null;
   temperature_unit: 'fahrenheit' | 'celsius';
   wind_speed_unit: WindSpeedUnit;
+  pressure_unit: PressureUnit;
   created_at: string;
   updated_at: string;
 }
@@ -196,6 +197,10 @@ export interface DailyForecast {
   uv_index_max: number[];
   weather_code: number[];
   precipitation_sum?: number[];
+  sunrise?: string[];    // ISO local datetime "YYYY-MM-DDTHH:MM"
+  sunset?: string[];     // ISO local datetime
+  moonrise?: string[];   // ISO local datetime; may be "" when no moonrise that day
+  moonset?: string[];    // ISO local datetime; may be "" when no moonset that day
 }
 
 export interface ForecastResponse {

@@ -35,7 +35,7 @@ export const useSettingsStore = create<SettingsState>()(
       setNotificationsEnabled: (enabled) => set({ notificationsEnabled: enabled }),
     }),
     {
-      name: 'weatherwatch-settings',
+      name: 'pingweather-settings',
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

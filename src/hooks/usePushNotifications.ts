@@ -118,7 +118,12 @@ export function usePushNotifications() {
       let finalStatus = existingStatus;
 
       if (existingStatus !== 'granted') {
-        const { status } = await N.requestPermissionsAsync({});
+        // iOS requires explicit permission types — empty {} causes Optional(nil) bridge error
+        const { status } = await N.requestPermissionsAsync(
+          Platform.OS === 'ios'
+            ? { ios: { allowAlert: true, allowBadge: true, allowSound: true } }
+            : {}
+        );
         finalStatus = status;
       }
 

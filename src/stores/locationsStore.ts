@@ -257,7 +257,7 @@ export const useLocationsStore = create<LocationsState>()(
       clearError: () => set({ error: null }),
     }),
     {
-      name: 'weatherwatch-locations',
+      name: 'pingweather-locations',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ locations: state.locations }),
     }

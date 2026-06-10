@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, Switch, Alert, Modal, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, Switch, Alert, Modal, RefreshControl, ActivityIndicator } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useStyles, useTokens } from '../../src/theme';
@@ -42,6 +42,7 @@ export default function AlertsScreen() {
     preset: AlertPreset;
     locationId: string;
   } | null>(null);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     loadRules();
@@ -87,28 +88,34 @@ export default function AlertsScreen() {
 
   const handlePresetCreate = async () => {
     if (!presetConfirmState) return;
+    if (creating) return;
 
     const { preset, locationId } = presetConfirmState;
     const pollingHours = Math.max(preset.polling_interval_hours, limits.minPollingIntervalHours);
 
-    await addRule({
-      location_id: locationId,
-      name: preset.name,
-      conditions: preset.conditions,
-      logical_operator: preset.logical_operator,
-      lookahead_hours: preset.lookahead_hours,
-      polling_interval_hours: pollingHours,
-      cooldown_hours: preset.cooldown_hours,
-    });
+    setCreating(true);
+    try {
+      await addRule({
+        location_id: locationId,
+        name: preset.name,
+        conditions: preset.conditions,
+        logical_operator: preset.logical_operator,
+        lookahead_hours: preset.lookahead_hours,
+        polling_interval_hours: pollingHours,
+        cooldown_hours: preset.cooldown_hours,
+      });
 
-    // FIX 10: Check whether the store recorded an error after the call.
-    // createRule sets store.error on failure; if it's set, keep the modal open
-    // so the user sees the error message (rendered elsewhere from the store)
-    // rather than silently dismissing as if the rule was created.
-    const storeError = useAlertRulesStore.getState().error;
-    if (storeError) return;
+      // FIX 10: Check whether the store recorded an error after the call.
+      // createRule sets store.error on failure; if it's set, keep the modal open
+      // so the user sees the error message (rendered elsewhere from the store)
+      // rather than silently dismissing as if the rule was created.
+      const storeError = useAlertRulesStore.getState().error;
+      if (storeError) return;
 
-    setPresetConfirmState(null);
+      setPresetConfirmState(null);
+    } finally {
+      setCreating(false);
+    }
   };
 
   const handleDeleteRule = (rule: AlertRule) => {
@@ -267,7 +274,10 @@ export default function AlertsScreen() {
               </Text>
               {rule.last_triggered_at && (
                 <Text style={styles.ruleTriggered}>
-                  Last triggered: {new Date(rule.last_triggered_at).toLocaleDateString()}
+                  Last triggered: {(() => {
+                    const [y, mo, d] = rule.last_triggered_at.slice(0, 10).split('-').map(Number);
+                    return new Date(y, mo - 1, d).toLocaleDateString();
+                  })()}
                 </Text>
               )}
               <View style={styles.ruleActions}>
@@ -406,12 +416,17 @@ export default function AlertsScreen() {
                     </Text>
                   </Pressable>
                   <Pressable
-                    style={styles.presetConfirmCreateButton}
+                    style={[styles.presetConfirmCreateButton, creating && { opacity: 0.6 }]}
                     onPress={handlePresetCreate}
+                    disabled={creating}
                   >
-                    <Text style={styles.presetConfirmCreateButtonText}>
-                      Create
-                    </Text>
+                    {creating ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <Text style={styles.presetConfirmCreateButtonText}>
+                        Create
+                      </Text>
+                    )}
                   </Pressable>
                 </View>
               </>
@@ -458,7 +473,7 @@ export default function AlertsScreen() {
 
 const createStyles = (t: ThemeTokens) => ({
   container: { flex: 1 as const, backgroundColor: t.background },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: 20, paddingBottom: 40, maxWidth: 600, alignSelf: 'center' as const, width: '100%' as const },
 
   // Filter toggle
   filterRow: {
@@ -538,7 +553,8 @@ const createStyles = (t: ThemeTokens) => ({
     backgroundColor: t.card,
     borderRadius: 14,
     padding: 8,
-    width: 280,
+    width: '90%' as const,
+    maxWidth: 320,
   },
   modalOption: {
     paddingVertical: 14,
@@ -576,8 +592,9 @@ const createStyles = (t: ThemeTokens) => ({
     backgroundColor: t.card,
     borderRadius: 16,
     padding: 20,
-    width: 320,
-  } as any,
+    width: '90%' as const,
+    maxWidth: 360,
+  },
   presetConfirmTitle: {
     fontSize: 18,
     fontWeight: '700' as const,

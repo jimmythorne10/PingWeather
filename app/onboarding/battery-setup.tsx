@@ -11,7 +11,7 @@ export default function BatterySetupScreen() {
 
   const handleOpenSettings = () => {
     if (isIOS) {
-      // Deep-links directly to PingWeather's page in iOS Settings
+      // Deep-links directly to WeatherBeacon's page in iOS Settings
       Linking.openURL('app-settings:');
     } else {
       Linking.openSettings();
@@ -21,8 +21,8 @@ export default function BatterySetupScreen() {
   const title = isIOS ? 'Enable Background App Refresh' : 'Battery Optimization Notice';
 
   const subtitle = isIOS
-    ? 'iOS may pause PingWeather when not in use. Enable Background App Refresh so alert notifications reach you reliably — even on quiet weather days.'
-    : 'Android may silence weather alerts if PingWeather isn\'t allowed to run in the background. Whitelist the app now to ensure you never miss critical alerts.';
+    ? 'iOS may pause WeatherBeacon when not in use. Enable Background App Refresh so alert notifications reach you reliably — even on quiet weather days.'
+    : 'Android may silence weather alerts if WeatherBeacon isn\'t allowed to run in the background. Whitelist the app now to ensure you never miss critical alerts.';
 
   const whyBody = isIOS
     ? 'Your weather rules are evaluated on our servers, but iOS can delay push notifications to apps that don\'t have Background App Refresh enabled. This setting is the most common cause of missed alerts on iPhone.'
@@ -35,8 +35,8 @@ export default function BatterySetupScreen() {
   const steps = isIOS
     ? [
         {
-          title: 'Open PingWeather Settings',
-          text: 'Tap the "Open Settings" button below — it opens PingWeather\'s page directly.',
+          title: 'Open WeatherBeacon Settings',
+          text: 'Tap the "Open Settings" button below — it opens WeatherBeacon\'s page directly.',
         },
         {
           title: 'Tap Background App Refresh',
@@ -53,8 +53,8 @@ export default function BatterySetupScreen() {
           text: 'Tap the "Open Battery Settings" button below.',
         },
         {
-          title: 'Find PingWeather',
-          text: 'Navigate to Apps → PingWeather (or search for "PingWeather" in Settings).',
+          title: 'Find WeatherBeacon',
+          text: 'Navigate to Apps → WeatherBeacon (or search for "WeatherBeacon" in Settings).',
         },
         {
           title: 'Set to Unrestricted',
@@ -147,6 +147,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 24,
     paddingVertical: 20,
+    maxWidth: 560,
+    alignSelf: 'center',
+    width: '100%',
   },
   content: {
     alignItems: 'center',
@@ -237,6 +240,9 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 24,
     paddingBottom: 48,
+    maxWidth: 560,
+    alignSelf: 'center',
+    width: '100%',
   },
   openButton: {
     paddingVertical: 16,

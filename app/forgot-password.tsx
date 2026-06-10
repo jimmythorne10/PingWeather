@@ -31,6 +31,7 @@ export default function ForgotPasswordScreen() {
       style={[styles.container, { backgroundColor: t.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <View style={styles.inner}>
       <View style={styles.header}>
         <Text style={styles.icon}>{'🔑'}</Text>
         <Text style={[styles.title, { color: t.textPrimary }]}>Reset Password</Text>
@@ -83,6 +84,7 @@ export default function ForgotPasswordScreen() {
             Back to Sign In
           </Text>
         </Pressable>
+      </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -157,5 +159,10 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 15,
     fontWeight: '500',
+  },
+  inner: {
+    maxWidth: 420,
+    alignSelf: 'center',
+    width: '100%',
   },
 });

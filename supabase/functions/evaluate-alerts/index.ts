@@ -9,7 +9,7 @@
 // (which uses a service_role supabase client). verify_jwt = false in
 // config.toml; the bearer check below is the access control.
 //
-// This is the core IP of PingWeather.
+// This is the core IP of WeatherBeacon.
 // ────────────────────────────────────────────────────────────
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -21,6 +21,7 @@ import type {
   AlertRule,
   ForecastData,
 } from "../_shared/weatherEngine.ts";
+import { validateEvaluateAlertsBody } from "./validation.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -39,11 +40,29 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { rules, forecast, location_name } = (await req.json()) as {
-      rules: AlertRule[];
-      forecast: ForecastData;
-      location_name: string;
+    const rawBody = (await req.json()) as {
+      rules: unknown;
+      forecast: unknown;
+      location_name: unknown;
     };
+
+    // ── Body guard (SEC-002) ──────────────────────────────────────────────────
+    // Validate shape before casting so malformed bodies from a poll-weather bug
+    // produce a clear 400 instead of a misleading 500.
+    const bodyValidation = validateEvaluateAlertsBody(rawBody);
+    if (!bodyValidation.valid) {
+      return new Response(
+        JSON.stringify({ error: bodyValidation.error }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Body is now structurally valid — cast is safe.
+    const rules = rawBody.rules as AlertRule[];
+    const forecast = rawBody.forecast as ForecastData;
+    const location_name = typeof rawBody.location_name === "string"
+      ? rawBody.location_name
+      : "";
 
     const evalNow = new Date();
 
@@ -52,7 +71,7 @@ Deno.serve(async (req) => {
     // without running Deno.
     const results = rules
       .filter((rule) => rule.is_active && !isInCooldown(rule, evalNow))
-      .map((rule) => evaluateRule(rule, forecast));
+      .map((rule) => evaluateRule(rule, forecast, evalNow));
 
     const triggered = results.filter((r) => r.triggered);
 

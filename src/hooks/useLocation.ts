@@ -15,15 +15,34 @@ export function useDeviceLocation() {
     setError(null);
 
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      // Check existing status before requesting to avoid repeated dialogs.
+      let { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        ({ status } = await Location.requestForegroundPermissionsAsync());
+      }
       if (status !== 'granted') {
         setError('Location permission denied. Please enable it in your device settings.');
         setLoading(false);
         return null;
       }
 
+      // Prefer a cached fix — instant, no GPS required (works on Wi-Fi-only iPads).
+      const lastKnown = await Location.getLastKnownPositionAsync({
+        maxAge: 5 * 60 * 1000,   // accept up to 5-minute-old fix
+        requiredAccuracy: 5000,   // 5 km is plenty for weather grid lookup
+      });
+      if (lastKnown) {
+        setLoading(false);
+        return {
+          latitude: lastKnown.coords.latitude,
+          longitude: lastKnown.coords.longitude,
+        };
+      }
+
+      // Fresh fix — use lowest accuracy so it works on Wi-Fi-only devices.
+      // Lowest = 3 km accuracy, sufficient for weather grid lookup.
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: Location.Accuracy.Lowest,
       });
 
       setLoading(false);
@@ -32,7 +51,9 @@ export function useDeviceLocation() {
         longitude: location.coords.longitude,
       };
     } catch {
-      setError('Failed to get your location. Please try again.');
+      setError(
+        'Could not determine your location. Try searching for your address above or enter coordinates manually below.'
+      );
       setLoading(false);
       return null;
     }

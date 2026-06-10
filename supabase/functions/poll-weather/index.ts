@@ -73,6 +73,8 @@ async function fetchForecast(lat: number, lon: number): Promise<Record<string, u
       "uv_index_max",
       "weather_code",
       "precipitation_sum",
+      "sunrise",
+      "sunset",
     ].join(","),
     timezone: "auto",
   });
@@ -164,6 +166,7 @@ interface GridGroup {
 interface GridResult {
   triggeredAlerts: Record<string, unknown>[];
   ruleIds: string[];
+  forecast: Record<string, unknown>;
 }
 
 async function processGrid(group: GridGroup): Promise<GridResult> {
@@ -231,16 +234,22 @@ async function processGrid(group: GridGroup): Promise<GridResult> {
 
   // Enrich each triggered alert with location_name so the notification
   // title can be built as "rule_name - location_name" after parallelization.
+  // Also attach the grid's forecast so poll-weather's push dispatch loop can
+  // derive the WMO emoji from the daily weather_code for the triggered day.
+  // evaluate-alerts does not echo forecast back in its response (no API contract
+  // change needed) — we carry it through processGrid's return value instead.
   const triggeredAlerts = (evalResult.alerts ?? []).map(
     (alert: Record<string, unknown>) => ({
       ...alert,
       location_name: group.locationName,
+      forecast,
     })
   );
 
   return {
     triggeredAlerts,
     ruleIds: group.rules.map((r) => r.id as string),
+    forecast,
   };
 }
 
@@ -359,10 +368,11 @@ Deno.serve(async (req) => {
         ...new Set(allTriggeredAlerts.map((a) => a.user_id as string)),
       ];
 
-      const { data: profiles } = await supabase
+      const { data: profiles, error: profilesErr } = await supabase
         .from("profiles")
         .select("id, push_token")
         .in("id", uniqueUserIds);
+      if (profilesErr) console.error("profiles push token fetch failed:", profilesErr);
 
       const pushTokenByUserId = new Map<string, string>(
         (profiles ?? [])

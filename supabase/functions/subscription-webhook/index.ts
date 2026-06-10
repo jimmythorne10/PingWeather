@@ -6,21 +6,34 @@
 //
 // Auth: HMAC-SHA256 of raw request body, verified against the
 // X-RevenueCat-Signature header using REVENUECAT_WEBHOOK_SECRET.
-// Falls back to plain Bearer token comparison if the signature
-// header is absent (transition period for existing webhook config).
+// Uses constant-time crypto.subtle.verify() — no timing side-channel.
+//
+// REQUIRE_HMAC_SIGNATURE env flag (default: false for backward compat):
+//   false — if X-RevenueCat-Signature is absent, fall back to Bearer
+//           token comparison (transition period for existing webhook config).
+//   true  — if X-RevenueCat-Signature is absent, reject 401 immediately.
+//           Flip this once HMAC delivery is confirmed in production logs.
+//
 // JWT verification is OFF (called by RevenueCat servers, not app).
 // ────────────────────────────────────────────────────────────
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { verifyHmacSignature } from "./hmacVerify.ts";
 
 // ── Product → tier mapping (mirrors src/services/subscriptionLogic.ts) ──
 const PRODUCT_TIER_MAP: Record<string, string> = {
+  // Android (short form)
   "pro_monthly": "pro",
   "pro_monthly:monthly": "pro",
   "pro_annual": "pro",
   "premium_monthly": "premium",
   "premium_monthly:monthly": "premium",
   "premium_annual": "premium",
+  // iOS (fully qualified bundle ID prefix)
+  "com.truthcenteredtech.pingweather.pro_monthly": "pro",
+  "com.truthcenteredtech.pingweather.pro_monthly:monthly": "pro",
+  "com.truthcenteredtech.pingweather.premium_monthly": "premium",
+  "com.truthcenteredtech.pingweather.premium_monthly:monthly": "premium",
 };
 
 function mapProductToTier(productId: string): string | null {
@@ -77,32 +90,30 @@ Deno.serve(async (req) => {
     );
   }
 
+  // REQUIRE_HMAC_SIGNATURE=true → reject any request lacking the header.
+  // Leave false during transition; flip to true once HMAC delivery is
+  // confirmed in RevenueCat production webhook logs.
+  const requireHmac = Deno.env.get("REQUIRE_HMAC_SIGNATURE") === "true";
+
   const receivedSig = req.headers.get("X-RevenueCat-Signature") ?? "";
 
-  if (receivedSig !== "") {
-    // RevenueCat is sending HMAC-SHA256 — verify it
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(webhookSecret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"],
-    );
-    const sigBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(rawBody));
-    const computedSig = Array.from(new Uint8Array(sigBuffer))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
+  const hmacResult = await verifyHmacSignature({
+    secret: webhookSecret,
+    rawBody,
+    receivedSig,
+    requireHmac,
+  });
 
-    if (computedSig !== receivedSig) {
-      console.error("subscription-webhook auth failure: HMAC signature mismatch");
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { "Content-Type": "application/json" } },
-      );
-    }
+  if (hmacResult === "PASS") {
+    // Signature present and cryptographically valid — proceed.
+  } else if (hmacResult === "FAIL") {
+    console.error("subscription-webhook auth failure: HMAC signature invalid or required but absent");
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { "Content-Type": "application/json" } },
+    );
   } else {
-    // No HMAC signature header — fall back to plain Bearer token comparison
+    // NO_SIG — requireHmac is false; fall back to plain Bearer token comparison
     // (transition period: RevenueCat may not send the signature on all webhooks yet)
     const authHeader = req.headers.get("Authorization");
     const token = authHeader?.startsWith("Bearer ")

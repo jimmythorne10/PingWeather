@@ -104,11 +104,12 @@ export default function ResetPasswordScreen() {
       style={[styles.container, { backgroundColor: t.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <View style={styles.inner}>
       <View style={styles.header}>
         <Text style={styles.icon}>{'🔒'}</Text>
         <Text style={[styles.title, { color: t.textPrimary }]}>Set New Password</Text>
         <Text style={[styles.subtitle, { color: t.textSecondary }]}>
-          Choose a new password for your PingWeather account.
+          Choose a new password for your WeatherBeacon account.
         </Text>
       </View>
 
@@ -182,6 +183,7 @@ export default function ResetPasswordScreen() {
           <Text style={[styles.linkText, { color: t.primary }]}>Back to Sign In</Text>
         </Pressable>
       </View>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -251,5 +253,10 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 15,
     fontWeight: '500',
+  },
+  inner: {
+    maxWidth: 420,
+    alignSelf: 'center',
+    width: '100%',
   },
 });

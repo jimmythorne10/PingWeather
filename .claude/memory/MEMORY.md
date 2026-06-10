@@ -1,6 +1,6 @@
 # Project Memory — WeatherBeacon
 
-> Last updated: 2026-06-04 (session 24 — iOS buildNumber 4 built + submitted to App Store Connect: UIRequiresFullScreen:true (Stage Manager fix), supportsTablet:true. Back button fix (create-rule Stack.Screen gestureEnabled+headerBackVisible) OTA'd to iOS production. Forecast 400 bug fixed: (1) get-forecast now uses repeated params (daily=a&daily=b not daily=a,b), (2) moonrise/moonset removed AGAIN — never valid Open-Meteo fields; DO NOT re-add. snowfall_sum added to DAILY_ALLOWLIST. 881/881 logic tests. Both iOS + Android OTAs deployed to production channel.)
+> Last updated: 2026-06-09 (session 25 — Apple App Store rejection (Build 4) fixed and resubmitted as Build 5. Fixes: iPad coord save bug (location-setup.tsx independent string states), Terms of Use + Privacy Policy links in upgrade.tsx (Linking.openURL), permission pre-prompt CTA renamed to "Continue" + Skip removed, NSLocationAlwaysAndWhenInUseUsageDescription removed from app.json, Mapbox ToS compliance (telemetry/logo/attribution), EULA v1.1.0 with Apple passthrough clauses, Privacy Policy v1.1.0. Wind direction added to day-detail hourly rows. OS-agnostic push token messaging. Both iOS + Android OTAs deployed to production channel. Build 5 submitted to Apple for review 2026-06-09. eas submit --platform ios --latest required after eas build — build and submit are separate steps.)
 
 ## Project Identity
 
@@ -21,7 +21,7 @@
 **Edge Functions deployed (session 14): fcm-keepalive (auth hardened), subscription-webhook (HMAC-SHA256), register-push-token (token format validation), dev-tier-override (new)**
 **Closed testing: Alpha track submitted 2026-05-05. versionCode 8 live. Opt-in URL: https://play.google.com/apps/testing/com.truthcenteredtech.pingweather. Google Group: pingweather-betagooglegroupscom@truthcenteredtech.com.**
 **Apple Developer: CLEARED. iOS setup complete.**
-**iOS Build 2 (1.0.0, buildNumber 2): Built 2026-05-21, submitted to ASC. supportsTablet:false, dedup UIBackgroundModes, WeatherBeacon branding, ITSAppUsesNonExemptEncryption:false. Build 1 superseded.**
+**iOS Build 5 (1.0.0, buildNumber 5): Built + submitted to Apple 2026-06-09. Resolves all 3 Build 4 rejection issues. Under Apple review. Builds 1–4 superseded.**
 **iOS credentials: Distribution Certificate + Provisioning Profile + APNs key — all active, expire May 2027.**
 **Open-Meteo key rotation: COMPLETE — new key `y8A63e8V82EPsr7j` set in Supabase secrets 2026-05-03.**
 
@@ -33,25 +33,31 @@
 3. **Update Google Play screenshots** — Current screenshots show old branding. Need WeatherBeacon name + radar feature.
 4. **Move EXPO_PUBLIC_REVENUECAT_ANDROID_KEY to EAS env var** — Currently hardcoded in `app.json` extra. Low urgency but is a key hygiene issue.
 
-**iOS — ORDERED FOR SUBMISSION**
-5. **Deploy iOS OTA** — `eas update --platform ios --channel production --message "fix: iOS paywall platform text"`. Fixes App Store-rejection upgrade.tsx text (Google Play → Apple). Hot-reload on iPhone to confirm paywall shows Apple IAP text.
-6. **App Store Connect subscription metadata** — Verify: (a) Premium Monthly has English localization matching Pro Monthly format, (b) both subs have all-country availability (was "1 of 175"), (c) $3.99/$7.99 price tiers confirmed set. "Missing Metadata" badge clears at submission — expected.
-7. **Verify iOS push notification toggle on device** — Toggle Push Notifications ON in Settings, confirm Supabase push_token updates to iOS ExponentPushToken value.
-8. **Verify radar US gate on iPhone** — Confirm "🌧 View Radar →" visible in Forecasts tab on US-locale iPhone.
-9. **App Store screenshots — BLOCKING SUBMISSION** — Force-close/reopen WeatherBeacon on iPhone AFTER step 5 OTA (so paywall shows Apple text in screenshots). Take 6 in this order: (1) Home with forecast data, (2) Forecasts tab 14-day expanded, (3) Radar screen with tiles loaded, (4) Alerts tab with active rules, (5) Create Rule screen mid-build, (6) Upgrade screen. AirDrop/email to PC. Upload to App Store Connect → Distribution → App Store → iPhone Screenshots.
-10. **Apply migration 00020** — PREREQUISITE: in Supabase Dashboard → Vault → `send_digest_auth_token`, confirm the value matches the `SEND_DIGEST_SECRET` function secret. Then `npx supabase db push`. Fixes digest never firing on schedule.
-11. **App Store submission** — After screenshots + metadata complete: Distribution → Add Build (select **Build 2**, buildNumber 2) → Add In-App Purchases (attach both Pro Monthly + Premium Monthly) → Submit for Review. Answer: age rating 4+, export compliance No (ITSAppUsesNonExemptEncryption=false already in Info.plist so may be skipped), content rights Yes (has rights to Open-Meteo + RainViewer + Mapbox).
-12. **Update truthcenteredtech.com** — Still references "PingWeather". Update app page to WeatherBeacon (keep `/pingweather-privacy` and `/pingweather-delete-account` URL paths unchanged).
+**iOS**
+5. **Await Apple review result** — Build 5 submitted 2026-06-09. Typical turnaround 24–48h. If rejected again, review rejection reasons in App Store Connect → Resolution Center.
+
+**GOOGLE PLAY**
+6. **Update Privacy Policy URL in Play Console** — Must change from `pingweather-privacy` to `https://www.truthcenteredtech.com/weatherbeacon-privacy`. Location: Policy and programmes → App content → Privacy Policy URL. Could not locate this field in session 25 — verify via Play Console web search or Help docs.
+7. **Rename subscriptions in Play Console** — "PingWeather Premium" → "WeatherBeacon Premium" and "PingWeather Pro" → "WeatherBeacon Pro" in Monetize → Subscriptions.
+
+**GENERAL**
+8. **Squarespace 301 redirect** — Settings → Advanced → URL Mappings → add `/privacy-pingweather → /weatherbeacon-privacy 301`. Protects any existing links to the old URL.
+9. **Git push** — Branch is ahead of origin/main (at least 3 commits from session 25). Push when ready: `git push origin main`.
+10. **Update truthcenteredtech.com app page** — Main app page still references "PingWeather". Update to WeatherBeacon. Keep `/pingweather-delete-account` URL path unchanged.
 
 ### Completed — do not re-propose
 
 | Item | Notes |
 |---|---|
+| iOS Build 5 — Apple rejection (Build 4) resolved | All 3 rejection issues fixed: (1) legal links (TOS + Privacy Policy via `Linking.openURL` in upgrade.tsx), (2) `NSLocationAlwaysAndWhenInUseUsageDescription` removed from app.json + expo-location plugin config, (3) Mapbox ToS compliance (`setTelemetryEnabled(false)`, logo/attribution re-enabled). Also: EULA v1.1.0 with Apple passthrough clauses, Privacy Policy v1.1.0, iPad coord save bug (independent `latStr`/`lonStr` string states in location-setup.tsx), CTA renamed "Continue"/Skip removed from onboarding. Build 5 submitted 2026-06-09. |
+| In-app legal screens | `app/legal/eula.tsx` (Terms of Use) + `app/legal/privacy-policy.tsx` (Privacy Policy). Both accessible from Settings → About/Legal. `src/data/legal-content.ts` holds full content. |
+| Wind direction in day-detail | `degreesToCardinal()` imported into `app/day-detail.tsx`; prefixed to wind speed in hourly rows as `"NW 12 mph"`. Fixes missing direction when tapping day from Home screen or Forecasts tab (same component). |
+| OS-agnostic push messaging in settings | Notification denied alert uses `Platform.select({ ios, android, default })`. Digest disable warning generalized (no Android-specific text). Shipped via OTA to iOS + Android production channel. |
 | RevenueCat Android | `goog_XykDmtoZwUNDfBgswNJaIkDLjNC`, products + webhook live |
 | Open-Meteo commercial license + key rotation | Supabase secret `OPEN_METEO_API_KEY` set to new key `y8A63e8V82EPsr7j` 2026-05-03. Old key `eNFRDFntQmSudB7E` revoked. `EXPO_PUBLIC_OPEN_METEO_API_KEY` removed from EAS preview + production. |
-| Privacy policy | `truthcenteredtech.com/pingweather-privacy` |
+| Privacy policy | `truthcenteredtech.com/weatherbeacon-privacy` (renamed from `pingweather-privacy` 2026-06-09; old URL still live, 301 redirect pending) |
 | Play Store internal testing | versionCode 7 live |
-| upgrade.tsx iOS paywall text | `Platform.select()` on downgrade dialog + legal footer. Android text unchanged. iOS shows Apple IAP required language. OTA to iOS production channel pending. |
+| upgrade.tsx iOS paywall text | `Platform.select()` on downgrade dialog + legal footer. Android text unchanged. iOS shows Apple IAP required language. OTA deployed to iOS production channel. |
 | Play Store listing | Screenshots, short/full description, data safety form — all complete. Store listing fully populated as of session ~5. |
 | Apple Developer Program | Company enrollment submitted 2026-04-29 — awaiting approval (1–3 business days). Personal account showed "Enroll today" — enrollment is for Truth Centered Tech entity, not personal. |
 | Edge Functions | poll-weather, evaluate-alerts, register-push-token, send-digest, fcm-keepalive, delete-account, subscription-webhook, get-forecast — all deployed |
@@ -309,8 +315,14 @@ Root failures: (1) `tdd-guard.yaml` was missing — TDD hook was unarmed, never 
 - Pre-OTA checklist: (1) make change, (2) tell Jimmy to hot-reload via `npx expo start --dev-client`, (3) Jimmy confirms on device in chat, (4) THEN run `eas update`.
 - Native component crashes (rnmapbox, etc.) are NOT caught by jsdom render tests — mocks hide them. Only device verification or Maestro E2E catches these. Never claim a native UI change is verified by Jest alone.
 
-### eas update requires --platform android
-`eas update` without `--platform` tries to export web bundle → fails with missing `react-native-web` dependency. Always run: `eas update --platform android --channel preview --message "..."`.
+### eas update — platform rules (BURNED ONCE)
+`eas update` without `--platform` tries to export web bundle → fails with missing `react-native-web` dependency. Always specify `--platform`.
+
+**NEVER run iOS and Android OTAs in parallel.** Both write to the same `dist/` directory. Whichever finishes first writes `metadata.json`; the second job reads it and fails with `--platform="ios" not found in metadata.json. Available platform(s): android`. Always run sequentially:
+```bash
+eas update --platform ios --channel production --message "..."
+eas update --platform android --channel production --message "..."
+```
 
 ---
 

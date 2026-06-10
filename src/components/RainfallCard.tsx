@@ -10,13 +10,14 @@ interface RainfallCardProps {
   locationId: string;
   latitude: number;
   longitude: number;
+  timezone: string;
 }
 
 const WINDOWS: RainfallWindow[] = ['24h', '7d', '30d'];
 
 const MAX_DAY_ROWS = 7;
 
-export function RainfallCard({ locationId, latitude, longitude }: RainfallCardProps) {
+export function RainfallCard({ locationId, latitude, longitude, timezone }: RainfallCardProps) {
   const styles = useStyles(createStyles);
   const tokens = useTokens();
   const temperatureUnit = useSettingsStore((s) => s.temperatureUnit);
@@ -28,6 +29,7 @@ export function RainfallCard({ locationId, latitude, longitude }: RainfallCardPr
   const [data, setData] = useState<RainfallData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (!isExpanded) return;
@@ -38,7 +40,7 @@ export function RainfallCard({ locationId, latitude, longitude }: RainfallCardPr
       setLoading(true);
       setError(null);
       try {
-        const result = await fetchRainfallHistory(latitude, longitude, window, precipitationUnit);
+        const result = await fetchRainfallHistory(latitude, longitude, window, precipitationUnit, timezone);
         if (!cancelled) setData(result);
       } catch {
         if (!cancelled) setError('Could not load precipitation data.');
@@ -50,7 +52,7 @@ export function RainfallCard({ locationId, latitude, longitude }: RainfallCardPr
     void load();
 
     return () => { cancelled = true; };
-  }, [locationId, latitude, longitude, window, precipitationUnit, isExpanded]);
+  }, [locationId, latitude, longitude, window, precipitationUnit, timezone, isExpanded, retryCount]);
 
   const hasSnow = (data?.snowTotal ?? 0) > 0;
 
@@ -102,7 +104,17 @@ export function RainfallCard({ locationId, latitude, longitude }: RainfallCardPr
           )}
 
           {!loading && error && (
-            <Text style={styles.errorText}>{error}</Text>
+            <View style={styles.errorBlock}>
+              <Text style={styles.errorText}>{error}</Text>
+              <Pressable
+                style={({ pressed }) => [styles.retryButton, pressed && { opacity: 0.7 }]}
+                onPress={() => setRetryCount((c) => c + 1)}
+                accessibilityRole="button"
+                accessibilityLabel="Retry loading precipitation data"
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </Pressable>
+            </View>
           )}
 
           {!loading && !error && data && (
@@ -208,10 +220,25 @@ const createStyles = (t: ThemeTokens) => ({
     marginVertical: 12,
   },
 
+  errorBlock: {
+    alignItems: 'flex-start' as const,
+    marginBottom: 8,
+  },
   errorText: {
     fontSize: 13,
     color: t.error,
     marginBottom: 8,
+  },
+  retryButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 6,
+    backgroundColor: t.primary,
+  },
+  retryButtonText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: t.textOnPrimary,
   },
 
   resultContainer: {

@@ -25,8 +25,8 @@ describe('buildRadarFrames', () => {
     expect(frames[frames.length - 1].isCurrent).toBe(true);
   });
 
-  it('current frame label is "Now"', () => {
-    expect(buildRadarFrames().find(f => f.isCurrent)?.label).toBe('Now');
+  it('current frame label is a formatted time string', () => {
+    expect(buildRadarFrames().find(f => f.isCurrent)?.label).toMatch(/\d{1,2}:\d{2}\s*(AM|PM)/i);
   });
 
   it('no forecast frames exist (IEM has no forecast radar)', () => {
@@ -39,9 +39,9 @@ describe('buildRadarFrames', () => {
     });
   });
 
-  it('past frame labels match -Xmin pattern', () => {
+  it('past frame labels are formatted time strings', () => {
     buildRadarFrames().filter(f => f.isPast).forEach(f => {
-      expect(f.label).toMatch(/^-\d+min$/);
+      expect(f.label).toMatch(/\d{1,2}:\d{2}\s*(AM|PM)/i);
     });
   });
 
@@ -55,14 +55,14 @@ describe('buildRadarFrames', () => {
   it('oldest frame is -55min relative to now', () => {
     const frames = buildRadarFrames();
     expect(frames[0].timestamp).toBe(PINNED_NOW - 55 * 60 * 1000);
-    expect(frames[0].label).toBe('-55min');
+    expect(frames[0].label).toMatch(/\d{1,2}:\d{2}\s*(AM|PM)/i);
   });
 
-  it('most recent past frame is -5min', () => {
+  it('most recent past frame label is a formatted time string', () => {
     const frames = buildRadarFrames();
     const lastPast = frames[frames.length - 2];
     expect(lastPast.isPast).toBe(true);
-    expect(lastPast.label).toBe('-5min');
+    expect(lastPast.label).toMatch(/\d{1,2}:\d{2}\s*(AM|PM)/i);
   });
 
   it('current frame timestamp equals pinned now', () => {

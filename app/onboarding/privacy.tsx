@@ -47,7 +47,11 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 48,
   },
-  content: {},
+  content: {
+    maxWidth: 480,
+    alignSelf: 'center',
+    width: '100%',
+  },
   title: {
     fontSize: 28,
     fontWeight: '700',
@@ -84,6 +88,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    maxWidth: 480,
+    alignSelf: 'center',
+    width: '100%',
   },
   buttonText: {
     fontSize: 18,

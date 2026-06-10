@@ -1,4 +1,4 @@
-// Shared mock factories for PingWeather tests
+// Shared mock factories for WeatherBeacon tests
 // ────────────────────────────────────────────────────────────
 
 import type {
@@ -26,6 +26,7 @@ export const mockProfile = (overrides: Partial<Profile> = {}): Profile => ({
   digest_last_sent_at: null,
   temperature_unit: 'fahrenheit',
   wind_speed_unit: 'mph',
+  pressure_unit: 'hPa',
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
   ...overrides,

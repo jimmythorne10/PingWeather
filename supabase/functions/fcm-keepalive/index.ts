@@ -63,19 +63,22 @@ async function sendBatch(tokens: string[]): Promise<string[]> {
 }
 
 Deno.serve(async (req) => {
+  // Method check first — a GET probe should get 405 before any auth check.
+  // This mirrors the send-digest pattern and lets health checkers distinguish
+  // "wrong method" from "unauthorized".
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      { status: 405, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   // Bearer auth — accepts SUPABASE_SERVICE_ROLE_KEY (called by pg_cron via
   // vault-held service role key or internal service-to-service calls).
   const authHeader = req.headers.get("Authorization") ?? "";
   const expectedToken = `Bearer ${serviceRoleKey}`;
   if (authHeader !== expectedToken) {
     return new Response("Unauthorized", { status: 401 });
-  }
-
-  if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: { "Content-Type": "application/json" } }
-    );
   }
 
   try {

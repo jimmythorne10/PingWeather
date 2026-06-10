@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useThemeStore } from '../stores/themeStore';
 
 /**
  * App-wide error boundary. Catches unhandled JS errors that would otherwise
@@ -8,6 +9,13 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
  *
  * React error boundaries MUST be class components — there is no functional
  * equivalent for `componentDidCatch` in React 19.
+ *
+ * Theme: class components cannot use hooks, so we read the current tokens
+ * synchronously from the store's getState() at render time. This gives us the
+ * correct dark/storm theme colors on crash without a subscription.
+ *
+ * Crash reporter: wire @sentry/react-native (or equivalent) in
+ * componentDidCatch before production. The call site is marked below.
  *
  * This is a safety net, not a substitute for real error handling at the
  * call site. Individual API calls should still catch and surface their
@@ -37,8 +45,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: { componentStack: string | null }) {
-    // Log for remote debugging later. When we add a crash reporter
-    // (Sentry, Bugsnag, etc.), wire it in here.
+    // TODO(pre-production): replace with Sentry.captureException(error, { extra: errorInfo })
+    // after wiring @sentry/react-native. The console.error below is silent in
+    // production builds — crashes are invisible without a real reporter.
     console.error('[ErrorBoundary] caught error:', error, errorInfo.componentStack);
   }
 
@@ -48,21 +57,25 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   render() {
     if (this.state.hasError) {
+      // Read theme tokens synchronously — safe in a class render because
+      // getState() is a plain object read, not a subscription.
+      const tokens = useThemeStore.getState().tokens;
+
       return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: tokens.background }]}>
           <Text style={styles.icon}>{'⚠️'}</Text>
-          <Text style={styles.title}>Something went wrong</Text>
-          <Text style={styles.subtitle}>
-            PingWeather hit an unexpected error. Tap "Try again" to recover.
+          <Text style={[styles.title, { color: tokens.textPrimary }]}>Something went wrong</Text>
+          <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>
+            WeatherBeacon hit an unexpected error. Tap "Try again" to recover.
             If this keeps happening, close and reopen the app.
           </Text>
           {this.state.errorMessage && (
-            <Text style={styles.errorDetail} selectable>
+            <Text style={[styles.errorDetail, { color: tokens.textTertiary }]} selectable>
               {this.state.errorMessage}
             </Text>
           )}
-          <Pressable style={styles.button} onPress={this.handleReset}>
-            <Text style={styles.buttonText}>Try again</Text>
+          <Pressable style={[styles.button, { backgroundColor: tokens.primary }]} onPress={this.handleReset}>
+            <Text style={[styles.buttonText, { color: tokens.textOnPrimary }]}>Try again</Text>
           </Pressable>
         </View>
       );
@@ -75,7 +88,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F4F8',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -87,13 +99,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1E3A5F',
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 15,
-    color: '#4A5568',
     lineHeight: 22,
     textAlign: 'center',
     marginBottom: 16,
@@ -102,19 +112,16 @@ const styles = StyleSheet.create({
   errorDetail: {
     fontSize: 11,
     fontFamily: 'monospace',
-    color: '#7B8794',
     marginBottom: 20,
     textAlign: 'center',
     paddingHorizontal: 16,
   },
   button: {
-    backgroundColor: '#1E3A5F',
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 10,
   },
   buttonText: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },

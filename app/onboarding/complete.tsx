@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTokens } from '../../src/theme';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -9,7 +9,11 @@ export default function CompleteScreen() {
   const updateProfile = useAuthStore((s) => s.updateProfile);
 
   const handleComplete = async () => {
-    await updateProfile({ onboarding_completed: true });
+    const ok = await updateProfile({ onboarding_completed: true });
+    if (!ok) {
+      Alert.alert('Save Failed', useAuthStore.getState().error ?? 'Could not save. Please try again.');
+      return;
+    }
     // Refetch profile to ensure auth guard sees the update, then navigate
     await useAuthStore.getState().fetchProfile();
     router.replace('/');
@@ -21,7 +25,7 @@ export default function CompleteScreen() {
         <Text style={styles.icon}>{'✅'}</Text>
         <Text style={[styles.title, { color: t.textOnPrimary }]}>You're All Set!</Text>
         <Text style={[styles.subtitle, { color: t.textOnPrimary, opacity: 0.9 }]}>
-          PingWeather is ready to keep you informed. Set up your first alert
+          WeatherBeacon is ready to keep you informed. Set up your first alert
           rule and never miss critical weather again.
         </Text>
 
@@ -44,7 +48,7 @@ export default function CompleteScreen() {
         style={[styles.button, { backgroundColor: t.textOnPrimary }]}
         onPress={handleComplete}
       >
-        <Text style={[styles.buttonText, { color: t.primary }]}>Start Using PingWeather</Text>
+        <Text style={[styles.buttonText, { color: t.primary }]}>Start Using WeatherBeacon</Text>
       </Pressable>
     </View>
   );
@@ -60,6 +64,9 @@ const styles = StyleSheet.create({
   },
   content: {
     alignItems: 'center',
+    maxWidth: 480,
+    alignSelf: 'center',
+    width: '100%',
   },
   icon: {
     fontSize: 64,
@@ -94,6 +101,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    maxWidth: 480,
+    alignSelf: 'center',
+    width: '100%',
   },
   buttonText: {
     fontSize: 18,

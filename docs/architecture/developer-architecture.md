@@ -1,4 +1,4 @@
-# PingWeather — Developer Architecture
+# WeatherBeacon — Developer Architecture
 
 Comprehensive technical reference for engineers joining the codebase. This document is self-contained: you should not need to open any other doc to understand how the app works, what the moving parts are, or how to run it.
 
@@ -44,7 +44,7 @@ Comprehensive technical reference for engineers joining the codebase. This docum
 ## 2. Directory structure
 
 ```
-PingWeather/
+WeatherBeacon/
 ├── app/                          # Expo Router file-based routing
 │   ├── _layout.tsx               # Root layout: ErrorBoundary, auth gate, OTA check, RevenueCat login
 │   ├── index.tsx                 # Redirect to (tabs)

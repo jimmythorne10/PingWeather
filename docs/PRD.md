@@ -1,4 +1,4 @@
-# PingWeather — Product Requirements Document
+# WeatherBeacon — Product Requirements Document
 
 **Version:** 1.0.0-MVP
 **Last Updated:** 2026-04-09 (original draft 2026-04-07; some sections below are historical design intent — see "Implementation delta" callouts for reality checks where they diverge)
@@ -10,7 +10,7 @@
 ## 1. Product Overview
 
 ### 1.1 Vision
-PingWeather is a mobile weather notification app that alerts users when custom weather conditions are met. Users define what weather matters to them, where they care about it, and how often to check — and the app handles the rest.
+WeatherBeacon is a mobile weather notification app that alerts users when custom weather conditions are met. Users define what weather matters to them, where they care about it, and how often to check — and the app handles the rest.
 
 ### 1.2 Problem Statement
 No consumer weather app offers compound conditional alerts with user-defined polling intervals. Livestock owners manually check weather.gov every morning for freeze risk. Construction managers have no way to get proactive rain delay warnings for specific job sites. Outdoor workers and hobbyists waste time checking forecasts repeatedly instead of being notified when conditions actually change.
@@ -97,9 +97,9 @@ Truth Centered Tech, Delaware, US
 #### FR-ONBOARD-002: Welcome Screen
 - **Given** a new user entering onboarding
 - **When** the welcome screen loads
-- **Then** they see the app name "PingWeather", tagline, and 4 key value propositions
+- **Then** they see the app name "WeatherBeacon", tagline, and 4 key value propositions
 - **Acceptance Criteria:**
-  - App name displayed as "PingWeather" (not WeatherWatch or any other name)
+  - App name displayed as "WeatherBeacon" (not WeatherWatch or any other name)
   - Tagline: "Weather alerts on your terms." (or similar — must be consistent with login screen)
   - "Get Started" button navigates to privacy screen
   - No skip option — must proceed through flow
@@ -147,7 +147,7 @@ Truth Centered Tech, Delaware, US
 
 #### FR-ONBOARD-007: Onboarding Completion
 - **Given** a user on the completion screen
-- **When** they tap "Start Using PingWeather"
+- **When** they tap "Start Using WeatherBeacon"
 - **Then** `onboarding_completed` is set to true and they are redirected to the main app
 - **Acceptance Criteria:**
   - Profile updated in Supabase
@@ -547,7 +547,7 @@ Truth Centered Tech, Delaware, US
 - **When** they scroll to the bottom
 - **Then** the app version, build number, and entity info are displayed
 - **Acceptance Criteria:**
-  - Shows "PingWeather v{version}" (from app.json)
+  - Shows "WeatherBeacon v{version}" (from app.json)
   - Shows "by Truth Centered Tech"
   - Version text is the tap target for developer mode activation (FR-SET-008)
 
@@ -771,9 +771,9 @@ Truth Centered Tech, Delaware, US
 - Error messages are user-facing and actionable
 
 ### NFR-006: Branding Consistency
-- App name is "PingWeather" everywhere: login screen, welcome screen, splash screen, app title bar, app store listing
+- App name is "WeatherBeacon" everywhere: login screen, welcome screen, splash screen, app title bar, app store listing
 - No references to "WeatherWatch" in any user-facing text or UI
-- Legal documents reference "PingWeather" as the product name and "Truth Centered Tech" as the entity
+- Legal documents reference "WeatherBeacon" as the product name and "Truth Centered Tech" as the entity
 - Notification channel display name: "Weather Alerts" (generic, not branded)
 
 ### NFR-007: Error States

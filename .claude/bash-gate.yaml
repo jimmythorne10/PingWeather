@@ -56,6 +56,13 @@ rules:
   # Remind about the mandatory deploy order before every build.
   - "eas build | warn | | | DEPLOY ORDER CHECK: Have Edge Functions been deployed? Have migrations been pushed? Required sequence: supabase functions deploy → supabase db push → eas build. A build that references a stale backend causes silent runtime failures."
 
+  # ── OTA DEPLOY GATES ───────────────────────────────────────────────────────
+  # OTA pushes go live immediately to all devices. Never push without Jimmy
+  # confirming the change works via hot-reload on device first.
+  # Two crashes were shipped to production (2026-05-07) by pushing OTA without
+  # device verification. This gate exists to prevent that from happening again.
+  - "eas update | warn | | | PRE-OTA CHECKLIST: (1) Have you tested this change via hot-reload on device? (2) Did Jimmy confirm it works in chat? OTA pushes are immediate and live — do NOT run eas update until Jimmy has said 'looks good' on the actual device."
+
   # ── SUPABASE DEPLOY GATES ──────────────────────────────────────────────────
   # Warn about the mandatory deploy order when pushing migrations.
   - "supabase db push | warn | | | REMINDER: Edge Functions must be deployed BEFORE db push if migrations reference them (pg_cron schedules reference already-deployed function URLs). Run: npx supabase functions deploy <name> first."

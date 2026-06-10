@@ -17,7 +17,7 @@ export const useThemeStore = create<ThemeState>()(
       setTheme: (name) => set({ themeName: name, tokens: THEMES[name] }),
     }),
     {
-      name: 'weatherwatch-theme',
+      name: 'pingweather-theme',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ themeName: state.themeName }),
       onRehydrateStorage: () => (state) => {

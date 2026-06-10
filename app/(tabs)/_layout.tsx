@@ -24,6 +24,9 @@ export default function TabLayout() {
           height: 60 + insets.bottom,
           paddingBottom: insets.bottom + 6,
           paddingTop: 6,
+          maxWidth: 600,
+          alignSelf: 'center',
+          width: '100%',
         },
         tabBarLabelStyle: {
           fontSize: 11,
@@ -31,6 +34,7 @@ export default function TabLayout() {
         },
         tabBarItemStyle: {
           flex: 1,
+          maxWidth: 120,
         },
       }}
     >

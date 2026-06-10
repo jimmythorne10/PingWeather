@@ -10,7 +10,7 @@ export default function WelcomeScreen() {
     <View style={[styles.container, { backgroundColor: t.primary }]}>
       <View style={styles.content}>
         <Text style={[styles.icon]}>{'⛅'}</Text>
-        <Text style={[styles.title, { color: t.textOnPrimary }]}>PingWeather</Text>
+        <Text style={[styles.title, { color: t.textOnPrimary }]}>WeatherBeacon</Text>
         <Text style={[styles.subtitle, { color: t.textOnPrimary, opacity: 0.9 }]}>
           Weather alerts on your terms.
         </Text>
@@ -50,6 +50,9 @@ const styles = StyleSheet.create({
   },
   content: {
     alignItems: 'center',
+    maxWidth: 480,
+    alignSelf: 'center',
+    width: '100%',
   },
   icon: {
     fontSize: 64,
@@ -84,6 +87,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    maxWidth: 480,
+    alignSelf: 'center',
+    width: '100%',
   },
   buttonText: {
     fontSize: 18,

@@ -52,12 +52,11 @@ export const ALERT_PRESETS: AlertPreset[] = [
   {
     id: 'cold-front',
     name: 'Cold Front Incoming',
-    description: 'Alert when a sharp temperature drop is expected. Plan ahead for sudden changes.',
+    description: 'Alert when the daily high stays below 40°F — a reliable signal that cold air has moved in. Good for livestock prep, pipe protection, and outdoor planning.',
     icon: '📉',
     category: 'temperature',
     conditions: [
-      // Differential alert — evaluated dynamically by comparing forecast to current
-      { metric: 'temperature_high', operator: 'lt', value: -15, unit: 'fahrenheit' },
+      { metric: 'temperature_high', operator: 'lt', value: 40, unit: 'fahrenheit' },
     ],
     logical_operator: 'AND',
     lookahead_hours: 72,

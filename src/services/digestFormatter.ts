@@ -79,13 +79,13 @@ export function formatDigestNotification(
 
   if (frequency === 'daily') {
     return {
-      title: `Today's forecast — ${locationName}`,
+      title: `3-day forecast — ${locationName}`,
       body: buildLines(daily, temperatureUnit, 3).join('\n'),
     };
   }
 
   return {
-    title: `7-day forecast — ${locationName}`,
+    title: `5-day forecast — ${locationName}`,
     body: buildLines(daily, temperatureUnit, 5).join('\n'),
   };
 }

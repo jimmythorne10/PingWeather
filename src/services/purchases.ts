@@ -1,8 +1,8 @@
 /**
- * RevenueCat purchase service for PingWeather.
+ * RevenueCat purchase service for WeatherBeacon.
  *
  * Wraps `react-native-purchases` with app-specific logic:
- *   - Maps RevenueCat package identifiers to PingWeather subscription tiers
+ *   - Maps RevenueCat package identifiers to WeatherBeacon subscription tiers
  *   - Handles initialization with the API key from env
  *   - Provides typed purchase/restore/status functions
  *
@@ -52,12 +52,18 @@ function getPurchases() {
 // both formats. Without the colon variants here, mapProductToTier() returns
 // null on restore and the user appears as free despite an active subscription.
 export const PRODUCT_TIER_MAP: Record<string, SubscriptionTier> = {
+  // Android (short form)
   pro_monthly: 'pro',
   'pro_monthly:monthly': 'pro',
   pro_annual: 'pro',
   premium_monthly: 'premium',
   'premium_monthly:monthly': 'premium',
   premium_annual: 'premium',
+  // iOS (fully qualified bundle ID prefix)
+  'com.truthcenteredtech.pingweather.pro_monthly': 'pro',
+  'com.truthcenteredtech.pingweather.pro_monthly:monthly': 'pro',
+  'com.truthcenteredtech.pingweather.premium_monthly': 'premium',
+  'com.truthcenteredtech.pingweather.premium_monthly:monthly': 'premium',
 };
 
 export function mapProductToTier(productId: string): SubscriptionTier | null {
@@ -228,10 +234,16 @@ export async function restorePurchases(): Promise<PurchaseResult> {
     const customerInfo = await P.restorePurchases();
     const newTier = determineTierFromCustomerInfo(customerInfo);
 
+    // BUG-012: determineTierFromCustomerInfo now always returns a non-null tier
+    // ('free' is the fallback). Use activeSubscriptions.length to distinguish
+    // "genuinely no subscription" from "subscription found but product ID
+    // unknown — server webhook will resolve the tier".
+    const hasActiveSubscription = customerInfo.activeSubscriptions.length > 0;
+
     return {
       success: true,
       tier: newTier,
-      error: newTier ? null : 'No active subscription found',
+      error: hasActiveSubscription ? null : 'No active subscription found',
     };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Restore failed';
@@ -241,7 +253,8 @@ export async function restorePurchases(): Promise<PurchaseResult> {
 
 // ── Customer Info → Tier ────────────────────────────────────
 
-function determineTierFromCustomerInfo(customerInfo: { activeSubscriptions: string[] }): SubscriptionTier | null {
+// Exported for unit testing (BUG-012).
+export function determineTierFromCustomerInfo(customerInfo: { activeSubscriptions: string[] }): SubscriptionTier {
   // Check active subscriptions from most-premium to least
   for (const productId of customerInfo.activeSubscriptions) {
     const tier = mapProductToTier(productId);
@@ -251,11 +264,12 @@ function determineTierFromCustomerInfo(customerInfo: { activeSubscriptions: stri
     const tier = mapProductToTier(productId);
     if (tier === 'pro') return 'pro';
   }
-  // No active subscription
-  if (customerInfo.activeSubscriptions.length === 0) {
-    return 'free';
-  }
-  return null;
+  // BUG-012: when activeSubscriptions is non-empty but no product ID maps to a
+  // known tier, the old code returned null — causing purchasePackage to return
+  // { success: true, tier: null } and restorePurchases to misreport the
+  // subscription as not found. The server-side subscription-webhook is the tier
+  // authority; the client defaults to 'free' when it can't map the product ID.
+  return 'free';
 }
 
 // ── Get Current Subscription Status ─────────────────────────

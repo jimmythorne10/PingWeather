@@ -1,4 +1,4 @@
-# PingWeather — Architecture Diagrams
+# WeatherBeacon — Architecture Diagrams
 
 All diagrams are Mermaid blocks. They should render as-is in any Mermaid-aware Markdown viewer (GitHub, VS Code with Mermaid extension, Mermaid Live Editor).
 
@@ -11,7 +11,7 @@ Which components run where, and what talks to what over the network.
 ```mermaid
 graph LR
     subgraph Device["Mobile device (Android / iOS)"]
-        APP[PingWeather app<br/>React Native + Expo SDK 54]
+        APP[WeatherBeacon app<br/>React Native + Expo SDK 54]
     end
 
     subgraph EAS["EAS (Expo Application Services)"]
@@ -289,7 +289,7 @@ stateDiagram-v2
     BatterySetup --> Complete: Skip for now (not recommended)
     BatterySetup --> Complete: Open Battery Settings<br/>(user returns via back)
 
-    Complete --> [*]: Start Using PingWeather<br/>(writes onboarding_completed=true,<br/>fetchProfile, replace to /)
+    Complete --> [*]: Start Using WeatherBeacon<br/>(writes onboarding_completed=true,<br/>fetchProfile, replace to /)
 
     note right of Complete
         Auth gate in _layout.tsx

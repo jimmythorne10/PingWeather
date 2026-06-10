@@ -61,6 +61,12 @@ export async function fetchForecast(
         'snowfall',
         'snow_depth',
         'soil_temperature_0cm',
+        // BUG-007: five WeatherMetric fields that were silently missing
+        'wind_gusts_10m',
+        'dew_point_2m',
+        'visibility',
+        'cloud_cover',
+        'wind_direction_10m',
       ],
       daily: [
         'temperature_2m_max',
@@ -71,6 +77,8 @@ export async function fetchForecast(
         'uv_index_max',
         'weather_code',
         'precipitation_sum',
+        'sunrise',
+        'sunset',
       ],
     },
   });

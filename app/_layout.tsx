@@ -169,7 +169,7 @@ export default function RootLayout() {
           <Stack.Screen name="forgot-password" />
           <Stack.Screen name="reset-password" />
           <Stack.Screen name="onboarding" />
-          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(tabs)" options={{ title: '' }} />
           <Stack.Screen name="create-rule" options={{ headerShown: true, title: 'Create Alert Rule' }} />
           <Stack.Screen name="day-detail" options={{ headerShown: false }} />
           <Stack.Screen name="upgrade" options={{ headerShown: true, title: 'Upgrade', presentation: 'modal' }} />

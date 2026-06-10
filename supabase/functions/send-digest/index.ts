@@ -9,7 +9,7 @@
 // ────────────────────────────────────────────────────────────
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { gridKey } from "../_shared/weatherEngine.ts";
+import { gridKey, weatherCodeToEmoji, processInBatches } from "../_shared/weatherEngine.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -113,11 +113,20 @@ async function getForecast(
       "precipitation_probability_max",
       "wind_speed_10m_max",
       "weather_code",
+      "sunrise",
+      "sunset",
     ].join(","),
     timezone: "auto",
   });
 
-  const res = await fetch(`${OPEN_METEO_URL}?${params}`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+  let res: Response;
+  try {
+    res = await fetch(`${OPEN_METEO_URL}?${params}`, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
   if (!res.ok) throw new Error(`Open-Meteo error: ${res.status}`);
   return res.json();
 }
@@ -142,23 +151,22 @@ interface ForecastResponse {
     precipitation_probability_max: number[];
     wind_speed_10m_max: number[];
     weather_code?: number[];
+    sunrise?: string[];
+    sunset?: string[];
+    moonrise?: string[];
+    moonset?: string[];
   };
 }
 
-// ── WMO weather code → emoji ────────────────────────────────
-// Local copy — avoids importing from weatherEngine which would pull in
-// evaluate/gridKey exports and bloat the bundle. Kept in sync manually.
-
-function weatherCodeToEmoji(code: number): string {
-  if (code <= 1) return "☀️";
-  if (code <= 3) return "⛅";
-  if (code <= 49) return "🌫️";
-  if (code <= 69) return "🌧️";
-  if (code <= 79) return "❄️";
-  if (code <= 84) return "🌦️";
-  if (code <= 94) return "🌨️";
-  if (code <= 99) return "⛈️";
-  return "🌡️";
+function formatSunTime(isoDateTime: string | undefined | null): string {
+  if (!isoDateTime || isoDateTime.length < 16) return "";
+  const timePart = isoDateTime.slice(11, 16);
+  const [hhStr, mm] = timePart.split(":");
+  const hh = parseInt(hhStr, 10);
+  if (isNaN(hh)) return "";
+  const period = hh >= 12 ? "pm" : "am";
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  return `${h12}:${mm}${period}`;
 }
 
 // ── Day label ───────────────────────────────────────────────
@@ -206,7 +214,19 @@ function buildDigestBody(
     const rainPct = daily.precipitation_probability_max[i];
     const rainStr = rainPct >= 20 ? ` · ${rainPct}%` : "";
 
-    parts.push(`${emoji}${label} — ${hi} / ${lo}${rainStr}`);
+    // Sun/moon times: append on a second line when available.
+    const sunParts: string[] = [];
+    const sunriseStr = daily.sunrise?.[i];
+    const sunsetStr = daily.sunset?.[i];
+    const moonriseStr = daily.moonrise?.[i];
+    const moonsetStr = daily.moonset?.[i];
+    if (sunriseStr) sunParts.push(`☀ ${formatSunTime(sunriseStr)}`);
+    if (sunsetStr) sunParts.push(`🌇 ${formatSunTime(sunsetStr)}`);
+    if (moonriseStr) sunParts.push(`🌙 ${formatSunTime(moonriseStr)}`);
+    if (moonsetStr) sunParts.push(`🌑 ${formatSunTime(moonsetStr)}`);
+    const sunLine = sunParts.length > 0 ? `\n  ${sunParts.join("  ")}` : "";
+
+    parts.push(`${emoji}${label} — ${hi} / ${lo}${rainStr}${sunLine}`);
   }
 
   return parts.join("\n");
@@ -219,7 +239,7 @@ function formatDigest(
 ): { title: string; body: string } {
   const body = buildDigestBody(forecast.daily, temperatureUnit, 3);
   return {
-    title: `PingWeather Forecast — ${locationName}`,
+    title: `WeatherBeacon Forecast — ${locationName}`,
     body,
   };
 }
@@ -230,7 +250,7 @@ async function sendPush(
   pushToken: string,
   title: string,
   body: string
-): Promise<boolean> {
+): Promise<{ sent: boolean; isInvalidToken: boolean }> {
   const res = await fetch("https://exp.host/--/api/v2/push/send", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -245,12 +265,30 @@ async function sendPush(
 
   if (!res.ok) {
     console.error(
-      `sendPush failed for token ${pushToken.slice(0, 20)}…: ${res.status}`,
+      `sendPush HTTP error for token ${pushToken.slice(0, 20)}…: ${res.status}`,
       await res.text()
     );
+    return { sent: false, isInvalidToken: false };
   }
 
-  return res.ok;
+  let result: { data?: { status?: string; details?: { error?: string } } };
+  try {
+    result = await res.json();
+  } catch {
+    return { sent: false, isInvalidToken: false };
+  }
+
+  const msgData = result?.data;
+  if (msgData?.status === "error") {
+    const isInvalidToken = msgData?.details?.error === "DeviceNotRegistered";
+    console.error(
+      `sendPush Expo error for token ${pushToken.slice(0, 20)}…:`,
+      msgData
+    );
+    return { sent: false, isInvalidToken };
+  }
+
+  return { sent: true, isInvalidToken: false };
 }
 
 // ── Main handler ───────────────────────────────────────────
@@ -321,17 +359,17 @@ Deno.serve(async (req) => {
     let sent = 0;
     let skipped = 0;
 
-    for (const profile of profiles) {
-      if (filterUserId && profile.id !== filterUserId) continue;
-
+    // Filter to only profiles that are due (or overridden by notifyNow / filterUserId)
+    // before batching so skipped count is tallied correctly.
+    const candidates = profiles.filter((profile) => {
+      if (filterUserId && profile.id !== filterUserId) return false;
       const loc = Array.isArray(profile.locations)
         ? profile.locations[0]
         : profile.locations;
       if (!loc?.timezone) {
         skipped++;
-        continue;
+        return false;
       }
-
       const due = notifyNow || shouldSendNow(
         profile.digest_hour,
         profile.digest_frequency,
@@ -340,11 +378,17 @@ Deno.serve(async (req) => {
         loc.timezone,
         nowUtc
       );
-
       if (!due) {
         skipped++;
-        continue;
+        return false;
       }
+      return true;
+    });
+
+    await processInBatches(candidates, 10, async (profile) => {
+      const loc = Array.isArray(profile.locations)
+        ? profile.locations[0]
+        : profile.locations;
 
       try {
         const forecast = await getForecast(loc.latitude, loc.longitude, nowUtc);
@@ -353,7 +397,7 @@ Deno.serve(async (req) => {
           loc.name,
           profile.temperature_unit ?? "fahrenheit"
         );
-        const ok = await sendPush(profile.push_token!, title, body);
+        const { sent: ok, isInvalidToken } = await sendPush(profile.push_token!, title, body);
 
         if (ok) {
           await supabase
@@ -364,11 +408,19 @@ Deno.serve(async (req) => {
         } else {
           skipped++;
         }
+
+        if (isInvalidToken) {
+          await supabase
+            .from("profiles")
+            .update({ push_token: null })
+            .eq("id", profile.id);
+          console.log(`Pruned stale digest push token for user ${profile.id}`);
+        }
       } catch (err) {
         console.error(`Digest failed for profile ${profile.id}:`, err);
         skipped++;
       }
-    }
+    });
 
     return new Response(JSON.stringify({ sent, skipped }), {
       headers: { "Content-Type": "application/json" },

@@ -23,7 +23,7 @@ interface AuthState {
   resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   fetchProfile: () => Promise<void>;
-  updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  updateProfile: (updates: Partial<Profile>) => Promise<boolean>;
   clearError: () => void;
 }
 
@@ -157,9 +157,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       if (data) {
         // Lazy-import to avoid module-level circular dependency.
         const { useSettingsStore } = await import('./settingsStore');
-        const { setTemperatureUnit } = useSettingsStore.getState();
+        const { setTemperatureUnit, setPressureUnit } = useSettingsStore.getState();
         if (data.temperature_unit) {
           setTemperatureUnit(data.temperature_unit as 'fahrenheit' | 'celsius');
+        }
+        if (data.pressure_unit) {
+          setPressureUnit(data.pressure_unit as 'hPa' | 'inHg');
         }
       }
     } catch (err) {
@@ -171,7 +174,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   updateProfile: async (updates) => {
     const user = get().user;
-    if (!user) return;
+    if (!user) return false;
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -181,8 +184,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         .single();
       if (error) throw error;
       set({ profile: data as Profile });
+      return true;
     } catch {
       set({ error: 'Failed to update profile' });
+      return false;
     }
   },
 

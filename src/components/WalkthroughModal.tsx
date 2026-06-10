@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, Pressable } from 'react-native';
+import { Modal, View, Text, Pressable, useWindowDimensions } from 'react-native';
 import { useTokens } from '../theme';
 
 const STEPS = [
@@ -24,9 +24,14 @@ const STEPS = [
     body: "For anything more specific, tap 'Build Custom Alert Rule.' Pick a weather metric, set your threshold — like rain chance below 20% — and choose how far ahead to look.",
   },
   {
+    emoji: '📅',
+    title: 'Drill Into Your Forecast',
+    body: 'Tap any day in your forecast to see a full 24-hour breakdown — hourly temperature, rain chance, wind, and more.',
+  },
+  {
     emoji: '📱',
     title: "You'll Know When It Counts",
-    body: "When your conditions are met, you get a push notification instantly — no need to check the app. Set it once and let PingWeather watch for you.",
+    body: "When your conditions are met, you get a push notification instantly — no need to check the app. Set it once and let WeatherBeacon watch for you.",
   },
 ];
 
@@ -38,6 +43,8 @@ interface WalkthroughModalProps {
 export function WalkthroughModal({ visible, onDismiss }: WalkthroughModalProps) {
   const t = useTokens();
   const [step, setStep] = useState(0);
+  const { width: screenWidth } = useWindowDimensions();
+  const cardMaxWidth = Math.min(screenWidth - 48, 480);
 
   useEffect(() => {
     if (!visible) {
@@ -60,6 +67,7 @@ export function WalkthroughModal({ visible, onDismiss }: WalkthroughModalProps) 
     <Modal
       visible={visible}
       transparent={true}
+      presentationStyle="overFullScreen"
       animationType="fade"
       onRequestClose={onDismiss}
     >
@@ -78,7 +86,7 @@ export function WalkthroughModal({ visible, onDismiss }: WalkthroughModalProps) 
             borderRadius: 16,
             padding: 28,
             width: '100%',
-            maxWidth: 360,
+            maxWidth: cardMaxWidth,
           }}
         >
           <Text style={{ fontSize: 52, textAlign: 'center', marginBottom: 16 }}>

@@ -12,6 +12,16 @@ export interface AnimationFrame {
   timestamp: number;
 }
 
+const timeFormatter = new Intl.DateTimeFormat(undefined, {
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+});
+
+function formatFrameTime(timestamp: number): string {
+  return timeFormatter.format(new Date(timestamp));
+}
+
 export function buildRadarFrames(): AnimationFrame[] {
   const currentMs = Math.floor(Date.now() / BUCKET_MS) * BUCKET_MS;
   const frames: AnimationFrame[] = [];
@@ -19,18 +29,19 @@ export function buildRadarFrames(): AnimationFrame[] {
   for (let i = PAST_FRAMES; i >= 1; i--) {
     const minAgo = i * 5;
     const mm = String(minAgo).padStart(2, '0');
+    const timestamp = currentMs - minAgo * 60 * 1000;
     frames.push({
-      label: `-${minAgo}min`,
+      label: formatFrameTime(timestamp),
       tileUrlTemplate: `${IEM_CACHE}/nexrad-n0q-m${mm}m/${TILE_PATH}`,
       isPast: true,
       isCurrent: false,
       isForecast: false,
-      timestamp: currentMs - minAgo * 60 * 1000,
+      timestamp,
     });
   }
 
   frames.push({
-    label: 'Now',
+    label: formatFrameTime(currentMs),
     tileUrlTemplate: `${IEM_CACHE}/nexrad-n0q/${TILE_PATH}`,
     isPast: false,
     isCurrent: true,

@@ -1,4 +1,4 @@
-// Global Jest setup for PingWeather
+// Global Jest setup for WeatherBeacon
 // Mocks native modules that don't work in the Jest environment.
 //
 // IMPORTANT: This file runs before each test file loads. Mocks declared here

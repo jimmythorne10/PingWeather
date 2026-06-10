@@ -19,6 +19,15 @@
 //   If unset, falls back to the free tier (no key). Acceptable for dev/testing.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import {
+  validateHourlyVars,
+  validateDailyVars,
+  clampForecastDays,
+  validateTemperatureUnit,
+  validateWindSpeedUnit,
+  validatePrecipitationUnit,
+} from "./validation.ts";
+
 const OPEN_METEO_API_KEY = Deno.env.get("OPEN_METEO_API_KEY") ?? "";
 const OPEN_METEO_URL = OPEN_METEO_API_KEY
   ? "https://customer-api.open-meteo.com/v1/forecast"
@@ -74,17 +83,44 @@ Deno.serve(async (req) => {
       );
     }
 
-    const params = new URLSearchParams({
-      latitude: latitude.toString(),
-      longitude: longitude.toString(),
-      forecast_days: String(forecast_days),
-      temperature_unit: String(temperature_unit),
-      wind_speed_unit: String(wind_speed_unit),
-      timezone: "auto",
-      ...(OPEN_METEO_API_KEY ? { apikey: OPEN_METEO_API_KEY } : {}),
-    });
+    // ── Unit validation ───────────────────────────────────────────────────────
+    const tempUnitResult = validateTemperatureUnit(temperature_unit);
+    if (!tempUnitResult.valid) {
+      return new Response(
+        JSON.stringify({ error: tempUnitResult.error }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
-    // Default hourly variables to request when the client doesn't specify.
+    const windUnitResult = validateWindSpeedUnit(wind_speed_unit);
+    if (!windUnitResult.valid) {
+      return new Response(
+        JSON.stringify({ error: windUnitResult.error }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    if (precipitation_unit !== undefined) {
+      const precipUnitResult = validatePrecipitationUnit(precipitation_unit);
+      if (!precipUnitResult.valid) {
+        return new Response(
+          JSON.stringify({ error: precipUnitResult.error }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // ── forecast_days range check ─────────────────────────────────────────────
+    const forecastDaysResult = clampForecastDays(forecast_days);
+    if (!forecastDaysResult.valid) {
+      return new Response(
+        JSON.stringify({ error: forecastDaysResult.error }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    const validatedForecastDays = forecastDaysResult.value as number;
+
+    // ── Default hourly/daily variable lists ───────────────────────────────────
     // Includes all new metrics so the forecast response carries them automatically.
     const defaultHourly = [
       "temperature_2m",
@@ -114,17 +150,54 @@ Deno.serve(async (req) => {
       "uv_index_max",
       "weather_code",
       "precipitation_sum",
+      "sunrise",
+      "sunset",
+      "snowfall_sum",
     ];
 
-    const hourlyVars = Array.isArray(hourly) && hourly.length > 0
-      ? (hourly as string[])
-      : defaultHourly;
-    const dailyVars = Array.isArray(daily) && daily.length > 0
-      ? (daily as string[])
-      : defaultDaily;
+    // ── Hourly/daily variable allowlist check ─────────────────────────────────
+    // Use defaults when the client omits the field (empty array).
+    // Validate client-supplied arrays against the explicit allowlist.
+    let hourlyVars: string[];
+    if (!Array.isArray(hourly) || hourly.length === 0) {
+      hourlyVars = defaultHourly;
+    } else {
+      const hourlyResult = validateHourlyVars(hourly as unknown[]);
+      if (!hourlyResult.valid) {
+        return new Response(
+          JSON.stringify({ error: hourlyResult.error }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      hourlyVars = hourly as string[];
+    }
 
-    params.set("hourly", hourlyVars.join(","));
-    params.set("daily", dailyVars.join(","));
+    let dailyVars: string[];
+    if (!Array.isArray(daily) || daily.length === 0) {
+      dailyVars = defaultDaily;
+    } else {
+      const dailyResult = validateDailyVars(daily as unknown[]);
+      if (!dailyResult.valid) {
+        return new Response(
+          JSON.stringify({ error: dailyResult.error }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      dailyVars = daily as string[];
+    }
+
+    const params = new URLSearchParams({
+      latitude: latitude.toString(),
+      longitude: longitude.toString(),
+      forecast_days: String(validatedForecastDays),
+      temperature_unit: String(temperature_unit),
+      wind_speed_unit: String(wind_speed_unit),
+      timezone: "auto",
+      ...(OPEN_METEO_API_KEY ? { apikey: OPEN_METEO_API_KEY } : {}),
+    });
+
+    for (const v of hourlyVars) params.append("hourly", v);
+    for (const v of dailyVars) params.append("daily", v);
     if (past_days !== undefined) {
       params.set("past_days", String(past_days));
     }

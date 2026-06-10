@@ -14,7 +14,7 @@ const PRODUCT_TIER_MAP: Record<string, string> = {
 };
 
 /**
- * Map a RevenueCat product_id to a PingWeather subscription tier.
+ * Map a RevenueCat product_id to a WeatherBeacon subscription tier.
  * Returns `null` for unknown products (caller decides what to do).
  */
 export function mapProductToTier(productId: string): string | null {

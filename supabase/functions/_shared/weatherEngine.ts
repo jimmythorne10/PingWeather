@@ -116,6 +116,10 @@ export interface DailyForecast {
   wind_direction_10m_dominant?: number[];
   weather_code?: number[];
   precipitation_sum?: number[]; // mm — daily total precipitation (fallback for precipitation_amount)
+  sunrise?: string[];    // ISO local datetime "YYYY-MM-DDTHH:MM"
+  sunset?: string[];     // ISO local datetime
+  moonrise?: string[];   // ISO local datetime; may be "" when no moonrise that day
+  moonset?: string[];    // ISO local datetime; may be "" when no moonset that day
 }
 
 export interface ForecastData {
@@ -178,9 +182,9 @@ export function extractTimezone(
 export function getMetricValues(
   metric: string,
   forecast: ForecastData,
-  lookaheadHours: number
+  lookaheadHours: number,
+  now: Date = new Date()
 ): number[] {
-  const now = new Date();
   const cutoff = new Date(now.getTime() + lookaheadHours * 60 * 60 * 1000);
 
   // For daily records: snap to UTC midnight so today's record is included.
@@ -320,9 +324,11 @@ export function getMetricValues(
       // Pure math — no API field. Returns illumination % for each day in the
       // daily time array that falls within the lookahead window.
       // Uses the daily.time array as the time axis (one value per calendar day).
+      // Fix: append 'T00:00:00.000Z' so YYYY-MM-DD is always parsed as UTC
+      // midnight, not local midnight (which drifts in western timezones).
       return forecast.daily.time
         .filter((dateStr) => {
-          const date = new Date(dateStr);
+          const date = new Date(dateStr + 'T00:00:00.000Z');
           return date >= todayUtc && date <= cutoff;
         })
         .map((dateStr) => _getMoonIlluminationForDate(dateStr));
@@ -407,9 +413,9 @@ export function getMetricValues(
 function getMetricEntries(
   metric: string,
   forecast: ForecastData,
-  lookaheadHours: number
+  lookaheadHours: number,
+  now: Date = new Date()
 ): Array<{ value: number; time: string }> {
-  const now = new Date();
   const cutoff = new Date(now.getTime() + lookaheadHours * 60 * 60 * 1000);
   const todayUtc = new Date(now.toISOString().slice(0, 10) + 'T00:00:00.000Z');
 
@@ -568,9 +574,11 @@ function getMetricEntries(
 
     case 'moon_phase': {
       // moon_phase uses daily dates as the time axis.
+      // Fix: append 'T00:00:00.000Z' so YYYY-MM-DD is always parsed as UTC
+      // midnight, not local midnight (which drifts in western timezones).
       return forecast.daily.time
         .filter((dateStr) => {
-          const date = new Date(dateStr);
+          const date = new Date(dateStr + 'T00:00:00.000Z');
           return date >= todayUtc && date <= cutoff;
         })
         .map((dateStr) => ({
@@ -708,9 +716,10 @@ function applyTemperatureUnit(value: number, metric: string, unit: string | unde
 export function evaluateCondition(
   condition: AlertCondition,
   forecast: ForecastData,
-  lookaheadHours: number
+  lookaheadHours: number,
+  now: Date = new Date()
 ): { met: boolean; matchedValue: number | null; matchedTime: string | null } {
-  const entries = getMetricEntries(condition.metric, forecast, lookaheadHours);
+  const entries = getMetricEntries(condition.metric, forecast, lookaheadHours, now);
 
   for (const { value, time } of entries) {
     const withTempUnit = applyTemperatureUnit(value, condition.metric, condition.unit);
@@ -727,7 +736,8 @@ export function evaluateCondition(
 
 export function evaluateRule(
   rule: AlertRule,
-  forecast: ForecastData
+  forecast: ForecastData,
+  now: Date = new Date()
 ): EvaluationResult {
   // Guard: a rule with no conditions can never trigger.
   if (rule.conditions.length === 0) {
@@ -740,7 +750,7 @@ export function evaluateRule(
   }
 
   const details = rule.conditions.map((condition) => {
-    const result = evaluateCondition(condition, forecast, rule.lookahead_hours);
+    const result = evaluateCondition(condition, forecast, rule.lookahead_hours, now);
     return {
       metric: condition.metric,
       operator: condition.operator,

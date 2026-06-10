@@ -53,10 +53,38 @@ async function invokeGetForecast(body: Record<string, unknown>): Promise<Forecas
   return data as ForecastRaw;
 }
 
+/**
+ * Compute the current local "now" as a no-suffix ISO string truncated to the
+ * hour boundary ("YYYY-MM-DDTHH:00"), matching the format Open-Meteo uses for
+ * its hourly timestamps.
+ *
+ * Swedish locale ("sv") gives "YYYY-MM-DD HH:mm:ss"; we swap the space for "T"
+ * and slice to 13 chars to get "YYYY-MM-DDTHH", then append ":00".
+ *
+ * Do NOT use new Date().toISOString() here -- that returns UTC, which will
+ * miscategorise future-local hours as already-passed for western-timezone users
+ * (DATA-002).
+ */
+function localNowHourIso(tz: string): string {
+  const prefix = new Intl.DateTimeFormat('sv', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    hour12: false,
+  })
+    .format(new Date())
+    .replace(' ', 'T')
+    .slice(0, 13);
+  return `${prefix}:00`; // e.g. "2026-04-27T12:00"
+}
+
 async function fetch24h(
   latitude: number,
   longitude: number,
   precipitationUnit: 'inch' | 'mm',
+  timezone: string,
 ): Promise<RainfallData> {
   const raw = await invokeGetForecast({
     latitude,
@@ -73,15 +101,18 @@ async function fetch24h(
     throw new Error('Rainfall API: unexpected hourly response shape');
   }
 
-  const nowIso = new Date().toISOString();
+  // Compute the local "now" anchor in the same format as Open-Meteo timestamps
+  // ("YYYY-MM-DDTHH:00", no suffix). Lexicographic comparison works because
+  // both sides use the same zero-padded ISO-like format.
+  const localNow = localNowHourIso(timezone);
   let total = 0;
   let snowTotal = 0;
 
   for (let i = 0; i < hourly.time.length; i++) {
-    // Only accumulate hours that have already passed — future hours have no
-    // observed precipitation. Open-Meteo returns past_days + forecast_days in
-    // a single array; we want only the historical half.
-    if (hourly.time[i] < nowIso) {
+    // Only accumulate hours that have already passed (local time) -- future
+    // hours have no observed precipitation. Open-Meteo returns past_days +
+    // forecast_days in a single array; we want only the historical half.
+    if (hourly.time[i] <= localNow) {
       total += hourly.precipitation[i] ?? 0;
       snowTotal += hourly.snowfall?.[i] ?? 0;
     }
@@ -180,9 +211,10 @@ export async function fetchRainfallHistory(
   longitude: number,
   window: RainfallWindow,
   precipitationUnit: 'inch' | 'mm',
+  timezone: string,
 ): Promise<RainfallData> {
   if (window === '24h') {
-    return fetch24h(latitude, longitude, precipitationUnit);
+    return fetch24h(latitude, longitude, precipitationUnit, timezone);
   }
   return fetchMultiDay(latitude, longitude, window, precipitationUnit);
 }

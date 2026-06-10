@@ -70,8 +70,16 @@ export function LocationSearchInput({
     const trimmed = query.trim();
 
     // This query was set by a selection — don't search it again.
+    // But if the user has edited away from the selected label and back,
+    // clear the suppression ref so the search is allowed.
     if (trimmed === lastSelectedLabelRef.current) {
       return;
+    }
+
+    // User typed something different from the last selected label — clear the
+    // suppression ref so typing back to that label later will trigger a search.
+    if (lastSelectedLabelRef.current !== null) {
+      lastSelectedLabelRef.current = null;
     }
 
     if (trimmed.length < MIN_QUERY_LENGTH) {
@@ -80,9 +88,12 @@ export function LocationSearchInput({
       return;
     }
 
-    setStatus('loading');
-
+    // Do NOT set loading here — only set it inside the setTimeout callback so
+    // we don't show a spinner for debounce windows that are cancelled before firing.
     const timerId = setTimeout(async () => {
+      // Now we're committed to firing the search — show the loading indicator.
+      setStatus('loading');
+
       // Record which query we're firing for race-condition guard.
       activeQueryRef.current = trimmed;
 

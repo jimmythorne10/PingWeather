@@ -1,9 +1,9 @@
-# PingWeather Privacy Policy
+# WeatherBeacon Privacy Policy
 
 **Effective Date:** April 10, 2026
 **Last Updated:** April 10, 2026
 
-**Truth Centered Tech, LLC** ("we," "us," or "our") operates the PingWeather mobile application (the "App"). This Privacy Policy explains how we collect, use, disclose, and protect your information when you use PingWeather. We are headquartered in Virginia and comply with the Virginia Consumer Data Protection Act (VCDPA) and applicable federal law.
+**Truth Centered Tech, LLC** ("we," "us," or "our") operates the WeatherBeacon mobile application (the "App"). This Privacy Policy explains how we collect, use, disclose, and protect your information when you use WeatherBeacon. We are headquartered in Virginia and comply with the Virginia Consumer Data Protection Act (VCDPA) and applicable federal law.
 
 ---
 
@@ -87,7 +87,7 @@ No method of transmission or storage is 100% secure. We cannot guarantee absolut
 
 ## 7. Children's Privacy
 
-PingWeather is not directed to children under 13. We do not knowingly collect personal information from children under 13. If you believe a child has provided us with personal information, contact us at **privacy@truthcenteredtech.com** and we will delete it promptly.
+WeatherBeacon is not directed to children under 13. We do not knowingly collect personal information from children under 13. If you believe a child has provided us with personal information, contact us at **privacy@truthcenteredtech.com** and we will delete it promptly.
 
 ---
 

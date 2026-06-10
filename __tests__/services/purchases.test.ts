@@ -6,7 +6,7 @@
  * The SDK itself is mocked in jest.setup.ts.
  */
 
-import { mapProductToTier, PRODUCT_TIER_MAP, TIER_PACKAGE_MAP } from '../../src/services/purchases';
+import { mapProductToTier, PRODUCT_TIER_MAP, TIER_PACKAGE_MAP, determineTierFromCustomerInfo } from '../../src/services/purchases';
 
 describe('mapProductToTier', () => {
   it('maps pro_monthly to pro', () => {
@@ -43,11 +43,9 @@ describe('mapProductToTier', () => {
     expect(mapProductToTier('premium_monthly:monthly')).toBe('premium');
   });
 
-  it('PRODUCT_TIER_MAP has exactly 6 entries (including RevenueCat colon-format variants)', () => {
-    // FIX 14: Two colon-format entries were added (pro_monthly:monthly,
-    // premium_monthly:monthly) to handle the product ID format RevenueCat
-    // returns on restorePurchases() on some SDK versions.
-    expect(Object.keys(PRODUCT_TIER_MAP)).toHaveLength(6);
+  it('PRODUCT_TIER_MAP has exactly 10 entries (Android short-form + iOS fully-qualified)', () => {
+    // 6 Android entries + 4 iOS entries (com.truthcenteredtech.pingweather.{pro,premium}_monthly with colon-format variants)
+    expect(Object.keys(PRODUCT_TIER_MAP)).toHaveLength(10);
   });
 
   it('every PRODUCT_TIER_MAP value is either pro or premium', () => {
@@ -87,6 +85,47 @@ describe('syncTierToSupabase — removed', () => {
     // The only permissible mention of subscription_tier in this file would be
     // a read (never a write). The column name in an update payload is the tell.
     expect(source).not.toContain('subscription_tier:');
+  });
+});
+
+// ── BUG-012: determineTierFromCustomerInfo null-tier hole ─────
+// determineTierFromCustomerInfo previously returned null when activeSubscriptions
+// was non-empty but no product ID mapped to a known tier. This caused:
+//   - purchasePackage to return { success: true, tier: null }
+//   - restorePurchases to report 'No active subscription found' despite finding one
+// Fix: default to 'free' (server webhook is the tier authority).
+describe('determineTierFromCustomerInfo — BUG-012', () => {
+  it('returns "free" when activeSubscriptions is empty', () => {
+    expect(determineTierFromCustomerInfo({ activeSubscriptions: [] })).toBe('free');
+  });
+
+  it('returns "pro" for a known pro product ID', () => {
+    expect(determineTierFromCustomerInfo({ activeSubscriptions: ['pro_monthly'] })).toBe('pro');
+  });
+
+  it('returns "premium" for a known premium product ID', () => {
+    expect(determineTierFromCustomerInfo({ activeSubscriptions: ['premium_monthly'] })).toBe('premium');
+  });
+
+  it('returns "premium" when both premium and pro are active (most-premium wins)', () => {
+    expect(
+      determineTierFromCustomerInfo({ activeSubscriptions: ['pro_monthly', 'premium_monthly'] })
+    ).toBe('premium');
+  });
+
+  // BUG-012 regression: was returning null — must now return 'free'
+  it('returns "free" (not null) when activeSubscriptions has an unknown product ID', () => {
+    expect(
+      determineTierFromCustomerInfo({ activeSubscriptions: ['some_unknown_product_id'] })
+    ).toBe('free');
+  });
+
+  it('returns "free" (not null) when multiple unknown product IDs are present', () => {
+    expect(
+      determineTierFromCustomerInfo({
+        activeSubscriptions: ['unknown_a', 'unknown_b'],
+      })
+    ).toBe('free');
   });
 });
 

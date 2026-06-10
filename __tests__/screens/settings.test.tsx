@@ -110,10 +110,10 @@ describe('SettingsScreen', () => {
     expect(screen.getByText(/Alert History/i)).toBeTruthy();
   });
 
-  // FR-SET-007: version display as "PingWeather v{version}"
-  it('shows PingWeather version string', () => {
+  // FR-SET-007: version display as "WeatherBeacon v{version}"
+  it('shows WeatherBeacon version string', () => {
     render(<SettingsScreen />);
-    expect(screen.getByText(/PingWeather v\d/)).toBeTruthy();
+    expect(screen.getByText(/WeatherBeacon v\d/)).toBeTruthy();
   });
 
   // FR-SET-009: delete account button (TDD — not implemented)

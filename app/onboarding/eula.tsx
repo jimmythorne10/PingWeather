@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTokens } from '../../src/theme';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -10,15 +10,20 @@ export default function EulaScreen() {
   const updateProfile = useAuthStore((s) => s.updateProfile);
 
   const handleAccept = async () => {
-    await updateProfile({
+    const ok = await updateProfile({
       eula_accepted_version: EULA_CONTENT.version,
       eula_accepted_at: new Date().toISOString(),
     });
+    if (!ok) {
+      Alert.alert('Save Failed', useAuthStore.getState().error ?? 'Could not save. Please try again.');
+      return;
+    }
     router.push('/onboarding/location-setup');
   };
 
   return (
     <View style={[styles.container, { backgroundColor: t.background }]}>
+      <View style={styles.inner}>
       <Text style={[styles.title, { color: t.textPrimary }]}>Terms of Use</Text>
       <Text style={[styles.version, { color: t.textTertiary }]}>
         Version {EULA_CONTENT.version} — {EULA_CONTENT.effectiveDate}
@@ -46,6 +51,7 @@ export default function EulaScreen() {
       >
         <Text style={[styles.buttonText, { color: t.textOnPrimary }]}>I Accept</Text>
       </Pressable>
+      </View>
     </View>
   );
 }
@@ -95,5 +101,11 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 18,
     fontWeight: '700',
+  },
+  inner: {
+    flex: 1,
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
   },
 });

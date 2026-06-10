@@ -1,5 +1,5 @@
 // ────────────────────────────────────────────────────────────
-// PingWeather Theme Tokens
+// WeatherBeacon Theme Tokens
 // Adapted from SocialUplink theme system
 // ────────────────────────────────────────────────────────────
 

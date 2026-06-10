@@ -165,6 +165,12 @@ describe('weatherApi — fetchForecast', () => {
       'wind_speed_10m',
       'apparent_temperature',
       'uv_index',
+      // BUG-007: five metrics that were missing from the hourly request
+      'wind_gusts_10m',
+      'dew_point_2m',
+      'visibility',
+      'cloud_cover',
+      'wind_direction_10m',
     ];
 
     hourlyFields.forEach((field) => {

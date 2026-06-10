@@ -41,7 +41,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { push_token } = await req.json();
+    let body: { push_token?: unknown };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON body" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    const { push_token } = body;
     if (!push_token || typeof push_token !== "string") {
       return new Response(
         JSON.stringify({ error: "push_token is required" }),

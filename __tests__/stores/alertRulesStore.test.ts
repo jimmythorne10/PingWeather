@@ -63,6 +63,7 @@ function setLoggedInUser(tier: 'free' | 'pro' | 'premium' = 'free') {
       digest_last_sent_at: null,
       temperature_unit: 'fahrenheit' as const,
       wind_speed_unit: 'mph' as const,
+      pressure_unit: 'hPa' as const,
       created_at: '2026-01-01',
       updated_at: '2026-01-01',
     },

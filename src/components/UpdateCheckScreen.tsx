@@ -32,6 +32,13 @@ export function UpdateCheckScreen({ status }: UpdateCheckScreenProps) {
   useEffect(() => {
     const duration = status === 'downloading' ? 900 : 1400;
 
+    // Reset both animated values to their resting position before starting a
+    // new loop. Without this, when status changes (e.g. 'checking' →
+    // 'downloading') the old loop stops mid-cycle and the new loop starts from
+    // wherever the values happened to land, causing a visible jump.
+    pulseAnim.setValue(0.25);
+    scaleAnim.setValue(1);
+
     const loop = Animated.loop(
       Animated.sequence([
         Animated.parallel([
@@ -87,7 +94,7 @@ export function UpdateCheckScreen({ status }: UpdateCheckScreenProps) {
         />
       </View>
 
-      <Text style={styles.appName}>PingWeather</Text>
+      <Text style={styles.appName}>WeatherBeacon</Text>
       <Text style={styles.statusText}>{STATUS_LABELS[status]}</Text>
     </View>
   );

@@ -20,8 +20,8 @@ interface AlertRulesState {
     lookahead_hours: number;
     polling_interval_hours: number;
     cooldown_hours: number;
-  }) => Promise<void>;
-  updateRule: (id: string, updates: Partial<AlertRule>) => Promise<void>;
+  }) => Promise<boolean>;
+  updateRule: (id: string, updates: Partial<AlertRule>) => Promise<boolean>;
   deleteRule: (id: string) => Promise<void>;
   toggleRule: (id: string, isActive: boolean) => Promise<void>;
   enforceTierLimits: (tier: SubscriptionTier) => Promise<void>;
@@ -64,13 +64,13 @@ export const useAlertRulesStore = create<AlertRulesState>()(
           const current = get().rules.length;
           if (current >= limits.maxAlertRules) {
             set({ loading: false, error: `Alert rule limit reached for your plan (${limits.maxAlertRules} max)` });
-            return;
+            return false;
           }
 
           // Compound condition gating
           if (!limits.compoundConditions && rule.conditions.length > 1) {
             set({ loading: false, error: 'Compound conditions require a Pro or Premium subscription' });
-            return;
+            return false;
           }
 
           const { data, error } = await supabase
@@ -80,10 +80,12 @@ export const useAlertRulesStore = create<AlertRulesState>()(
             .single();
           if (error) throw error;
           set({ rules: [data as AlertRule, ...get().rules], loading: false });
+          return true;
         } catch (err) {
           // FIX 4: Real error message instead of hardcoded string.
           const message = err instanceof Error ? err.message : 'Failed to create alert rule';
           set({ loading: false, error: message });
+          return false;
         }
       },
 
@@ -99,10 +101,12 @@ export const useAlertRulesStore = create<AlertRulesState>()(
           set({
             rules: get().rules.map((r) => (r.id === id ? (data as AlertRule) : r)),
           });
+          return true;
         } catch (err) {
           // FIX 4: Real error message instead of hardcoded string.
           const message = err instanceof Error ? err.message : 'Failed to update alert rule';
           set({ error: message });
+          return false;
         }
       },
 
@@ -196,7 +200,7 @@ export const useAlertRulesStore = create<AlertRulesState>()(
       clearError: () => set({ error: null }),
     }),
     {
-      name: 'weatherwatch-alert-rules',
+      name: 'pingweather-alert-rules',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ rules: state.rules }),
     }

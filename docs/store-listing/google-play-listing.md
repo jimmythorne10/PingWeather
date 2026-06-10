@@ -1,4 +1,4 @@
-# Google Play Store Listing — PingWeather
+# Google Play Store Listing — WeatherBeacon
 
 ## Short Description (80 characters max)
 
@@ -6,7 +6,7 @@ Custom weather alerts for freeze warnings, rain, wind, and more. Set and forget.
 
 ## Full Description (4000 characters max)
 
-PingWeather sends you a push notification before bad weather hits — not after. You set the conditions, we watch the forecast, you get a ping when it matters.
+WeatherBeacon sends you a push notification before bad weather hits — not after. You set the conditions, we watch the forecast, you get a ping when it matters.
 
 Built for people who work and live outdoors:
 
@@ -25,7 +25,7 @@ HOW IT WORKS
 3. Choose your polling interval — how often we check the forecast against your rules.
 4. Go about your day. We handle the rest.
 
-PingWeather checks forecasts server-side on your schedule. When conditions match, you get a push notification. No background battery drain. No constant location tracking. Your rules run on our servers, not your phone.
+WeatherBeacon checks forecasts server-side on your schedule. When conditions match, you get a push notification. No background battery drain. No constant location tracking. Your rules run on our servers, not your phone.
 
 FEATURES
 - Temperature, precipitation, wind, humidity, and weather code alerts
@@ -47,7 +47,7 @@ PRO — $3.99/month
 PREMIUM — $7.99/month
 10 locations, unlimited rules, 1-hour polling, 90-day history, compound conditions, SMS alerts (coming soon).
 
-IMPORTANT: Weather forecasts are inherently uncertain. PingWeather supplements official weather warnings — it does not replace the National Weather Service or emergency alerts. Always maintain backup alert channels for life-safety decisions.
+IMPORTANT: Weather forecasts are inherently uncertain. WeatherBeacon supplements official weather warnings — it does not replace the National Weather Service or emergency alerts. Always maintain backup alert channels for life-safety decisions.
 
 Privacy-first: we collect only what the service requires (email, locations you add, device token for notifications). We do not sell data. Full privacy policy at truthcenteredtech.com.
 
@@ -81,7 +81,7 @@ No special content warnings needed. The app does collect location data (user-ent
 The feature graphic should convey:
 - The core value prop: proactive weather alerts, not reactive checking
 - Target audience: outdoor/rural, not urban lifestyle
-- Suggested concept: Split image — left side shows a phone with a freeze alert notification, right side shows a frosty pasture at dawn. PingWeather logo centered. Tagline: "Get a ping before it freezes."
+- Suggested concept: Split image — left side shows a phone with a freeze alert notification, right side shows a frosty pasture at dawn. WeatherBeacon logo centered. Tagline: "Get a ping before it freezes."
 - Color palette: Deep navy (#1E3A5F) as primary, with warm amber or orange accents for the alert/notification elements.
 - Keep it clean and readable at small sizes. No busy photography.
 

@@ -61,8 +61,11 @@ export default function LocationsScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadLocations();
-    setRefreshing(false);
+    try {
+      await loadLocations();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleSave = async () => {
@@ -253,12 +256,16 @@ export default function LocationsScreen() {
                 </Pressable>
                 <Text style={styles.locationName}>{loc.name}</Text>
               </View>
-              <Switch
-                value={loc.is_active}
-                onValueChange={(val) => toggleLocation(loc.id, val)}
-                trackColor={{ false: tokens.border, true: tokens.primaryLight }}
-                thumbColor={loc.is_active ? tokens.primary : tokens.textTertiary}
-              />
+              {/* Wrap Switch in Pressable to stop tap from bubbling to the
+                  card Pressable's onPress and opening the edit form. */}
+              <Pressable onPress={(e) => { e.stopPropagation?.(); }}>
+                <Switch
+                  value={loc.is_active}
+                  onValueChange={(val) => toggleLocation(loc.id, val)}
+                  trackColor={{ false: tokens.border, true: tokens.primaryLight }}
+                  thumbColor={loc.is_active ? tokens.primary : tokens.textTertiary}
+                />
+              </Pressable>
             </View>
             <Text style={styles.locationCoords}>
               {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}
@@ -296,7 +303,7 @@ export default function LocationsScreen() {
 
 const createStyles = (t: ThemeTokens) => ({
   container: { flex: 1 as const, backgroundColor: t.background },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: 20, paddingBottom: 40, maxWidth: 600, alignSelf: 'center' as const, width: '100%' as const },
   headerRow: {
     flexDirection: 'row' as const,
     justifyContent: 'space-between' as const,
