@@ -26,6 +26,7 @@ function buildHourly(includeOptional = false): HourlyForecast {
   const snowfall: number[] = [];
   const snow_depth: number[] = [];
   const soil_temperature_0cm: number[] = [];
+  const wind_direction_10m: number[] = [];
 
   const days = ['2026-04-09', '2026-04-10', '2026-04-11'];
   days.forEach((day, dayIdx) => {
@@ -45,6 +46,7 @@ function buildHourly(includeOptional = false): HourlyForecast {
         snowfall.push(h < 6 ? dayIdx * 0.2 : 0);
         snow_depth.push(dayIdx * 5 + h);
         soil_temperature_0cm.push(10 + dayIdx + h * 0.5);
+        wind_direction_10m.push((dayIdx * 120 + h * 15) % 360);
       }
     }
   });
@@ -68,6 +70,7 @@ function buildHourly(includeOptional = false): HourlyForecast {
       snowfall,
       snow_depth,
       soil_temperature_0cm,
+      wind_direction_10m,
     };
   }
   return base;
@@ -189,6 +192,7 @@ describe('getHourlyForDay', () => {
       expect(result.snowfall).toBeUndefined();
       expect(result.snow_depth).toBeUndefined();
       expect(result.soil_temperature_0cm).toBeUndefined();
+      expect(result.wind_direction_10m).toBeUndefined();
     });
 
     it('forwards optional arrays when source includes them, preserving lockstep with time', () => {
@@ -205,6 +209,8 @@ describe('getHourlyForDay', () => {
       expect(result.soil_temperature_0cm).toHaveLength(24);
       expect(result.precipitation).toBeDefined();
       expect(result.precipitation).toHaveLength(24);
+      expect(result.wind_direction_10m).toBeDefined();
+      expect(result.wind_direction_10m).toHaveLength(24);
     });
 
     it('optional arrays contain the correct values for the selected day (lockstep check)', () => {
@@ -216,6 +222,8 @@ describe('getHourlyForDay', () => {
         expect(result.surface_pressure![h]).toBe(1013 + h);
         expect(result.snow_depth![h]).toBe(1 * 5 + h); // dayIdx=1 → 5 + h
         expect(result.soil_temperature_0cm![h]).toBeCloseTo(10 + 1 + h * 0.5, 5);
+        // dayIdx=1 → (1*120 + h*15) % 360 = (120 + h*15) % 360
+        expect(result.wind_direction_10m![h]).toBe((120 + h * 15) % 360);
       }
     });
   });

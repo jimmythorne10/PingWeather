@@ -34,6 +34,7 @@ export function getHourlyForDay(hourly: HourlyForecast, isoDate: string): Hourly
     uv_index: pick(hourly.uv_index),
     weather_code: pick(hourly.weather_code),
     // Optional new metric fields — forwarded when present in the source.
+    wind_direction_10m: pickOpt(hourly.wind_direction_10m),
     precipitation: pickOpt(hourly.precipitation),
     surface_pressure: pickOpt(hourly.surface_pressure),
     snowfall: pickOpt(hourly.snowfall),
