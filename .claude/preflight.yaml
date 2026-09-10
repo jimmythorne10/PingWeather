@@ -1,0 +1,100 @@
+# TCT Ship Framework — Preflight Blocker Registry
+# WeatherBeacon. Populated 2026-09-09 for feature: design-system-v2.
+# Run /preflight-check to validate and assign owners.
+
+blockers:
+  - id: BLOCK-001
+    name: "eas-cli >= 20.x (OTA fingerprint bug)"
+    category: tooling
+    required_for: []
+    status: resolved
+    owner: orchestrator
+    evidence: "eas --version -> eas-cli/20.1.0 win32-x64 node-v24.13.0, verified 2026-09-09"
+    verify_command: "eas --version"
+    notes: >
+      eas-cli 18.5.0 printed "Skipping project fingerprints" under
+      EAS_SKIP_AUTO_FINGERPRINT=1 but still attached a fingerprint, so three OTA
+      pushes on 2026-06-10 silently delivered to ZERO devices. 20.1.0 satisfies
+      the >= 20.x floor. 20.5.0 is available but not required.
+
+  - id: BLOCK-002
+    name: "OTA channel mapping read from eas build:list, not memory"
+    category: process
+    required_for: []
+    status: owned
+    owner: orchestrator
+    evidence: null
+    verify_command: "eas build:list --platform android --limit 3"
+    notes: >
+      Channel is locked at build time and differs between preview and production
+      profiles. MEMORY.md records that every prior Android OTA went to `preview`
+      while production-profile users (versionCode 12+) sit on `production`, so
+      zero production users received them. Must be re-read at ship time, never
+      assumed. iOS and Android OTAs must run SEQUENTIALLY (shared dist/ dir).
+
+  - id: BLOCK-003
+    name: "Clean working tree at OTA push time"
+    category: process
+    required_for: []
+    status: pending
+    owner: operator
+    evidence: null
+    verify_command: "git status --porcelain"
+    notes: >
+      EAS bundles from Metro's output of the working directory, NOT from the git
+      commit, so a dirty tree ships uncommitted code to all users. This already
+      happened once (2026-06-09, 94-file catch-up commit). Currently blocked by a
+      stray zero-byte untracked file `nul` at the repo root from a botched shell
+      redirect; operator declined removal this session, so it must be cleared or
+      gitignored before any OTA push.
+
+  - id: BLOCK-004
+    name: "Physical device + EAS dev build for aesthetic verification"
+    category: process
+    required_for: []
+    status: owned
+    owner: operator
+    evidence: null
+    verify_command: null
+    notes: >
+      Irreducible. Whether the new design LOOKS good is a judgment no automated
+      verifier can make. This is the `device` verifier in the manifest and it
+      requires Jimmy on a physical Android device via `npx expo start
+      --dev-client`. All STRUCTURAL criteria (token contract completeness,
+      zero-hardcoded-literals coverage, classic parity, persistence) are
+      unit-real-path and do NOT depend on this blocker.
+
+  - id: BLOCK-005
+    name: "Maestro E2E toolchain (INFRA-001)"
+    category: tooling
+    required_for: []
+    status: resolved
+    owner: operator
+    evidence: "Deliberately descoped for design-system-v2 — see notes."
+    verify_command: "maestro --version"
+    notes: >
+      NOT REQUIRED for this feature, by deliberate decision on 2026-09-09.
+      Verified absent on this machine: no maestro CLI, no adb, no JDK, no Android
+      SDK, no Android Studio, no ~/.maestro. Installing it is a multi-hour
+      Windows build-out (Maestro officially wants WSL).
+      Descoped because a token-driven restyle adds ZERO native surface, so the
+      risk is visual regression rather than crashes — and Maestro asserts element
+      presence, not aesthetics, so it would not catch the actual risk. The
+      proportionate net is: TypeScript strict (catches missing token keys at
+      compile time), token-contract completeness test, zero-hardcoded-literals
+      coverage test, classic-parity test, plus instant OTA rollback by
+      republishing the prior update.
+      Remains the right long-term investment; re-open for any feature that adds
+      native surface.
+
+constraints:
+  - id: CONS-001
+    name: "OTA-only — no new native dependencies"
+    notes: >
+      Adding expo-font, expo-blur, expo-linear-gradient, expo-haptics,
+      @expo/vector-icons, or react-native-svg requires new binaries for BOTH
+      stores plus another Apple review round. Usable without a new build:
+      react-native-reanimated 4.1.1 + react-native-worklets 0.5.1 (newArchEnabled
+      true), RN Animated/LayoutAnimation, all JS style props including the full
+      shadow/elevation model, and image assets (gradients and icons can ship as
+      PNG/WebP over OTA, tinted via tintColor).
