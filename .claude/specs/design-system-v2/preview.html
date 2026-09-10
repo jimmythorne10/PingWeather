@@ -1,346 +1,315 @@
-<title>WeatherBeacon Depth &amp; Surface</title>
+<title>WeatherBeacon Look Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
 
 <style>
-/* ─────────────────────────────────────────────
-   PAGE CHROME TOKENS — navy-biased neutrals,
-   drawn toward the app's own #1E3A5F primary.
-   ───────────────────────────────────────────── */
+/* ─── Page chrome. Square everywhere, to match what it argues for. ─── */
 :root{
-  --ground:#EEF1F5;
+  --ground:#F2F4F7;
   --surface:#FFFFFF;
-  --surface-sunk:#E4E9F0;
-  --ink:#131A24;
-  --ink-muted:#5B6875;
-  --ink-faint:#8B98A8;
-  --rule:#D3DBE4;
+  --surface-sunk:#E6EAF0;
+  --ink:#0F151D;
+  --ink-muted:#54616F;
+  --ink-faint:#8593A3;
+  --rule:#CFD7E0;
+  --rule-strong:#0F151D;
   --accent:#1E3A5F;
-  --accent-soft:#E3EAF2;
-  --flag:#B45309;
-  --flag-soft:#FDF1DC;
-  --good:#276749;
-  --good-soft:#DFF0E4;
+  --accent-soft:#E2E8F1;
+  --flag:#A8541C;
+  --flag-soft:#FBEFE5;
+  --good:#215E42;
+  --good-soft:#DFEDE5;
 
   --font-display:'Archivo',system-ui,sans-serif;
   --font-body:'Source Sans 3',system-ui,sans-serif;
   --font-mono:'IBM Plex Mono',ui-monospace,monospace;
-
-  /* The app renders in the OS font. Mockup interiors must too. */
   --font-device:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --ground:#0E1520;
-    --surface:#17202E;
-    --surface-sunk:#111926;
-    --ink:#E8EDF3;
-    --ink-muted:#96A3B4;
-    --ink-faint:#66748A;
-    --rule:#25303F;
-    --accent:#7DB8E8;
-    --accent-soft:#1B2735;
-    --flag:#E0A15B;
-    --flag-soft:#2A2113;
-    --good:#7BC496;
-    --good-soft:#152519;
+    --ground:#0B1018; --surface:#131A24; --surface-sunk:#0F151E;
+    --ink:#E9EEF4; --ink-muted:#94A2B2; --ink-faint:#64738A;
+    --rule:#232E3C; --rule-strong:#E9EEF4;
+    --accent:#7FBAE9; --accent-soft:#17222F;
+    --flag:#D79A63; --flag-soft:#241B10;
+    --good:#74BF90; --good-soft:#132218;
   }
 }
 :root[data-theme="dark"]{
-  --ground:#0E1520;
-  --surface:#17202E;
-  --surface-sunk:#111926;
-  --ink:#E8EDF3;
-  --ink-muted:#96A3B4;
-  --ink-faint:#66748A;
-  --rule:#25303F;
-  --accent:#7DB8E8;
-  --accent-soft:#1B2735;
-  --flag:#E0A15B;
-  --flag-soft:#2A2113;
-  --good:#7BC496;
-  --good-soft:#152519;
+  --ground:#0B1018; --surface:#131A24; --surface-sunk:#0F151E;
+  --ink:#E9EEF4; --ink-muted:#94A2B2; --ink-faint:#64738A;
+  --rule:#232E3C; --rule-strong:#E9EEF4;
+  --accent:#7FBAE9; --accent-soft:#17222F;
+  --flag:#D79A63; --flag-soft:#241B10;
+  --good:#74BF90; --good-soft:#132218;
 }
 
 *{box-sizing:border-box}
 body{
-  background:var(--ground);
-  color:var(--ink);
-  font-family:var(--font-body);
-  font-size:16px;
-  line-height:1.55;
-  padding-inline:20px;
-  padding-block:0 64px;
-  -webkit-font-smoothing:antialiased;
+  background:var(--ground);color:var(--ink);
+  font-family:var(--font-body);font-size:16px;line-height:1.55;
+  padding-inline:20px;padding-block:0 64px;-webkit-font-smoothing:antialiased;
 }
-.wrap{max-width:1080px;margin-inline:auto}
+.wrap{max-width:1160px;margin-inline:auto}
 
-/* ── Masthead ───────────────────────────── */
-.masthead{padding-block:52px 36px;border-bottom:1px solid var(--rule)}
+.masthead{padding-block:52px 32px;border-bottom:2px solid var(--rule-strong)}
 .eyebrow{
   font-family:var(--font-mono);font-size:11px;font-weight:600;
-  letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);
-  margin:0 0 14px;
+  letter-spacing:.15em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 14px;
 }
 h1{
   font-family:var(--font-display);font-weight:700;font-size:clamp(30px,5.2vw,46px);
-  line-height:1.06;letter-spacing:-.022em;margin:0 0 16px;text-wrap:balance;
+  line-height:1.04;letter-spacing:-.025em;margin:0 0 16px;text-wrap:balance;
 }
-.standfirst{font-size:17px;color:var(--ink-muted);max-width:64ch;margin:0}
+.standfirst{font-size:17px;color:var(--ink-muted);max-width:66ch;margin:0}
 .standfirst strong{color:var(--ink);font-weight:600}
 
-/* ── Defect ledger ──────────────────────── */
-.ledger{margin-block:36px 8px}
-.ledger h2,.spec h2,.screens h2{
-  font-family:var(--font-display);font-weight:600;font-size:13px;
-  letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);
-  margin:0 0 18px;
+h2.sec{
+  font-family:var(--font-display);font-weight:600;font-size:12.5px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);
+  margin:0 0 18px;padding-bottom:8px;border-bottom:1px solid var(--rule);
 }
+
+/* ── Candidate briefs ── */
+.cands{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:1px;background:var(--rule);margin-block:36px}
+.cand{background:var(--ground);padding:22px}
+.cand .n{font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 8px}
+.cand h3{font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:-.015em;margin:0 0 10px}
+.cand p{margin:0;font-size:14.5px;color:var(--ink-muted)}
+.cand.is-out h3{color:var(--ink-faint);text-decoration:line-through;text-decoration-thickness:2px}
+
+/* ── Ledger ── */
 .ledger-scroll{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:520px}
 th{
   text-align:left;font-family:var(--font-mono);font-size:10.5px;font-weight:600;
   letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);
-  padding:0 14px 9px 0;border-bottom:1px solid var(--rule);white-space:nowrap;
+  padding:0 14px 9px 0;border-bottom:2px solid var(--rule-strong);white-space:nowrap;
 }
 td{padding:11px 14px 11px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 td.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--flag);font-weight:600}
 td.fix{color:var(--ink-muted)}
 tr:last-child td{border-bottom:none}
 
-/* ── Jump nav ───────────────────────────── */
 .jump{
   position:sticky;top:0;z-index:20;background:var(--ground);
   padding-block:14px;border-bottom:1px solid var(--rule);
   display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:40px;
 }
-.jump span{
-  font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--ink-faint);margin-right:4px;
-}
+.jump span{font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-right:4px}
 .jump a{
   font-size:13.5px;font-weight:600;color:var(--ink-muted);text-decoration:none;
-  padding:5px 12px;border-radius:999px;border:1px solid var(--rule);
-  transition:background .15s,color .15s,border-color .15s;
+  padding:5px 12px;border:1px solid var(--rule);transition:background .15s,color .15s;
 }
-.jump a:hover,.jump a:focus-visible{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.jump a:hover,.jump a:focus-visible{background:var(--ink);color:var(--ground);border-color:var(--ink)}
 
-/* ── Comparison pairs ───────────────────── */
-.pair{padding-block:44px;border-bottom:1px solid var(--rule)}
+.pair{padding-block:42px;border-bottom:1px solid var(--rule)}
 .pair-head{margin-bottom:24px}
-.pair-head h3{
-  font-family:var(--font-display);font-weight:700;font-size:22px;
-  letter-spacing:-.015em;margin:0 0 6px;
-}
-.pair-head p{margin:0;color:var(--ink-muted);font-size:15px;max-width:62ch}
+.pair-head h3{font-family:var(--font-display);font-weight:700;font-size:22px;letter-spacing:-.015em;margin:0 0 6px}
+.pair-head p{margin:0;color:var(--ink-muted);font-size:15px;max-width:64ch}
 .pair-head code{font-family:var(--font-mono);font-size:12.5px;color:var(--ink-faint)}
 
-.stage{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
-.slot{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:10px}
-.slot-label{
-  display:flex;align-items:baseline;gap:8px;
-  font-family:var(--font-mono);font-size:10.5px;font-weight:600;
-  letter-spacing:.11em;text-transform:uppercase;
-}
-.slot-label .tag{padding:2px 7px;border-radius:4px}
+.stage{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+.slot{flex:1 1 270px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.slot-label{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;margin:0}
+.tag{padding:3px 8px}
 .tag-now{background:var(--surface-sunk);color:var(--ink-muted)}
-.tag-new{background:var(--accent);color:#fff}
-:root[data-theme="dark"] .tag-new,
-:root:not([data-theme="light"]) .tag-new{color:#0E1520}
-@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .tag-new{color:#fff}}
+.tag-a{background:var(--ink);color:var(--ground)}
+.tag-b{background:var(--accent);color:#fff}
+:root[data-theme="dark"] .tag-b{color:#0B1018}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tag-b{color:#0B1018}}
 .slot-label .note{color:var(--ink-faint);font-weight:400;letter-spacing:.02em;text-transform:none;font-size:11.5px}
 
-/* ─────────────────────────────────────────────
-   PHONE FRAME + THE TWO TOKEN SCOPES.
-   Identical markup inside both. Only the token
-   values differ — exactly the architecture
-   being proposed for the app itself.
-   ───────────────────────────────────────────── */
-.phone{
-  border-radius:26px;padding:9px;background:#20262E;
-  box-shadow:0 10px 30px rgba(16,26,40,.20);max-width:100%;
-}
+/* ═══ Phone + the three token scopes. Identical markup in all three. ═══ */
+.phone{border:1px solid var(--rule);padding:8px;background:var(--surface);max-width:100%}
 .screen{
-  border-radius:19px;overflow:hidden;font-family:var(--font-device);
-  background:var(--s-bg);color:var(--s-ink);padding:var(--sp-lg);
-  display:flex;flex-direction:column;gap:var(--sp-lg);
-  min-height:452px;
+  font-family:var(--font-device);background:var(--s-bg);color:var(--s-ink);
+  padding:var(--sp-lg);display:flex;flex-direction:column;gap:var(--sp-lg);
+  min-height:460px;overflow:hidden;
 }
 
-/* CLASSIC — today's shipped values, verbatim */
+/* ── CLASSIC — today's shipped values, verbatim ── */
 .classic{
-  --s-bg:#F0F4F8; --s-card:#FFFFFF; --s-sunk:#F7F9FC;
-  --s-ink:#1A202C; --s-ink2:#4A5568; --s-ink3:#A0AEC0;
-  --s-primary:#1E3A5F; --s-border:#CBD5E0; --s-border-l:#E2E8F0;
-  --s-freeze:#63B3ED; --s-rain:#4299E1; --s-heat:#FC8181; --s-ok:#38A169;
-
-  /* No scale: the arbitrary literals actually in the code today */
-  --t-display:48px; --t-display-w:700; --t-display-ls:0;
-  --t-title:20px;   --t-title-w:700;   --t-title-ls:0;
-  --t-head:16px;    --t-head-w:600;
-  --t-body:14px;    --t-body-w:400;
-  --t-cap:13px;     --t-cap-w:600;
-  --t-label:12px;   --t-label-w:600;  --t-label-ls:.5px;
-
-  --sp-xs:4px; --sp-sm:8px; --sp-md:10px; --sp-lg:16px; --sp-xl:20px;
-  --r-sm:6px; --r-md:8px; --r-lg:12px;
-  --sh-card:none; --sh-tile:none; --sh-hero:none;
-  --card-border:1px solid var(--s-border-l);
+  --s-bg:#F0F4F8;--s-card:#FFFFFF;--s-sunk:#F7F9FC;
+  --s-ink:#1A202C;--s-ink2:#4A5568;--s-ink3:#A0AEC0;
+  --s-primary:#1E3A5F;--s-border:#CBD5E0;--s-border-l:#E2E8F0;
+  --s-accent:#63B3ED;--s-rain:#4299E1;--s-ok:#38A169;
+  --t-display:48px;--t-display-w:700;--t-display-ls:0;
+  --t-head:16px;--t-head-w:600;--t-head-ls:0;
+  --t-body:14px;--t-cap:13px;--t-cap-w:600;
+  --t-label:12px;--t-label-w:600;--t-label-ls:.5px;
+  --sp-xs:4px;--sp-sm:8px;--sp-md:10px;--sp-lg:16px;--sp-xl:20px;
+  --r:12px;--r-sm:6px;
+  --card-bd:none;--card-sh:none;--label-rule:none;--rail:0px;
+  --hero-bg:#FFFFFF;--hero-ink:#1A202C;--hero-sub:#4A5568;--hero-pad:20px;
+  --row-bg:#FFFFFF;--row-bd:none;
 }
-/* MODERN — Depth & Surface */
-.modern{
-  --s-bg:#EDF2F7; --s-card:#FFFFFF; --s-sunk:#F4F7FA;
-  --s-ink:#111820; --s-ink2:#4E5C6B; --s-ink3:#93A1B0;
-  --s-primary:#1E3A5F; --s-border:#CBD5E0; --s-border-l:#E7EDF3;
-  --s-freeze:#3B8FD4; --s-rain:#4299E1; --s-heat:#E06B6B; --s-ok:#2F855A;
-
-  /* 7-step scale, real weight ramp, tuned tracking */
-  --t-display:56px; --t-display-w:300; --t-display-ls:-1.6px;
-  --t-title:28px;   --t-title-w:700;   --t-title-ls:-.5px;
-  --t-head:20px;    --t-head-w:600;
-  --t-body:15px;    --t-body-w:400;
-  --t-cap:13px;     --t-cap-w:500;
-  --t-label:11px;   --t-label-w:600;  --t-label-ls:.9px;
-
-  --sp-xs:4px; --sp-sm:8px; --sp-md:12px; --sp-lg:16px; --sp-xl:24px;
-  --r-sm:8px; --r-md:12px; --r-lg:16px;
-  --sh-card:0 2px 8px rgba(17,24,32,.08);
-  --sh-tile:0 1px 3px rgba(17,24,32,.06);
-  --sh-hero:0 6px 16px rgba(17,24,32,.12);
-  --card-border:none;
+/* ── A · RULED — hairlines, near-white, Swiss precision ── */
+.ruled{
+  --s-bg:#FBFCFD;--s-card:#FFFFFF;--s-sunk:#F2F5F8;
+  --s-ink:#0D1319;--s-ink2:#4C5966;--s-ink3:#8492A1;
+  --s-primary:#12283F;--s-border:#0D1319;--s-border-l:#D9E0E7;
+  --s-accent:#12283F;--s-rain:#2C6FA8;--s-ok:#1E5A3C;
+  --t-display:60px;--t-display-w:250;--t-display-ls:-2.4px;
+  --t-head:19px;--t-head-w:600;--t-head-ls:-.3px;
+  --t-body:15px;--t-cap:13px;--t-cap-w:400;
+  --t-label:10px;--t-label-w:700;--t-label-ls:1.5px;
+  --sp-xs:4px;--sp-sm:8px;--sp-md:12px;--sp-lg:16px;--sp-xl:24px;
+  --r:0px;--r-sm:0px;
+  --card-bd:1px solid var(--s-border-l);--card-sh:none;
+  --label-rule:1px solid var(--s-border-l);--rail:2px;
+  --hero-bg:#FFFFFF;--hero-ink:#0D1319;--hero-sub:#4C5966;--hero-pad:20px;
+  --row-bg:transparent;--row-bd:1px solid var(--s-border-l);
+}
+/* ── B · BLOCKED — tonal fields, solid accent, no rules needed ── */
+.blocked{
+  --s-bg:#E4E9EF;--s-card:#FFFFFF;--s-sunk:#D5DCE4;
+  --s-ink:#0C1219;--s-ink2:#4A5763;--s-ink3:#7C8B99;
+  --s-primary:#12283F;--s-border:#C2CCD6;--s-border-l:#E4E9EF;
+  --s-accent:#12283F;--s-rain:#2C6FA8;--s-ok:#1E5A3C;
+  --t-display:60px;--t-display-w:600;--t-display-ls:-2px;
+  --t-head:19px;--t-head-w:700;--t-head-ls:-.3px;
+  --t-body:15px;--t-cap:13px;--t-cap-w:500;
+  --t-label:10px;--t-label-w:700;--t-label-ls:1.5px;
+  --sp-xs:4px;--sp-sm:8px;--sp-md:12px;--sp-lg:16px;--sp-xl:24px;
+  --r:0px;--r-sm:0px;
+  --card-bd:none;--card-sh:none;--label-rule:none;--rail:0px;
+  --hero-bg:#12283F;--hero-ink:#FFFFFF;--hero-sub:#A9BDD2;--hero-pad:24px;
+  --row-bg:#FFFFFF;--row-bd:none;
 }
 
-/* Shared component vocabulary — one set of rules, two token scopes */
+/* Shared component vocabulary — one rule set, three token scopes */
 .s-label{
-  font-size:var(--t-label);font-weight:var(--t-label-w);
-  letter-spacing:var(--t-label-ls);text-transform:uppercase;color:var(--s-ink3);
-  margin:0;
+  font-size:var(--t-label);font-weight:var(--t-label-w);letter-spacing:var(--t-label-ls);
+  text-transform:uppercase;color:var(--s-ink3);margin:0;
+  padding-bottom:var(--sp-sm);border-bottom:var(--label-rule);
 }
 .s-sec{display:flex;flex-direction:column;gap:var(--sp-md)}
-.s-card{
-  background:var(--s-card);border-radius:var(--r-lg);padding:var(--sp-lg);
-  box-shadow:var(--sh-card);border:var(--card-border);
-}
+.s-card{background:var(--s-card);border-radius:var(--r);padding:var(--sp-lg);border:var(--card-bd);box-shadow:var(--card-sh)}
 .s-hero{
-  background:var(--s-card);border-radius:var(--r-lg);padding:var(--sp-xl);
-  box-shadow:var(--sh-hero);border:var(--card-border);
+  background:var(--hero-bg);color:var(--hero-ink);border-radius:var(--r);
+  padding:var(--hero-pad);border:var(--card-bd);
   display:flex;flex-direction:column;gap:var(--sp-sm);
 }
 .s-temp{
-  font-size:var(--t-display);font-weight:var(--t-display-w);
-  letter-spacing:var(--t-display-ls);line-height:1;color:var(--s-ink);
-  font-variant-numeric:tabular-nums;
+  font-size:var(--t-display);font-weight:var(--t-display-w);letter-spacing:var(--t-display-ls);
+  line-height:.95;font-variant-numeric:tabular-nums;color:inherit;
 }
-.s-verdict{font-size:var(--t-head);font-weight:var(--t-head-w);color:var(--s-freeze);display:flex;align-items:center;gap:var(--sp-sm)}
-.s-sub{font-size:var(--t-cap);font-weight:var(--t-cap-w);color:var(--s-ink2)}
-.s-tiles{display:flex;gap:var(--sp-md)}
+.s-verdict{font-size:var(--t-head);font-weight:var(--t-head-w);letter-spacing:var(--t-head-ls);display:flex;align-items:center;gap:var(--sp-sm);color:inherit}
+.s-sub{font-size:var(--t-cap);font-weight:var(--t-cap-w);color:var(--hero-sub)}
+.s-note{font-size:var(--t-cap);font-weight:var(--t-cap-w);color:var(--s-ink2)}
+.s-tiles{display:flex;gap:1px;background:var(--s-border-l)}
+.classic .s-tiles{gap:var(--sp-md);background:transparent}
 .s-tile{
-  flex:1;background:var(--s-card);border-radius:var(--r-md);padding:var(--sp-md);
-  box-shadow:var(--sh-tile);border:var(--card-border);
-  display:flex;flex-direction:column;gap:2px;min-width:0;
+  flex:1;background:var(--s-card);border-radius:var(--r-sm);padding:var(--sp-md);
+  display:flex;flex-direction:column;gap:2px;min-width:0;border:var(--card-bd);
 }
-.s-tile .v{font-size:var(--t-head);font-weight:var(--t-head-w);color:var(--s-ink);font-variant-numeric:tabular-nums}
+.classic .s-tile{border:none}
+.s-tile .v{font-size:var(--t-head);font-weight:var(--t-head-w);letter-spacing:var(--t-head-ls);color:var(--s-ink);font-variant-numeric:tabular-nums}
 .s-tile .k{font-size:var(--t-label);font-weight:var(--t-label-w);letter-spacing:var(--t-label-ls);text-transform:uppercase;color:var(--s-ink3)}
 .s-row{
-  display:flex;align-items:center;gap:var(--sp-md);
-  background:var(--s-card);border-radius:var(--r-md);padding:var(--sp-md);
-  box-shadow:var(--sh-tile);border:var(--card-border);
+  display:flex;align-items:center;gap:var(--sp-md);background:var(--row-bg);
+  border-radius:var(--r-sm);padding:var(--sp-md);border-bottom:var(--row-bd);
+  border-left:var(--rail) solid var(--s-accent);
 }
+.classic .s-row{border-left:none}
 .s-row .body{flex:1;min-width:0}
 .s-row .t{font-size:var(--t-body);font-weight:600;color:var(--s-ink)}
 .s-row .d{font-size:var(--t-cap);font-weight:400;color:var(--s-ink2)}
-.s-pill{
-  font-size:var(--t-label);font-weight:var(--t-label-w);letter-spacing:var(--t-label-ls);
-  text-transform:uppercase;padding:3px 9px;border-radius:999px;white-space:nowrap;
-}
+.s-pill{font-size:var(--t-label);font-weight:var(--t-label-w);letter-spacing:var(--t-label-ls);text-transform:uppercase;padding:3px 8px;border-radius:var(--r-sm);white-space:nowrap}
+.classic .s-pill{border-radius:999px}
 .s-pill.on{background:var(--s-ok);color:#fff}
-.s-pill.off{background:var(--s-border-l);color:var(--s-ink2)}
+.s-pill.off{background:var(--s-sunk);color:var(--s-ink2)}
 .s-chips{display:flex;gap:var(--sp-sm);flex-wrap:wrap}
-.s-chip{
-  font-size:var(--t-cap);font-weight:var(--t-cap-w);padding:var(--sp-sm) var(--sp-md);
-  border-radius:var(--r-sm);background:var(--s-card);color:var(--s-ink2);
-  box-shadow:var(--sh-tile);border:var(--card-border);
-}
-.s-chip.sel{background:var(--s-primary);color:#fff}
+.s-chip{font-size:var(--t-cap);font-weight:var(--t-cap-w);padding:var(--sp-sm) var(--sp-md);border-radius:var(--r-sm);background:var(--s-card);color:var(--s-ink2);border:var(--card-bd)}
+.blocked .s-chip{border:1px solid var(--s-border)}
+.s-chip.sel{background:var(--s-primary);color:#fff;border-color:var(--s-primary)}
 .s-fc{display:flex;flex-direction:column}
-.s-fc-row{
-  display:flex;align-items:center;gap:var(--sp-md);padding:var(--sp-md) 0;
-  border-bottom:1px solid var(--s-border-l);font-size:var(--t-body);
-}
+.s-fc-row{display:flex;align-items:center;gap:var(--sp-md);padding:var(--sp-md) 0;border-bottom:1px solid var(--s-border-l);font-size:var(--t-body)}
+.blocked .s-fc-row{border-bottom-color:#E4E9EF}
 .s-fc-row:last-child{border-bottom:none}
-.s-fc-row .day{width:52px;font-weight:600;color:var(--s-ink)}
-.s-fc-row .ic{width:22px;text-align:center}
-.s-fc-row .hi{font-weight:600;color:var(--s-ink);font-variant-numeric:tabular-nums}
+.s-fc-row .day{width:50px;font-weight:600;color:var(--s-ink)}
+.s-fc-row .ic{width:20px;text-align:center}
+.s-fc-row .hi{font-weight:700;color:var(--s-ink);font-variant-numeric:tabular-nums}
 .s-fc-row .lo{color:var(--s-ink3);font-variant-numeric:tabular-nums}
-.s-fc-row .rain{margin-left:auto;color:var(--s-rain);font-size:var(--t-cap);font-variant-numeric:tabular-nums}
-.s-seg{display:flex;gap:var(--sp-xs);background:var(--s-sunk);padding:var(--sp-xs);border-radius:var(--r-md)}
+.s-fc-row .rain{margin-left:auto;color:var(--s-rain);font-size:var(--t-cap);font-variant-numeric:tabular-nums;font-weight:600}
+.s-seg{display:flex;gap:1px;background:var(--s-border);padding:1px}
+.classic .s-seg{gap:var(--sp-xs);background:var(--s-sunk);padding:var(--sp-xs);border-radius:8px}
 .s-seg button{
-  flex:1;font-family:inherit;font-size:var(--t-cap);font-weight:600;
-  padding:var(--sp-sm);border-radius:calc(var(--r-md) - 3px);border:none;
-  background:transparent;color:var(--s-ink2);cursor:default;
+  flex:1;font-family:inherit;font-size:var(--t-cap);font-weight:700;
+  padding:var(--sp-sm);border:none;background:var(--s-card);color:var(--s-ink2);cursor:default;
 }
-.s-seg button.sel{background:var(--s-card);color:var(--s-ink);box-shadow:var(--sh-tile)}
+.classic .s-seg button{border-radius:5px;font-weight:600}
+.s-seg button.sel{background:var(--s-primary);color:#fff}
+.classic .s-seg button.sel{background:#FFFFFF;color:#1A202C}
 .s-set-row{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-md);padding:var(--sp-md) 0;border-bottom:1px solid var(--s-border-l);font-size:var(--t-body)}
 .s-set-row:last-child{border-bottom:none}
 .s-set-row .k{color:var(--s-ink)}
-.s-set-row .v{color:var(--s-ink3);font-size:var(--t-cap)}
-.s-new{outline:2px dashed var(--flag);outline-offset:5px;border-radius:var(--r-md)}
+.s-set-row .v{color:var(--s-ink3);font-size:var(--t-cap);font-weight:600}
+.s-new{outline:2px dashed var(--flag);outline-offset:5px}
 
-/* ── Spec tables ────────────────────────── */
-.spec{padding-block:44px}
-.spec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:28px}
-.spec-block h4{
-  font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--ink-faint);margin:0 0 12px;
-}
+/* ── Spec ── */
+.spec{padding-block:42px}
+.spec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:26px}
+.spec-block h4{font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 12px}
 .spec-block table{min-width:0}
+.spec-block th{border-bottom:1px solid var(--rule)}
 .spec-block td:first-child{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:600;white-space:nowrap}
 .spec-block td:last-child{font-family:var(--font-mono);font-size:12.5px;color:var(--ink-muted);font-variant-numeric:tabular-nums;text-align:right;padding-right:0}
 
-.footnote{
-  margin-top:40px;padding:18px 20px;background:var(--flag-soft);
-  border-left:3px solid var(--flag);border-radius:0 8px 8px 0;
-  font-size:14.5px;color:var(--ink);
-}
-.footnote strong{font-weight:600}
-.footnote + .footnote{margin-top:14px}
+.footnote{margin-top:16px;padding:18px 20px;background:var(--flag-soft);border-left:3px solid var(--flag);font-size:14.5px;color:var(--ink)}
 .footnote.ok{background:var(--good-soft);border-left-color:var(--good)}
+.footnote strong{font-weight:600}
+.footnote code{font-family:var(--font-mono);font-size:12.5px}
 
-@media (max-width:700px){
-  .stage{gap:32px}
-  .masthead{padding-block:36px 28px}
-}
+@media (max-width:760px){.stage{gap:30px}.masthead{padding-block:36px 26px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
 <div class="wrap">
 
   <header class="masthead">
-    <p class="eyebrow">WeatherBeacon · design-system-v2 · 2026-09-09</p>
-    <h1>Depth &amp; Surface</h1>
+    <p class="eyebrow">WeatherBeacon · design-system-v2 · round 2 · 2026-09-10</p>
+    <h1>Look Book</h1>
     <p class="standfirst">
-      Every screen, rendered twice. Left is what ships today; right is the proposed system.
-      Both columns below are <strong>the same markup</strong> — only the token values differ.
-      That is the architecture being proposed: one screen tree, two token sets, so
-      “Revert to Classic” costs nothing to maintain and every future screen supports both for free.
+      Round 1 was rejected: it built hierarchy out of rounded corners and soft elevation.
+      Both candidates here are <strong>square at every edge</strong> and carry no shadows at all.
+      They split on one question — whether surfaces separate by <strong>hairline</strong> or by <strong>tone</strong>.
+      All three columns below are the same markup; only token values differ.
     </p>
   </header>
 
-  <section class="ledger">
-    <h2>What actually reads as generic</h2>
+  <section class="cands">
+    <div class="cand is-out">
+      <p class="n">Round 1 · rejected</p>
+      <h3>Depth &amp; Surface</h3>
+      <p>16px radii, four-level shadow ramp. Depth as the organizing principle — the friendly-native idiom, and the wrong answer here.</p>
+    </div>
+    <div class="cand">
+      <p class="n">Candidate A</p>
+      <h3>Ruled</h3>
+      <p>Near-white ground, 1px hairlines, zero radius, zero shadow. A 250-weight display numeral at &minus;2.4 tracking against 10px/700 labels at +1.5. A 2px accent rail marks state. Reads as a spec sheet or instrument panel: precise, quiet, high information density.</p>
+    </div>
+    <div class="cand">
+      <p class="n">Candidate B</p>
+      <h3>Blocked</h3>
+      <p>Cool slate ground with white fields butted on 1px seams. Surfaces separate by tone, so nothing needs an outline. The alert state becomes a solid navy field rather than a tinted word. Heavier, more assertive, strongest in direct sun.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">What actually reads as generic</h2>
     <div class="ledger-scroll">
       <table>
-        <thead>
-          <tr><th>Signal</th><th>Measured today</th><th>Proposed</th></tr>
-        </thead>
+        <thead><tr><th>Signal</th><th>Measured today</th><th>Square-edge answer</th></tr></thead>
         <tbody>
-          <tr><td>Type scale</td><td class="num">21 sizes</td><td class="fix">7 steps. Today includes 11, 12, 13, 14, 15, 16, 17, 18 — eight consecutive integers, which is improvisation, not a scale.</td></tr>
-          <tr><td>Weight hierarchy</td><td class="num">'600' × 70 of 145</td><td class="fix">Five-step ramp, 300–700. One weight currently carries 48% of all declarations.</td></tr>
-          <tr><td>Spacing rhythm</td><td class="num">33 values</td><td class="fix">7-step 4/8pt grid. Today's paddings run 10, 12, 13, 14, 16, 18, 20 — no grid.</td></tr>
-          <tr><td>Shape language</td><td class="num">11 radii</td><td class="fix">4 roles. 12px, 8px and 10px currently do the same job in different files.</td></tr>
-          <tr><td>Typographic tuning</td><td class="num">10 uses</td><td class="fix">Tracking on every scale step — negative on display, positive on labels.</td></tr>
-          <tr><td>Depth model</td><td class="num">1 shadow</td><td class="fix">4-level elevation ramp. This is the single largest visual change and it costs nothing to ship.</td></tr>
+          <tr><td>Type scale</td><td class="num">21 sizes</td><td class="fix">7 steps, with far wider contrast than round 1 — type carries the hierarchy that shadows are no longer available to carry.</td></tr>
+          <tr><td>Weight hierarchy</td><td class="num">'600' × 70 of 145</td><td class="fix">A · 250 → 700. B · 500 → 700. One weight currently carries 48% of all declarations.</td></tr>
+          <tr><td>Spacing rhythm</td><td class="num">33 values</td><td class="fix">7-step 4/8pt grid. Square layouts are unforgiving about alignment, so the grid stops being optional.</td></tr>
+          <tr><td>Shape language</td><td class="num">11 radii</td><td class="fix"><strong>0.</strong> One value, no scale, no exceptions.</td></tr>
+          <tr><td>Typographic tuning</td><td class="num">10 uses</td><td class="fix">Tracking on every step — strongly negative on display, +1.5 on micro-labels. This is the single biggest lever once shadows are gone.</td></tr>
+          <tr><td>Depth model</td><td class="num">1 shadow</td><td class="fix"><strong>Still none.</strong> Separation comes from a 1px rule (A) or a tone shift (B), never a shadow.</td></tr>
         </tbody>
       </table>
     </div>
@@ -359,9 +328,10 @@ tr:last-child td{border-bottom:none}
   <section class="pair" id="home">
     <div class="pair-head">
       <h3>Home</h3>
-      <p>The screen that has to work at arm's length, in sun, with gloves. <code>app/(tabs)/index.tsx</code></p>
+      <p>Read at arm's length, in sun, with gloves. <code>app/(tabs)/index.tsx</code></p>
     </div>
     <div class="stage">
+
       <div class="slot">
         <p class="slot-label"><span class="tag tag-now">Classic</span> <span class="note">shipping today</span></p>
         <div class="phone"><div class="screen classic">
@@ -372,7 +342,7 @@ tr:last-child td{border-bottom:none}
             <div class="s-sub">Low 28° at 6:00 AM · trough check</div>
           </div>
           <div class="s-tiles">
-            <div class="s-tile"><span class="v">12 mph</span><span class="k">Wind NW</span></div>
+            <div class="s-tile"><span class="v">12</span><span class="k">MPH NW</span></div>
             <div class="s-tile"><span class="v">40%</span><span class="k">Rain</span></div>
             <div class="s-tile"><span class="v">29.7</span><span class="k">inHg ↓</span></div>
           </div>
@@ -383,9 +353,10 @@ tr:last-child td{border-bottom:none}
           </div>
         </div></div>
       </div>
+
       <div class="slot">
-        <p class="slot-label"><span class="tag tag-new">Depth &amp; Surface</span> <span class="note">proposed</span></p>
-        <div class="phone"><div class="screen modern">
+        <p class="slot-label"><span class="tag tag-a">A · Ruled</span></p>
+        <div class="phone"><div class="screen ruled">
           <p class="s-label">North Pasture</p>
           <div class="s-hero">
             <div class="s-temp">32°</div>
@@ -393,7 +364,7 @@ tr:last-child td{border-bottom:none}
             <div class="s-sub">Low 28° at 6:00 AM · trough check</div>
           </div>
           <div class="s-tiles">
-            <div class="s-tile"><span class="v">12 mph</span><span class="k">Wind NW</span></div>
+            <div class="s-tile"><span class="v">12</span><span class="k">MPH NW</span></div>
             <div class="s-tile"><span class="v">40%</span><span class="k">Rain</span></div>
             <div class="s-tile"><span class="v">29.7</span><span class="k">inHg ↓</span></div>
           </div>
@@ -404,6 +375,29 @@ tr:last-child td{border-bottom:none}
           </div>
         </div></div>
       </div>
+
+      <div class="slot">
+        <p class="slot-label"><span class="tag tag-b">B · Blocked</span></p>
+        <div class="phone"><div class="screen blocked">
+          <p class="s-label">North Pasture</p>
+          <div class="s-hero">
+            <div class="s-temp">32°</div>
+            <div class="s-verdict">❄️ Freeze tonight</div>
+            <div class="s-sub">Low 28° at 6:00 AM · trough check</div>
+          </div>
+          <div class="s-tiles">
+            <div class="s-tile"><span class="v">12</span><span class="k">MPH NW</span></div>
+            <div class="s-tile"><span class="v">40%</span><span class="k">Rain</span></div>
+            <div class="s-tile"><span class="v">29.7</span><span class="k">inHg ↓</span></div>
+          </div>
+          <div class="s-sec">
+            <p class="s-label">Active alerts</p>
+            <div class="s-row"><div class="body"><div class="t">Freeze Warning</div><div class="d">Temp ≤ 32°F within 12h</div></div><span class="s-pill on">Armed</span></div>
+            <div class="s-row"><div class="body"><div class="t">North Wind</div><div class="d">From 0° ±22.5° over 15 mph</div></div><span class="s-pill off">Paused</span></div>
+          </div>
+        </div></div>
+      </div>
+
     </div>
   </section>
 
@@ -411,49 +405,58 @@ tr:last-child td{border-bottom:none}
   <section class="pair" id="alerts">
     <div class="pair-head">
       <h3>Alerts</h3>
-      <p>Presets and rules. Free tier caps at 2 rules, so the counter is doing real work. <code>app/(tabs)/alerts.tsx</code></p>
+      <p>Presets and rules. The Free tier caps at 2, so the counter does real work. <code>app/(tabs)/alerts.tsx</code></p>
     </div>
     <div class="stage">
+
       <div class="slot">
         <p class="slot-label"><span class="tag tag-now">Classic</span></p>
         <div class="phone"><div class="screen classic">
           <div class="s-sec">
             <p class="s-label">Presets</p>
-            <div class="s-chips">
-              <span class="s-chip sel">Freeze Alert</span>
-              <span class="s-chip">North Wind</span>
-              <span class="s-chip">Pressure Drop</span>
-              <span class="s-chip">Soil Temp</span>
-            </div>
+            <div class="s-chips"><span class="s-chip sel">Freeze Alert</span><span class="s-chip">North Wind</span><span class="s-chip">Pressure Drop</span><span class="s-chip">Soil Temp</span></div>
           </div>
           <div class="s-sec">
             <p class="s-label">Your rules · 2 of 2 · Free</p>
             <div class="s-row"><div class="body"><div class="t">Freeze Warning</div><div class="d">Temperature ≤ 32°F in the next 12 hours</div></div><span class="s-pill on">Armed</span></div>
             <div class="s-row"><div class="body"><div class="t">North Wind</div><div class="d">Wind from 0° ±22.5° above 15 mph</div></div><span class="s-pill off">Paused</span></div>
-            <div class="s-card"><div class="s-sub">Upgrade to Pro for 5 rules and compound conditions.</div></div>
+            <div class="s-card"><div class="s-note">Upgrade to Pro for 5 rules and compound conditions.</div></div>
           </div>
         </div></div>
       </div>
+
       <div class="slot">
-        <p class="slot-label"><span class="tag tag-new">Depth &amp; Surface</span></p>
-        <div class="phone"><div class="screen modern">
+        <p class="slot-label"><span class="tag tag-a">A · Ruled</span></p>
+        <div class="phone"><div class="screen ruled">
           <div class="s-sec">
             <p class="s-label">Presets</p>
-            <div class="s-chips">
-              <span class="s-chip sel">Freeze Alert</span>
-              <span class="s-chip">North Wind</span>
-              <span class="s-chip">Pressure Drop</span>
-              <span class="s-chip">Soil Temp</span>
-            </div>
+            <div class="s-chips"><span class="s-chip sel">Freeze Alert</span><span class="s-chip">North Wind</span><span class="s-chip">Pressure Drop</span><span class="s-chip">Soil Temp</span></div>
           </div>
           <div class="s-sec">
             <p class="s-label">Your rules · 2 of 2 · Free</p>
             <div class="s-row"><div class="body"><div class="t">Freeze Warning</div><div class="d">Temperature ≤ 32°F in the next 12 hours</div></div><span class="s-pill on">Armed</span></div>
             <div class="s-row"><div class="body"><div class="t">North Wind</div><div class="d">Wind from 0° ±22.5° above 15 mph</div></div><span class="s-pill off">Paused</span></div>
-            <div class="s-card"><div class="s-sub">Upgrade to Pro for 5 rules and compound conditions.</div></div>
+            <div class="s-card"><div class="s-note">Upgrade to Pro for 5 rules and compound conditions.</div></div>
           </div>
         </div></div>
       </div>
+
+      <div class="slot">
+        <p class="slot-label"><span class="tag tag-b">B · Blocked</span></p>
+        <div class="phone"><div class="screen blocked">
+          <div class="s-sec">
+            <p class="s-label">Presets</p>
+            <div class="s-chips"><span class="s-chip sel">Freeze Alert</span><span class="s-chip">North Wind</span><span class="s-chip">Pressure Drop</span><span class="s-chip">Soil Temp</span></div>
+          </div>
+          <div class="s-sec">
+            <p class="s-label">Your rules · 2 of 2 · Free</p>
+            <div class="s-row"><div class="body"><div class="t">Freeze Warning</div><div class="d">Temperature ≤ 32°F in the next 12 hours</div></div><span class="s-pill on">Armed</span></div>
+            <div class="s-row"><div class="body"><div class="t">North Wind</div><div class="d">Wind from 0° ±22.5° above 15 mph</div></div><span class="s-pill off">Paused</span></div>
+            <div class="s-card"><div class="s-note">Upgrade to Pro for 5 rules and compound conditions.</div></div>
+          </div>
+        </div></div>
+      </div>
+
     </div>
   </section>
 
@@ -461,9 +464,10 @@ tr:last-child td{border-bottom:none}
   <section class="pair" id="forecasts">
     <div class="pair-head">
       <h3>Forecasts</h3>
-      <p>Fourteen dense rows — where a spacing grid and tabular figures earn their keep. <code>app/(tabs)/forecasts.tsx</code></p>
+      <p>Fourteen dense rows — where the grid and tabular figures earn their keep. <code>app/(tabs)/forecasts.tsx</code></p>
     </div>
     <div class="stage">
+
       <div class="slot">
         <p class="slot-label"><span class="tag tag-now">Classic</span></p>
         <div class="phone"><div class="screen classic">
@@ -477,14 +481,15 @@ tr:last-child td{border-bottom:none}
             <div class="s-fc-row"><span class="day">Sun</span><span class="ic">🌨️</span><span class="hi">36°</span><span class="lo">26°</span><span class="rain">60%</span></div>
           </div></div>
           <div class="s-tiles">
-            <div class="s-tile"><span class="v">0.42 in</span><span class="k">Rain 7d</span></div>
+            <div class="s-tile"><span class="v">0.42</span><span class="k">IN · 7 DAY</span></div>
             <div class="s-tile"><span class="v">🌓</span><span class="k">First qtr</span></div>
           </div>
         </div></div>
       </div>
+
       <div class="slot">
-        <p class="slot-label"><span class="tag tag-new">Depth &amp; Surface</span></p>
-        <div class="phone"><div class="screen modern">
+        <p class="slot-label"><span class="tag tag-a">A · Ruled</span></p>
+        <div class="phone"><div class="screen ruled">
           <p class="s-label">North Pasture · 14 days</p>
           <div class="s-card"><div class="s-fc">
             <div class="s-fc-row"><span class="day">Today</span><span class="ic">❄️</span><span class="hi">34°</span><span class="lo">28°</span><span class="rain">40%</span></div>
@@ -495,11 +500,31 @@ tr:last-child td{border-bottom:none}
             <div class="s-fc-row"><span class="day">Sun</span><span class="ic">🌨️</span><span class="hi">36°</span><span class="lo">26°</span><span class="rain">60%</span></div>
           </div></div>
           <div class="s-tiles">
-            <div class="s-tile"><span class="v">0.42 in</span><span class="k">Rain 7d</span></div>
+            <div class="s-tile"><span class="v">0.42</span><span class="k">IN · 7 DAY</span></div>
             <div class="s-tile"><span class="v">🌓</span><span class="k">First qtr</span></div>
           </div>
         </div></div>
       </div>
+
+      <div class="slot">
+        <p class="slot-label"><span class="tag tag-b">B · Blocked</span></p>
+        <div class="phone"><div class="screen blocked">
+          <p class="s-label">North Pasture · 14 days</p>
+          <div class="s-card"><div class="s-fc">
+            <div class="s-fc-row"><span class="day">Today</span><span class="ic">❄️</span><span class="hi">34°</span><span class="lo">28°</span><span class="rain">40%</span></div>
+            <div class="s-fc-row"><span class="day">Wed</span><span class="ic">🌧️</span><span class="hi">41°</span><span class="lo">33°</span><span class="rain">80%</span></div>
+            <div class="s-fc-row"><span class="day">Thu</span><span class="ic">⛅</span><span class="hi">48°</span><span class="lo">31°</span><span class="rain">10%</span></div>
+            <div class="s-fc-row"><span class="day">Fri</span><span class="ic">☀️</span><span class="hi">52°</span><span class="lo">35°</span><span class="rain">0%</span></div>
+            <div class="s-fc-row"><span class="day">Sat</span><span class="ic">🌫️</span><span class="hi">47°</span><span class="lo">38°</span><span class="rain">20%</span></div>
+            <div class="s-fc-row"><span class="day">Sun</span><span class="ic">🌨️</span><span class="hi">36°</span><span class="lo">26°</span><span class="rain">60%</span></div>
+          </div></div>
+          <div class="s-tiles">
+            <div class="s-tile"><span class="v">0.42</span><span class="k">IN · 7 DAY</span></div>
+            <div class="s-tile"><span class="v">🌓</span><span class="k">First qtr</span></div>
+          </div>
+        </div></div>
+      </div>
+
     </div>
   </section>
 
@@ -509,12 +534,12 @@ tr:last-child td{border-bottom:none}
       <h3>Settings — and the two-axis control</h3>
       <p>
         The dashed outline marks the only genuinely new control. <strong>Look</strong> and <strong>Palette</strong>
-        are independent axes: switching to Classic restores the old proportions without touching a Dark or Storm
-        user's colors. Folding “modern” in as a fourth palette name would have conflated the two and locked
-        Dark and Storm users out of the new design entirely. <code>app/(tabs)/settings.tsx</code>
+        stay independent axes, so switching to Classic restores the old proportions without touching a Dark or
+        Storm user's colors. <code>app/(tabs)/settings.tsx</code>
       </p>
     </div>
     <div class="stage">
+
       <div class="slot">
         <p class="slot-label"><span class="tag tag-now">Classic</span> <span class="note">3 palettes, no look axis</span></p>
         <div class="phone"><div class="screen classic">
@@ -536,15 +561,13 @@ tr:last-child td{border-bottom:none}
           </div>
         </div></div>
       </div>
+
       <div class="slot">
-        <p class="slot-label"><span class="tag tag-new">Depth &amp; Surface</span> <span class="note">look × palette</span></p>
-        <div class="phone"><div class="screen modern">
+        <p class="slot-label"><span class="tag tag-a">A · Ruled</span></p>
+        <div class="phone"><div class="screen ruled">
           <div class="s-sec s-new">
             <p class="s-label">Look</p>
-            <div class="s-seg">
-              <button type="button" class="sel">Modern</button>
-              <button type="button">Classic</button>
-            </div>
+            <div class="s-seg"><button type="button" class="sel">Square</button><button type="button">Classic</button></div>
           </div>
           <div class="s-sec">
             <p class="s-label">Palette</p>
@@ -564,30 +587,70 @@ tr:last-child td{border-bottom:none}
           </div>
         </div></div>
       </div>
+
+      <div class="slot">
+        <p class="slot-label"><span class="tag tag-b">B · Blocked</span></p>
+        <div class="phone"><div class="screen blocked">
+          <div class="s-sec s-new">
+            <p class="s-label">Look</p>
+            <div class="s-seg"><button type="button" class="sel">Square</button><button type="button">Classic</button></div>
+          </div>
+          <div class="s-sec">
+            <p class="s-label">Palette</p>
+            <div class="s-card">
+              <div class="s-set-row"><span class="k">Classic</span><span class="v">●</span></div>
+              <div class="s-set-row"><span class="k">Dark</span><span class="v">○</span></div>
+              <div class="s-set-row"><span class="k">Storm</span><span class="v">○</span></div>
+            </div>
+          </div>
+          <div class="s-sec">
+            <p class="s-label">Units</p>
+            <div class="s-card">
+              <div class="s-set-row"><span class="k">Temperature</span><span class="v">°F</span></div>
+              <div class="s-set-row"><span class="k">Wind speed</span><span class="v">mph</span></div>
+              <div class="s-set-row"><span class="k">Pressure</span><span class="v">inHg</span></div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
     </div>
   </section>
 
   <!-- ══ SPEC ══ -->
   <section class="spec" id="spec">
-    <h2>The token contract this freezes into</h2>
+    <h2 class="sec">The token contract this freezes into</h2>
     <div class="spec-grid">
 
       <div class="spec-block">
-        <h4>Typography — 21 sizes → 7 steps</h4>
-        <table><tbody>
-          <tr><td>display</td><td>56 / 300 / −1.6</td></tr>
-          <tr><td>title</td><td>28 / 700 / −0.5</td></tr>
-          <tr><td>heading</td><td>20 / 600 / −0.2</td></tr>
+        <h4>Typography · A Ruled</h4>
+        <table><thead><tr><th>Step</th><th>px / wt / track</th></tr></thead><tbody>
+          <tr><td>display</td><td>60 / 250 / −2.4</td></tr>
+          <tr><td>title</td><td>28 / 600 / −1.0</td></tr>
+          <tr><td>heading</td><td>19 / 600 / −0.3</td></tr>
           <tr><td>body</td><td>15 / 400 / 0</td></tr>
           <tr><td>bodyStrong</td><td>15 / 600 / 0</td></tr>
-          <tr><td>caption</td><td>13 / 500 / 0</td></tr>
-          <tr><td>label</td><td>11 / 600 / +0.9</td></tr>
+          <tr><td>caption</td><td>13 / 400 / 0</td></tr>
+          <tr><td>label</td><td>10 / 700 / +1.5</td></tr>
         </tbody></table>
       </div>
 
       <div class="spec-block">
-        <h4>Spacing — 4/8pt grid</h4>
-        <table><tbody>
+        <h4>Typography · B Blocked</h4>
+        <table><thead><tr><th>Step</th><th>px / wt / track</th></tr></thead><tbody>
+          <tr><td>display</td><td>60 / 600 / −2.0</td></tr>
+          <tr><td>title</td><td>28 / 700 / −0.8</td></tr>
+          <tr><td>heading</td><td>19 / 700 / −0.3</td></tr>
+          <tr><td>body</td><td>15 / 400 / 0</td></tr>
+          <tr><td>bodyStrong</td><td>15 / 700 / 0</td></tr>
+          <tr><td>caption</td><td>13 / 500 / 0</td></tr>
+          <tr><td>label</td><td>10 / 700 / +1.5</td></tr>
+        </tbody></table>
+      </div>
+
+      <div class="spec-block">
+        <h4>Spacing — shared, 4/8pt</h4>
+        <table><thead><tr><th>Step</th><th>px</th></tr></thead><tbody>
           <tr><td>xs</td><td>4</td></tr>
           <tr><td>sm</td><td>8</td></tr>
           <tr><td>md</td><td>12</td></tr>
@@ -599,38 +662,32 @@ tr:last-child td{border-bottom:none}
       </div>
 
       <div class="spec-block">
-        <h4>Radius — 11 values → 4 roles</h4>
-        <table><tbody>
-          <tr><td>sm — chips, inputs</td><td>8</td></tr>
-          <tr><td>md — tiles, rows</td><td>12</td></tr>
-          <tr><td>lg — cards, sheets</td><td>16</td></tr>
-          <tr><td>full — pills</td><td>999</td></tr>
+        <h4>Radius — one value</h4>
+        <table><thead><tr><th>Role</th><th>px</th></tr></thead><tbody>
+          <tr><td>everything</td><td>0</td></tr>
         </tbody></table>
-      </div>
-
-      <div class="spec-block">
-        <h4>Elevation — 1 shadow → 4 levels</h4>
-        <table><tbody>
-          <tr><td>e0 — flat</td><td>none / 0</td></tr>
-          <tr><td>e1 — tiles</td><td>y1 b3 .06 / 1</td></tr>
-          <tr><td>e2 — cards</td><td>y2 b8 .08 / 3</td></tr>
-          <tr><td>e3 — hero, sheets</td><td>y6 b16 .12 / 8</td></tr>
+        <h4 style="margin-top:20px">Separation — replaces elevation</h4>
+        <table><thead><tr><th>Level</th><th>A / B</th></tr></thead><tbody>
+          <tr><td>flush</td><td>none / none</td></tr>
+          <tr><td>divide</td><td>1px rule / 1px seam</td></tr>
+          <tr><td>field</td><td>1px box / tone step</td></tr>
+          <tr><td>emphasis</td><td>2px rail / solid fill</td></tr>
         </tbody></table>
       </div>
 
       <div class="spec-block">
         <h4>Motion — reanimated 4.1.1</h4>
-        <table><tbody>
+        <table><thead><tr><th>Token</th><th>Value</th></tr></thead><tbody>
           <tr><td>fast</td><td>120ms</td></tr>
-          <tr><td>base</td><td>200ms</td></tr>
-          <tr><td>slow</td><td>320ms</td></tr>
+          <tr><td>base</td><td>180ms</td></tr>
+          <tr><td>slow</td><td>280ms</td></tr>
           <tr><td>easing</td><td>(.2, 0, 0, 1)</td></tr>
         </tbody></table>
       </div>
 
       <div class="spec-block">
         <h4>Migration surface</h4>
-        <table><tbody>
+        <table><thead><tr><th>Measure</th><th>Count</th></tr></thead><tbody>
           <tr><td>Literals to replace</td><td>901</td></tr>
           <tr><td>Files touched</td><td>33</td></tr>
           <tr><td>Already factory-based</td><td>10</td></tr>
@@ -642,25 +699,27 @@ tr:last-child td{border-bottom:none}
     </div>
 
     <div class="footnote ok">
-      <strong>Ships over the air.</strong> Every value above is a plain JavaScript style prop or an
-      already-installed dependency — <code>reanimated 4.1.1</code> and <code>react-native-worklets 0.5.1</code>
-      are both present with <code>newArchEnabled</code> on. No build credits, no App Store review round, and
-      rollback is republishing the previous update.
+      <strong>Square is cheaper than round.</strong> Dropping to a single radius of 0 and no shadow ramp
+      removes two whole token categories from the contract — the structural key count falls from 26 to 21,
+      and there is no per-platform shadow/elevation pairing to keep in sync. Still pure OTA:
+      <code>reanimated 4.1.1</code> and <code>react-native-worklets 0.5.1</code> are already installed with
+      <code>newArchEnabled</code> on.
     </div>
 
     <div class="footnote">
-      <strong>Two files stay hardcoded on purpose.</strong> <code>app/_layout.tsx</code> and
-      <code>UpdateCheckScreen.tsx</code> pin brand navy to match the native splash; tokenizing them
-      reintroduces a color flash before theme state hydrates. <code>radar.tsx</code> line 65 carries a
-      Mapbox-native <code>style</code> prop that is not a React Native style — migration tooling must skip
-      it, and that screen needs its own device check.
+      <strong>The one real risk in going square.</strong> Android's own design language is rounded, so
+      square edges read as deliberately non-native — which is the point, but it means the tab bar and hit
+      targets need explicit attention: with no radius and no shadow, a tappable row must be distinguished by
+      tone or rule, or it stops looking tappable. Both candidates handle this, A with a 2px rail and B with a
+      filled field. Worth checking specifically on the device pass.
     </div>
 
     <div class="footnote">
-      <strong>These frames render in the OS font, deliberately.</strong> Custom typefaces need
-      <code>expo-font</code>, which is a native module and would force new binaries for both stores. The
-      hierarchy above is built entirely from size, weight and tracking on the system stack — which is
-      exactly what will render on a device.
+      <strong>Unchanged from round 1.</strong> <code>app/_layout.tsx</code> and
+      <code>UpdateCheckScreen.tsx</code> keep their hardcoded brand navy to match the native splash.
+      <code>radar.tsx</code> line 65 carries a Mapbox-native <code>style</code> prop that migration tooling
+      must skip, and that screen gets its own device check. These frames render in the OS font because
+      custom typefaces need <code>expo-font</code>, a native module that would force new store binaries.
     </div>
   </section>
 

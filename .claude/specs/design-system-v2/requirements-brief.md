@@ -25,15 +25,22 @@ The subjective complaint is a consequence of those six measurable absences. This
 the absences being closed. Whether the result is attractive remains a judgment reserved to the
 operator on a physical device, recorded separately as Scenario 6.
 
-**Look name:** the new structural token set is named `depth` (from the "Depth & Surface" direction);
-the preserved one is named `classic`. These are the two values of the `look` axis.
+**Look name:** the new structural token set is named `square`; the preserved one is named `classic`.
+These are the two values of the `look` axis.
+
+**Round history.** A first direction ("Depth & Surface") built hierarchy from 16px radii and a
+four-level shadow ramp. The operator rejected it on 2026-09-10 and asked for square edges. Radius
+therefore collapses to a single value of 0, shadows are removed entirely, and separation is carried by
+rule weight and tone instead. Two square candidates remain open — Ruled (hairline separation) and
+Blocked (tonal separation) — and they differ only in token *values*, not in contract *shape*, so every
+scenario below holds for either.
 
 ## Architecture decision (settled in Phase 0)
 
 `ThemeTokens` currently has a single axis of variation: color palette (`classic` / `dark` / `storm`).
 This feature adds a second, **orthogonal** axis:
 
-- `look`: `depth` | `classic` — typography, spacing, radius, elevation, motion
+- `look`: `square` | `classic` — typography, spacing, radius, elevation, motion
 - `palette`: `classic` | `dark` | `storm` — colors, unchanged from today
 
 Adding the new design as a fourth `palette` name was rejected: it would conflate the two concepts and
@@ -54,10 +61,10 @@ would leave every Dark and Storm user permanently on the old proportions.
 ### Scenario 1: Every theme supplies the complete structural token contract
 
 - **Actor**: Maintainer
-- **Trigger**: The token contract is extended past color into typography, spacing, radius, elevation and motion
+- **Trigger**: The token contract is extended past color into typography, spacing, radius, separation and motion
 - **When**: A unit test enumerates every entry of the exported `LOOKS` record
-- **Then**: Every look object exposes all 26 required structural token keys with non-null values
-- **Quality Thresholds**: 26 structural keys present per look, 0 missing
+- **Then**: Every look object exposes all 21 required structural token keys with non-null values
+- **Quality Thresholds**: 21 structural keys present per look, 0 missing
 - **Error State**: The contract test fails naming the look and the specific missing key
 
 ### Scenario 2: No hardcoded style literals survive outside the documented exceptions
@@ -82,7 +89,7 @@ would leave every Dark and Storm user permanently on the old proportions.
 
 - **Actor**: App User
 - **Trigger**: A user selects Classic in the Settings look control
-- **When**: `setLook('classic')` is dispatched from a state where look equals `depth`
+- **When**: `setLook('classic')` is dispatched from a state where look equals `square`
 - **Then**: The resolved structural tokens deep-equal the frozen `LOOKS.classic` snapshot
 - **Quality Thresholds**: none
 - **Error State**: Any resolved structural token differs from the classic snapshot, so the revert is incomplete
@@ -94,7 +101,7 @@ would leave every Dark and Storm user permanently on the old proportions.
 - **When**: The theme store rehydrates from AsyncStorage carrying a persisted look of `classic`
 - **Then**: The store resolves structural tokens to the classic set before first render
 - **Quality Thresholds**: none
-- **Error State**: The store resolves to `depth` tokens, discarding the user's stored preference
+- **Error State**: The store resolves to `square` tokens, discarding the user's stored preference
 
 ### Scenario 6: The radar screen still renders on a physical device
 
@@ -126,10 +133,11 @@ would leave every Dark and Storm user permanently on the old proportions.
 | --- | --- | --- |
 | Distinct `fontSize` values | 21 | 7 |
 | Distinct spacing values | 33 | 7 |
-| Distinct `borderRadius` values | 11 | 4 |
-| Elevation levels defined | 1 | 4 |
+| Distinct `borderRadius` values | 11 | 1 |
+| Shadow definitions | 1 | 0 |
+| Separation levels defined | 0 | 4 |
 | Hardcoded literals in scope | 901 | 0 |
-| Structural token keys per look | 0 | 26 |
+| Structural token keys per look | 0 | 21 |
 
 ## Deployment constraint
 
