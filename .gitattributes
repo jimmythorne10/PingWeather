@@ -1,0 +1,24 @@
+# ──────────────────────────────────────────────────────────────
+# The TCT run-cache is a HASH-CHAINED EVIDENCE STORE, not text.
+#
+# Every record carries prev_sha = sha256 of the previous record's raw LINE.
+# This repo is checked out with core.autocrlf=true, so committing these files
+# without the marker below makes git rewrite every line ending to CRLF on the
+# next checkout or branch switch. The bytes change, every hash after line 1
+# stops matching, and verification-gate.sh reports the chain as
+# "BROKEN/tampered" — indistinguishable from someone actually forging it.
+#
+# That happened on 2026-09-11: tct-run-test.sh verify-chain said OK, the
+# files were committed, three branch switches followed, and the Stop hook
+# then rejected four passing features. Restoring LF made the chain verify
+# again, which proved the records were intact and git was the culprit.
+#
+# `-text` disables all end-of-line conversion for these paths. Do not remove
+# it, and do not "normalise" this directory.
+# ──────────────────────────────────────────────────────────────
+.claude/run-cache/**    -text
+
+# Keep the manifest byte-stable too: spec-hash-guard and manifest-state-gate
+# both hash file contents, and a CRLF rewrite would move those hashes.
+.claude/feature-manifest.json   -text
+.claude/specs/**/spec.md        -text
