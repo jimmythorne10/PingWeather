@@ -18,6 +18,7 @@
         "testMatch": [
           "<rootDir>/__tests__/stores/**/*.test.ts",
           "<rootDir>/__tests__/engine/**/*.test.ts",
+          "<rootDir>/__tests__/theme/**/*.test.ts",
           "<rootDir>/__tests__/data/**/*.test.ts",
           "<rootDir>/__tests__/flows/**/*.test.ts",
           "<rootDir>/__tests__/services/**/*.test.ts"
