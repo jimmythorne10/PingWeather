@@ -83,8 +83,20 @@ function scan(): Finding[] {
 // covers: app/(tabs)/history.tsx
 // covers: app/day-detail.tsx
 // covers: app/upgrade.tsx
+// covers: app/forgot-password.tsx
+// covers: app/reset-password.tsx
 // covers: src/components/RainfallCard.tsx
 // covers: src/components/ScreenContainer.tsx
+// covers: src/components/LocationSearchInput.tsx
+// covers: app/(tabs)/_layout.tsx
+// covers: src/components/ErrorBoundary.tsx
+//
+// NOT declared, on purpose: app/_layout.tsx and src/components/UpdateCheckScreen.tsx.
+// The spec puts their colour values out of scope — both pin brand navy to match
+// the native splash — so tdd-guard blocking writes to them is the correct
+// outcome, not an obstacle. They stay in the scan inventory because the scan
+// still has to account for every file; they are simply exempt from its literal
+// assertion via EXCLUDED_FILES.
 const COVERED_FILES: readonly string[] = [
   'app/(tabs)/_layout.tsx',
   'app/(tabs)/alerts.tsx',
