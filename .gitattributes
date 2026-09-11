@@ -13,6 +13,12 @@
 # then rejected four passing features. Restoring LF made the chain verify
 # again, which proved the records were intact and git was the culprit.
 #
+# THE PRIMARY FIX IS .gitignore, NOT THIS FILE. init-project.sh excludes
+# .claude/run-cache/ precisely because it is per-machine evidence signed by a
+# per-machine .chain-secret — this project predates that block, so the
+# directory was tracked and got normalised. It is untracked now. The rule
+# below is defence in depth for anyone who re-adds it.
+#
 # `-text` disables all end-of-line conversion for these paths. Do not remove
 # it, and do not "normalise" this directory.
 # ──────────────────────────────────────────────────────────────
