@@ -5,67 +5,56 @@
 
 <style>
 :root{
-  --ground:#F2F4F7;--surface:#FFFFFF;--surface-sunk:#E6EAF0;
-  --ink:#0F151D;--ink-muted:#54616F;--ink-faint:#8593A3;
-  --rule:#CFD7E0;--rule-strong:#0F151D;
-  --accent:#4B39C4;--flag:#A8541C;--flag-soft:#FBEFE5;
-  --good:#215E42;--good-soft:#DFEDE5;
-  --stop:#B03030;--stop-soft:#FBE9E9;
+  --ground:#F3F2EF;--surface:#FFFFFF;--surface-sunk:#E7E5DF;
+  --ink:#17140F;--ink-muted:#5C554B;--ink-faint:#8C8478;
+  --rule:#D6D2C8;--rule-strong:#17140F;
+  --accent:#A8481A;--flag:#8A5A12;--flag-soft:#F7EEDD;
+  --good:#3E5E2E;--good-soft:#E7EEDF;
+  --stop:#9E2F22;--stop-soft:#F8E7E4;
   --font-display:'Archivo',system-ui,sans-serif;
   --font-body:'Source Sans 3',system-ui,sans-serif;
   --font-mono:'IBM Plex Mono',ui-monospace,monospace;
   --font-device:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --font-device-mono:ui-monospace,'SF Mono','Roboto Mono',Menlo,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --ground:#0B1018;--surface:#131A24;--surface-sunk:#0F151E;
-  --ink:#E9EEF4;--ink-muted:#94A2B2;--ink-faint:#64738A;
-  --rule:#232E3C;--rule-strong:#E9EEF4;
-  --accent:#A08CFF;--flag:#D79A63;--flag-soft:#241B10;
-  --good:#74BF90;--good-soft:#132218;--stop:#E08585;--stop-soft:#2A1414;
+  --ground:#12100D;--surface:#1B1813;--surface-sunk:#151209;
+  --ink:#F1EDE6;--ink-muted:#A9A093;--ink-faint:#787064;
+  --rule:#2C2820;--rule-strong:#F1EDE6;
+  --accent:#E58A4E;--flag:#D6A65C;--flag-soft:#241C0E;
+  --good:#8FB878;--good-soft:#16200F;--stop:#E08A7E;--stop-soft:#261210;
 }}
 :root[data-theme="dark"]{
-  --ground:#0B1018;--surface:#131A24;--surface-sunk:#0F151E;
-  --ink:#E9EEF4;--ink-muted:#94A2B2;--ink-faint:#64738A;
-  --rule:#232E3C;--rule-strong:#E9EEF4;
-  --accent:#A08CFF;--flag:#D79A63;--flag-soft:#241B10;
-  --good:#74BF90;--good-soft:#132218;--stop:#E08585;--stop-soft:#2A1414;
+  --ground:#12100D;--surface:#1B1813;--surface-sunk:#151209;
+  --ink:#F1EDE6;--ink-muted:#A9A093;--ink-faint:#787064;
+  --rule:#2C2820;--rule-strong:#F1EDE6;
+  --accent:#E58A4E;--flag:#D6A65C;--flag-soft:#241C0E;
+  --good:#8FB878;--good-soft:#16200F;--stop:#E08A7E;--stop-soft:#261210;
 }
 
 *{box-sizing:border-box}
 body{background:var(--ground);color:var(--ink);font-family:var(--font-body);
   font-size:16px;line-height:1.55;padding-inline:20px;padding-block:0 64px;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1120px;margin-inline:auto}
+.wrap{max-width:1320px;margin-inline:auto}
 
 .masthead{padding-block:52px 30px;border-bottom:2px solid var(--rule-strong)}
 .eyebrow{font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.15em;
   text-transform:uppercase;color:var(--ink-faint);margin:0 0 14px}
 h1{font-family:var(--font-display);font-weight:700;font-size:clamp(30px,5.2vw,46px);
   line-height:1.04;letter-spacing:-.025em;margin:0 0 16px;text-wrap:balance}
-.standfirst{font-size:17px;color:var(--ink-muted);max-width:68ch;margin:0}
+.standfirst{font-size:17px;color:var(--ink-muted);max-width:70ch;margin:0}
 .standfirst strong{color:var(--ink);font-weight:600}
 
 h2.sec{font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--ink-faint);margin:0 0 18px;padding-bottom:8px;border-bottom:1px solid var(--rule)}
 
-.dna{margin-block:32px}
-.dna table{border-collapse:collapse;width:100%;font-size:14.5px}
-.dna th{text-align:left;font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--ink-faint);padding:0 14px 8px 0;border-bottom:2px solid var(--rule-strong);white-space:nowrap}
-.dna td{padding:10px 14px 10px 0;border-bottom:1px solid var(--rule);vertical-align:top}
-.dna td:last-child{padding-right:0}
-.dna tr:last-child td{border-bottom:none}
-.cost{font-family:var(--font-mono);font-size:11px;font-weight:600;padding:3px 8px;white-space:nowrap;display:inline-block}
-.cost.ota{background:var(--good-soft);color:var(--good)}
-.cost.bin{background:var(--stop-soft);color:var(--stop)}
-
-.cands{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1px;background:var(--rule);margin-block:30px}
-.cand{background:var(--ground);padding:20px}
+.cands{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1px;background:var(--rule);margin-block:30px}
+.cand{background:var(--ground);padding:20px;display:flex;flex-direction:column}
 .cand .n{font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.12em;
   text-transform:uppercase;color:var(--ink-faint);margin:0 0 8px}
 .cand h3{font-family:var(--font-display);font-weight:700;font-size:19px;letter-spacing:-.015em;margin:0 0 9px}
-.cand p{margin:0;font-size:14px;color:var(--ink-muted)}
-.swatch{display:flex;margin-top:12px;height:20px}
+.cand p{margin:0 0 14px;font-size:14px;color:var(--ink-muted)}
+.cand .why{margin:auto 0 0;font-size:13px;color:var(--ink);font-weight:600}
+.swatch{display:flex;margin:12px 0 0;height:22px}
 .swatch i{flex:1}
 
 .jump{position:sticky;top:0;z-index:20;background:var(--ground);padding-block:13px;
@@ -78,137 +67,120 @@ h2.sec{font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-s
 .pair{padding-block:38px;border-bottom:1px solid var(--rule)}
 .pair-head{margin-bottom:22px}
 .pair-head h3{font-family:var(--font-display);font-weight:700;font-size:21px;letter-spacing:-.015em;margin:0 0 6px}
-.pair-head p{margin:0;color:var(--ink-muted);font-size:14.5px;max-width:66ch}
+.pair-head p{margin:0;color:var(--ink-muted);font-size:14.5px;max-width:68ch}
 .pair-head code{font-family:var(--font-mono);font-size:12.5px;color:var(--ink-faint)}
 
-.stage{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
-.slot{flex:1 1 290px;min-width:0;display:flex;flex-direction:column;gap:9px}
+.stage{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+.slot{flex:1 1 275px;min-width:0;display:flex;flex-direction:column;gap:9px}
 .slot-label{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;font-family:var(--font-mono);
   font-size:10px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;margin:0}
-.tag{padding:3px 8px}
-.tag-e{background:#0B0D11;color:#FFB020}
-.tag-f{background:linear-gradient(100deg,#2E6BFF,#7C4DFF);color:#fff}
-.tag-g{background:linear-gradient(100deg,#7C4DFF,#C77DFF);color:#fff}
+.tag{padding:3px 9px;color:#fff}
+.tag-1{background:linear-gradient(100deg,#FF4D0F,#FF8A2B)}
+.tag-2{background:linear-gradient(100deg,#B33A2B,#F0A93F)}
+.tag-3{background:linear-gradient(100deg,#46743A,#C0A03A)}
+.tag-4{background:linear-gradient(100deg,#C81E10,#FF7A18)}
 .slot-label .note{color:var(--ink-faint);font-weight:400;letter-spacing:.02em;text-transform:none;font-size:11px}
 
 .phone{border:1px solid var(--rule);padding:7px;background:var(--surface);max-width:100%}
-.screen{position:relative;font-family:var(--font-device);background:var(--s-bg);color:var(--s-ink);
-  padding:var(--sp-lg);display:flex;flex-direction:column;gap:var(--sp-lg);min-height:492px;overflow:hidden}
 
-/* ═══ E · GRID — round-3 frontrunner, unchanged ═══ */
-.grid{
-  --s-bg:#0B0D11;--s-card:transparent;--s-sunk:#12151B;--s-seam:#1A1F28;
-  --s-ink:#EAEEF3;--s-ink2:#7E8896;--s-ink3:#4E5865;
-  --s-accent:#FFB020;--s-accent2:#FFB020;--s-ink-on:#05070A;
-  --f-num:var(--font-device-mono);--f-lab:var(--font-device-mono);
-  --t-display:72px;--t-display-w:300;--t-display-ls:-3.5px;
-  --t-head:17px;--t-head-w:400;--t-body:14px;--t-cap:12px;--t-cap-w:400;
-  --t-label:9.5px;--t-label-w:700;--t-label-ls:2.5px;
-  --sp-sm:8px;--sp-md:12px;--sp-lg:16px;
-  --r:0px;--r-nav:0px;
-  --hero-bg:transparent;--hero-ink:#EAEEF3;--hero-sub:#7E8896;--hero-pad:0px;
-  --row-bg:transparent;--row-bd:1px solid #1A1F28;--row-pad:12px 0;
-  --tile-bg:#0B0D11;--tile-seam:#1A1F28;--label-rule:1px solid #1A1F28;
-  --lab-col:#FFB020;--glow:none;--nav-bg:#0B0D11;--nav-bd:1px solid #1A1F28;
-}
-/* ═══ F · AURORA / OTA — gradient + glow as baked image assets ═══ */
-.aurora{
-  --s-bg:#080B16;--s-card:#0F1426;--s-sunk:#0C1020;--s-seam:#1C2340;
-  --s-ink:#EDF0FA;--s-ink2:#98A1C4;--s-ink3:#5D6790;
-  --s-accent:#6E8BFF;--s-accent2:#B06CFF;--s-ink-on:#FFFFFF;
-  --f-num:var(--font-device-mono);--f-lab:var(--font-device-mono);
-  --t-display:68px;--t-display-w:300;--t-display-ls:-3px;
-  --t-head:18px;--t-head-w:600;--t-body:14.5px;--t-cap:12.5px;--t-cap-w:500;
-  --t-label:10px;--t-label-w:700;--t-label-ls:2.2px;
-  --sp-sm:8px;--sp-md:12px;--sp-lg:16px;
-  --r:0px;--r-nav:0px;
-  --hero-bg:linear-gradient(135deg,#2E6BFF 0%,#7C4DFF 55%,#B14DFF 100%);
-  --hero-ink:#FFFFFF;--hero-sub:#D6DEFF;--hero-pad:22px;
-  --row-bg:#0F1426;--row-bd:none;--row-pad:12px;
-  --tile-bg:#0F1426;--tile-seam:#1C2340;--label-rule:none;
-  --lab-col:#5D6790;
-  --glow:radial-gradient(58% 42% at 78% -4%,rgba(124,77,255,.60) 0%,rgba(46,107,255,.26) 42%,transparent 72%);
-  --nav-bg:#0F1426;--nav-bd:1px solid #1C2340;
-}
-/* ═══ G · AURORA / FULL — reference-faithful; needs native modules ═══ */
-.full{
-  --s-bg:#0A0D1C;--s-card:rgba(255,255,255,.055);--s-sunk:rgba(255,255,255,.03);--s-seam:rgba(255,255,255,.09);
-  --s-ink:#F2F4FF;--s-ink2:#A6AEDA;--s-ink3:#6D77A8;
-  --s-accent:#7C9BFF;--s-accent2:#C77DFF;--s-ink-on:#FFFFFF;
+/* ═══════════════════════════════════════════════════════
+   STRUCTURE — Aurora Full. Locked. Identical in all four.
+   ═══════════════════════════════════════════════════════ */
+.screen{
+  position:relative;font-family:var(--font-device);overflow:hidden;
+  background:var(--s-bg);color:var(--s-ink);
+  padding:16px;display:flex;flex-direction:column;gap:16px;min-height:500px;
   --f-num:var(--font-device);--f-lab:var(--font-device);
   --t-display:66px;--t-display-w:600;--t-display-ls:-2.6px;
   --t-head:19px;--t-head-w:600;--t-body:15px;--t-cap:13px;--t-cap-w:500;
   --t-label:10.5px;--t-label-w:700;--t-label-ls:1.6px;
   --sp-sm:8px;--sp-md:12px;--sp-lg:16px;
-  --r:18px;--r-nav:26px;
-  --hero-bg:linear-gradient(135deg,#3C6DFF 0%,#8B5CF6 52%,#C77DFF 100%);
-  --hero-ink:#FFFFFF;--hero-sub:#E0E6FF;--hero-pad:24px;
-  --row-bg:rgba(255,255,255,.055);--row-bd:none;--row-pad:14px;
-  --tile-bg:rgba(255,255,255,.055);--tile-seam:transparent;--label-rule:none;
-  --lab-col:#6D77A8;
-  --glow:radial-gradient(62% 46% at 50% -8%,rgba(139,92,246,.75) 0%,rgba(60,109,255,.34) 44%,transparent 74%);
+  --r:18px;--r-nav:26px;--hero-pad:24px;--row-pad:14px;
+  --s-card:rgba(255,255,255,.055);--s-sunk:rgba(255,255,255,.03);--s-seam:rgba(255,255,255,.09);
   --nav-bg:rgba(255,255,255,.07);--nav-bd:1px solid rgba(255,255,255,.10);
 }
-.full .s-card,.full .s-tile,.full .s-row,.full .s-nav{backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 
-/* ── Shared component vocabulary: ONE rule set, three token scopes ── */
+/* ═══ PALETTES — the only thing that varies below ═══ */
+/* 1 · BLAZE — safety orange. The colour the audience legally wears. */
+.blaze{
+  --s-bg:#0B0A09;--s-ink:#F7F3EF;--s-ink2:#B8ADA4;--s-ink3:#78706A;
+  --s-accent:#FF4D0F;--s-accent2:#FF9A3D;
+  --s-cold:#6FB6E8;--s-warm:#FF7A45;--s-ok:#6FBF73;
+  --glow:radial-gradient(62% 46% at 50% -8%,rgba(255,77,15,.50) 0%,rgba(255,138,43,.20) 45%,transparent 74%);
+}
+/* 2 · FIRST LIGHT — the hour they are actually out there. */
+.firstlight{
+  --s-bg:#0D0A14;--s-ink:#F6EFE6;--s-ink2:#C0AE9C;--s-ink3:#7E7062;
+  --s-accent:#B33A2B;--s-accent2:#F0A93F;
+  --s-cold:#7FA8C9;--s-warm:#E8823C;--s-ok:#8CB87A;
+  --glow:radial-gradient(70% 48% at 50% 102%,rgba(240,169,63,.34) 0%,rgba(179,58,43,.30) 40%,transparent 76%);
+}
+/* 3 · TIMBER — moss and brass. Reads as gear, not as an app. */
+.timber{
+  --s-bg:#0A0C0A;--s-ink:#F0F2EA;--s-ink2:#A8B09C;--s-ink3:#6B7263;
+  --s-accent:#46743A;--s-accent2:#C0A03A;
+  --s-cold:#7FB5C4;--s-warm:#D89A4A;--s-ok:#8FC47A;
+  --glow:radial-gradient(62% 46% at 50% -8%,rgba(70,116,58,.52) 0%,rgba(192,160,58,.20) 45%,transparent 74%);
+}
+/* 4 · NIGHT VISION — long-wavelength only. Preserves dark adaptation. */
+.nightvision{
+  --s-bg:#0A0808;--s-ink:#F2E9E4;--s-ink2:#B09B92;--s-ink3:#6E5F59;
+  --s-accent:#C81E10;--s-accent2:#FF7A18;
+  --s-cold:#C9D6DC;--s-warm:#FF9A4A;--s-ok:#D8B45A;
+  --glow:radial-gradient(62% 46% at 50% -8%,rgba(200,30,16,.46) 0%,rgba(255,122,24,.16) 45%,transparent 74%);
+}
+
+/* ── Shared component vocabulary: ONE rule set, four palette scopes ── */
 .s-glow{position:absolute;inset:0;background:var(--glow);pointer-events:none}
 .s-body{position:relative;display:flex;flex-direction:column;gap:var(--sp-lg);flex:1}
 .s-label{font-family:var(--f-lab);font-size:var(--t-label);font-weight:var(--t-label-w);
-  letter-spacing:var(--t-label-ls);text-transform:uppercase;color:var(--lab-col);margin:0;
-  padding-bottom:var(--sp-sm);border-bottom:var(--label-rule)}
+  letter-spacing:var(--t-label-ls);text-transform:uppercase;color:var(--s-ink3);margin:0}
 .s-sec{display:flex;flex-direction:column;gap:var(--sp-md)}
+.s-card,.s-tile,.s-row,.s-nav{backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 .s-card{background:var(--s-card);border-radius:var(--r);padding:var(--sp-lg)}
-.grid .s-card{padding:0}
-.s-hero{background:var(--hero-bg);color:var(--hero-ink);border-radius:var(--r);padding:var(--hero-pad);
-  display:flex;flex-direction:column;gap:6px}
+.s-hero{background:linear-gradient(135deg,var(--s-accent) 0%,var(--s-accent2) 100%);
+  color:#fff;border-radius:var(--r);padding:var(--hero-pad);display:flex;flex-direction:column;gap:6px}
 .s-temp{font-family:var(--f-num);font-size:var(--t-display);font-weight:var(--t-display-w);
-  letter-spacing:var(--t-display-ls);line-height:.92;font-variant-numeric:tabular-nums;color:inherit}
-.s-verdict{font-size:var(--t-head);font-weight:var(--t-head-w);display:flex;align-items:center;gap:var(--sp-sm);color:inherit}
-.grid .s-verdict{color:var(--s-accent)}
-.s-sub{font-family:var(--f-lab);font-size:var(--t-cap);font-weight:var(--t-cap-w);color:var(--hero-sub)}
+  letter-spacing:var(--t-display-ls);line-height:.92;font-variant-numeric:tabular-nums}
+.s-verdict{font-size:var(--t-head);font-weight:var(--t-head-w);display:flex;align-items:center;gap:var(--sp-sm)}
+.s-sub{font-size:var(--t-cap);font-weight:var(--t-cap-w);color:rgba(255,255,255,.82)}
 .s-note{font-size:var(--t-cap);font-weight:var(--t-cap-w);color:var(--s-ink2)}
-.s-tiles{display:flex;gap:1px;background:var(--tile-seam)}
-.full .s-tiles,.aurora .s-tiles{gap:var(--sp-sm);background:transparent}
-.s-tile{flex:1;background:var(--tile-bg);border-radius:var(--r);padding:var(--sp-md);
+.s-tiles{display:flex;gap:var(--sp-sm)}
+.s-tile{flex:1;background:var(--s-card);border-radius:var(--r);padding:var(--sp-md);
   display:flex;flex-direction:column;gap:3px;min-width:0}
 .s-tile .v{font-family:var(--f-num);font-size:var(--t-head);font-weight:var(--t-head-w);
   color:var(--s-ink);font-variant-numeric:tabular-nums}
+.s-tile .v.cold{color:var(--s-cold)}
 .s-tile .k{font-family:var(--f-lab);font-size:var(--t-label);font-weight:var(--t-label-w);
   letter-spacing:var(--t-label-ls);text-transform:uppercase;color:var(--s-ink3)}
-.s-row{display:flex;align-items:center;gap:var(--sp-md);background:var(--row-bg);border-radius:var(--r);
-  padding:var(--row-pad);border-bottom:var(--row-bd)}
+.s-row{display:flex;align-items:center;gap:var(--sp-md);background:var(--s-card);
+  border-radius:var(--r);padding:var(--row-pad)}
 .s-row .body{flex:1;min-width:0}
 .s-row .t{font-size:var(--t-body);font-weight:600;color:var(--s-ink)}
-.s-row .d{font-family:var(--f-lab);font-size:var(--t-cap);font-weight:400;color:var(--s-ink2)}
+.s-row .d{font-size:var(--t-cap);font-weight:400;color:var(--s-ink2)}
 .s-pill{font-family:var(--f-lab);font-size:var(--t-label);font-weight:var(--t-label-w);
-  letter-spacing:var(--t-label-ls);text-transform:uppercase;padding:4px 9px;white-space:nowrap;border-radius:calc(var(--r) / 2)}
-.grid .s-pill.on{background:transparent;color:var(--s-accent);border:1px solid var(--s-accent)}
-.aurora .s-pill.on,.full .s-pill.on{background:linear-gradient(100deg,var(--s-accent),var(--s-accent2));color:#fff}
+  letter-spacing:var(--t-label-ls);text-transform:uppercase;padding:4px 10px;white-space:nowrap;border-radius:9px}
+.s-pill.on{background:linear-gradient(100deg,var(--s-accent),var(--s-accent2));color:#fff}
 .s-pill.off{background:var(--s-sunk);color:var(--s-ink3)}
-.grid .s-pill.off{border:1px solid var(--s-seam)}
 .s-chips{display:flex;gap:var(--sp-sm);flex-wrap:wrap}
-.s-chip{font-family:var(--f-lab);font-size:var(--t-cap);font-weight:var(--t-cap-w);padding:var(--sp-sm) var(--sp-md);
-  background:var(--s-card);color:var(--s-ink2);border:1px solid var(--s-seam);border-radius:calc(var(--r) / 1.5)}
-.grid .s-chip{background:transparent}
-.s-chip.sel{background:linear-gradient(100deg,var(--s-accent),var(--s-accent2));color:var(--s-ink-on);border-color:transparent;font-weight:700}
-.grid .s-chip.sel{background:var(--s-accent)}
+.s-chip{font-size:var(--t-cap);font-weight:var(--t-cap-w);padding:var(--sp-sm) var(--sp-md);
+  background:var(--s-card);color:var(--s-ink2);border:1px solid var(--s-seam);border-radius:12px}
+.s-chip.sel{background:linear-gradient(100deg,var(--s-accent),var(--s-accent2));color:#fff;border-color:transparent;font-weight:700}
 .s-fc{display:flex;flex-direction:column}
 .s-fc-row{display:flex;align-items:center;gap:var(--sp-md);padding:10px 0;
   border-bottom:1px solid var(--s-seam);font-size:var(--t-body)}
 .s-fc-row:last-child{border-bottom:none}
-.s-fc-row .day{font-family:var(--f-lab);width:46px;font-weight:700;color:var(--s-ink);font-size:var(--t-cap)}
+.s-fc-row .day{width:46px;font-weight:700;color:var(--s-ink);font-size:var(--t-cap)}
 .s-fc-row .ic{width:20px;text-align:center}
 .s-fc-row .hi{font-family:var(--f-num);font-weight:700;color:var(--s-ink);font-variant-numeric:tabular-nums}
-.s-fc-row .lo{font-family:var(--f-num);color:var(--s-ink3);font-variant-numeric:tabular-nums}
-.s-fc-row .rain{font-family:var(--f-num);margin-left:auto;color:var(--s-accent);font-size:var(--t-cap);
+.s-fc-row .lo{font-family:var(--f-num);color:var(--s-cold);font-variant-numeric:tabular-nums}
+.s-fc-row .rain{font-family:var(--f-num);margin-left:auto;color:var(--s-ink2);font-size:var(--t-cap);
   font-variant-numeric:tabular-nums;font-weight:600}
-.s-seg{display:flex;gap:1px;background:var(--s-seam);padding:1px;border-radius:calc(var(--r) / 1.5)}
+.s-seg{display:flex;gap:2px;background:var(--s-sunk);padding:3px;border-radius:13px}
 .s-seg button{flex:1;font-family:var(--f-lab);font-size:var(--t-cap);font-weight:700;padding:var(--sp-sm);
-  border:none;background:var(--s-bg);color:var(--s-ink2);cursor:default;text-transform:uppercase;letter-spacing:1.2px;
-  border-radius:calc(var(--r) / 2)}
-.s-seg button.sel{background:linear-gradient(100deg,var(--s-accent),var(--s-accent2));color:var(--s-ink-on)}
-.grid .s-seg button.sel{background:var(--s-accent)}
+  border:none;background:transparent;color:var(--s-ink2);cursor:default;text-transform:uppercase;
+  letter-spacing:1.2px;border-radius:10px}
+.s-seg button.sel{background:linear-gradient(100deg,var(--s-accent),var(--s-accent2));color:#fff}
 .s-set-row{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-md);
   padding:11px 0;border-bottom:1px solid var(--s-seam);font-size:var(--t-body)}
 .s-set-row:last-child{border-bottom:none}
@@ -216,28 +188,28 @@ h2.sec{font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-s
 .s-set-row .v{font-family:var(--f-num);color:var(--s-ink3);font-size:var(--t-cap);font-weight:600}
 .s-new{outline:2px dashed var(--flag);outline-offset:5px}
 
-/* Bottom tab bar — the app really has five tabs */
 .s-nav{position:relative;margin-top:auto;display:flex;align-items:center;justify-content:space-between;
-  background:var(--nav-bg);border:var(--nav-bd);border-radius:var(--r-nav);padding:10px 14px}
-.s-nav i{font-style:normal;font-size:16px;opacity:.45;line-height:1}
-.s-nav i.on{opacity:1}
-.s-nav .fab{width:36px;height:36px;display:grid;place-items:center;border-radius:calc(var(--r-nav) / 1.6);
-  background:linear-gradient(135deg,var(--s-accent),var(--s-accent2));color:#fff;font-size:19px;font-weight:300}
-.grid .s-nav .fab{background:var(--s-accent);color:#05070A;border-radius:0}
+  background:var(--nav-bg);border:var(--nav-bd);border-radius:var(--r-nav);padding:10px 16px}
+.s-nav i{font-style:normal;font-size:16px;opacity:.42;line-height:1;color:var(--s-ink)}
+.s-nav i.on{opacity:1;color:var(--s-accent2)}
+.s-nav .fab{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;
+  background:linear-gradient(135deg,var(--s-accent),var(--s-accent2));color:#fff;font-size:20px;font-weight:300}
 
-/* Sparkline — G only; needs react-native-svg on device */
-.s-spark{display:none}
-.full .s-spark{display:block;width:100%;height:44px}
+.s-spark{width:100%;height:46px;display:block}
+.s-spark .g-a{stop-color:var(--s-accent)}
+.s-spark .g-b{stop-color:var(--s-accent2)}
+.s-spark .f-a{stop-color:var(--s-accent2);stop-opacity:.45}
+.s-spark .f-b{stop-color:var(--s-accent2);stop-opacity:0}
 
 .spec{padding-block:38px}
-.spec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:24px}
+.spec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px}
 .spec-block h4{font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.1em;
   text-transform:uppercase;color:var(--ink-faint);margin:0 0 12px}
-.spec-block table{border-collapse:collapse;width:100%;font-size:14px}
-.spec-block th{text-align:left;font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--ink-faint);padding:0 12px 8px 0;border-bottom:1px solid var(--rule)}
-.spec-block td{padding:9px 12px 9px 0;border-bottom:1px solid var(--rule)}
-.spec-block tr:last-child td{border-bottom:none}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{text-align:left;font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-faint);padding:0 12px 8px 0;border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:9px 12px 9px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:last-child td{border-bottom:none}
 .spec-block td:first-child{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:600;white-space:nowrap}
 .spec-block td:last-child{font-family:var(--font-mono);font-size:12px;color:var(--ink-muted);
   font-variant-numeric:tabular-nums;text-align:right;padding-right:0}
@@ -249,159 +221,144 @@ h2.sec{font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-s
 .footnote strong{font-weight:600}
 .footnote code{font-family:var(--font-mono);font-size:12.5px}
 
-@media (max-width:800px){.stage{gap:28px}}
+@media (max-width:900px){.stage{gap:26px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
 <div class="wrap">
 
   <header class="masthead">
-    <p class="eyebrow">WeatherBeacon · design-system-v2 · round 4 · 2026-09-10</p>
+    <p class="eyebrow">WeatherBeacon · design-system-v2 · round 5 · 2026-09-10</p>
     <h1>Look Book</h1>
     <p class="standfirst">
-      Your references share a blue&rarr;violet gradient, an ambient glow, gradient-filled data and a
-      floating nav. <strong>E is structurally the opposite of all of them</strong> — flat, square, hairline,
-      mono. So this round keeps E's bones and grafts on the reference colour story, then shows the same
-      thing again at full reference fidelity. The two new columns differ mainly in
-      <strong>what they cost to ship</strong>.
+      Structure is settled: <strong>Aurora Full</strong> — frosted glass, 18px radii, gradient hero,
+      sparkline, floating pill nav. Every column below is that same structure with nothing changed but
+      colour tokens, which is the look&nbsp;&times;&nbsp;palette split doing exactly what it was designed
+      for. <strong>The violet is gone.</strong> Four palettes drawn from the hunting world rather than
+      from a fintech dashboard.
     </p>
   </header>
 
-  <section class="dna">
-    <h2 class="sec">What is actually in those three references</h2>
-    <table>
-      <thead><tr><th>Move</th><th>Where it shows up</th><th>On this build</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Blue&rarr;violet gradient</strong></td><td>All three. The signature.</td><td><span class="cost ota">OTA as a baked PNG</span></td></tr>
-        <tr><td><strong>Ambient glow / bloom</strong></td><td>Blurred blobs, horizon glow, floating orbs</td><td><span class="cost ota">OTA as a baked PNG</span></td></tr>
-        <tr><td><strong>Bold display numerals</strong></td><td>$24,580 · 2201 · 75%</td><td><span class="cost ota">OTA, free</span></td></tr>
-        <tr><td><strong>Floating nav + circular FAB</strong></td><td>Refs 1 and 3</td><td><span class="cost ota">OTA, plain views</span></td></tr>
-        <tr><td><strong>Frosted glass surfaces</strong></td><td>Ref 1 throughout, ref 2's cards</td><td><span class="cost bin">needs expo-blur</span></td></tr>
-        <tr><td><strong>Gradient area / line charts</strong></td><td>Ref 2's market charts, ref 3's bars</td><td><span class="cost bin">needs react-native-svg</span></td></tr>
-        <tr><td><strong>Live animated gradients</strong></td><td>Ref 1's rings, ref 3's cards</td><td><span class="cost bin">needs expo-linear-gradient</span></td></tr>
-        <tr><td><strong>Crisp vector iconography</strong></td><td>All three</td><td><span class="cost bin">needs vector-icons / svg</span></td></tr>
-      </tbody>
-    </table>
-  </section>
-
   <section class="cands">
     <div class="cand">
-      <p class="n">Candidate E — current frontrunner</p>
-      <h3>Grid</h3>
-      <p>Unchanged from round 3. No cards, hairline lattice, signal amber, mono throughout. Held here as the control so the delta is visible.</p>
-      <div class="swatch"><i style="background:#0B0D11"></i><i style="background:#1A1F28"></i><i style="background:#4E5865"></i><i style="background:#FFB020"></i><i style="background:#EAEEF3"></i></div>
+      <p class="n">Palette 1</p>
+      <h3>Blaze</h3>
+      <p>Safety orange on warm black. The one colour this audience is legally required to wear, so it reads as hunting before a single word is understood.</p>
+      <p class="why">Loudest. Instant category recognition.</p>
+      <div class="swatch"><i style="background:#0B0A09"></i><i style="background:#78706A"></i><i style="background:#FF4D0F"></i><i style="background:#FF9A3D"></i><i style="background:#6FB6E8"></i></div>
     </div>
     <div class="cand">
-      <p class="n">Candidate F — ships this week</p>
-      <h3>Aurora / OTA</h3>
-      <p>E's square, mono, dense bones with the references' colour: indigo ground, a blue&rarr;violet gradient hero, a violet bloom behind the header. Every gradient is a flat image asset, so it ships over the air for zero build credits.</p>
-      <div class="swatch"><i style="background:#080B16"></i><i style="background:#0F1426"></i><i style="background:#2E6BFF"></i><i style="background:#7C4DFF"></i><i style="background:#B14DFF"></i></div>
+      <p class="n">Palette 2</p>
+      <h3>First Light</h3>
+      <p>Pre-dawn plum ground with a rust-to-gold bloom rising from the bottom edge, like sun coming up behind a treeline. The hour they are actually out there.</p>
+      <p class="why">Most atmospheric. Sells the feeling.</p>
+      <div class="swatch"><i style="background:#0D0A14"></i><i style="background:#7E7062"></i><i style="background:#B33A2B"></i><i style="background:#F0A93F"></i><i style="background:#7FA8C9"></i></div>
     </div>
     <div class="cand">
-      <p class="n">Candidate G — needs two store builds</p>
-      <h3>Aurora / Full</h3>
-      <p>The references done properly: frosted translucent cards, 18px radii, a real sparkline, a floating pill nav. Closest to what you pinned — and it cannot ship over the air.</p>
-      <div class="swatch"><i style="background:#0A0D1C"></i><i style="background:#1B2040"></i><i style="background:#3C6DFF"></i><i style="background:#8B5CF6"></i><i style="background:#C77DFF"></i></div>
+      <p class="n">Palette 3</p>
+      <h3>Timber</h3>
+      <p>Moss green into aged brass on a green-black ground. No orange anywhere. Reads like good gear rather than like an app — closer to Filson than to a trading terminal.</p>
+      <p class="why">Most understated. Widest audience.</p>
+      <div class="swatch"><i style="background:#0A0C0A"></i><i style="background:#6B7263"></i><i style="background:#46743A"></i><i style="background:#C0A03A"></i><i style="background:#7FB5C4"></i></div>
+    </div>
+    <div class="cand">
+      <p class="n">Palette 4</p>
+      <h3>Night Vision</h3>
+      <p>Deep red into amber, and almost no blue anywhere on the screen. Long-wavelength light does not bleach rhodopsin, which is the entire reason hunters use red headlamps.</p>
+      <p class="why">The only one with a functional argument.</p>
+      <div class="swatch"><i style="background:#0A0808"></i><i style="background:#6E5F59"></i><i style="background:#C81E10"></i><i style="background:#FF7A18"></i><i style="background:#C9D6DC"></i></div>
     </div>
   </section>
 
   <nav class="jump">
     <span>Screens</span>
     <a href="#home">Home</a>
-    <a href="#alerts">Alerts</a>
     <a href="#forecasts">Forecasts</a>
     <a href="#settings">Settings</a>
-    <a href="#spec">Cost &amp; spec</a>
+    <a href="#spec">Notes &amp; cost</a>
   </nav>
 
   <section class="pair" id="home">
     <div class="pair-head"><h3>Home</h3>
-      <p>Read at arm's length, in sun, with gloves. <code>app/(tabs)/index.tsx</code></p></div>
+      <p>Note the freeze figure stays cold in every palette. The accent brands the interface; it never colours the weather. <code>app/(tabs)/index.tsx</code></p></div>
     <div class="stage">
-      <div class="slot"><p class="slot-label"><span class="tag tag-e">E · Grid</span> <span class="note">control</span></p>
-        <div class="phone"><div class="screen grid" data-tpl="home"></div></div></div>
-      <div class="slot"><p class="slot-label"><span class="tag tag-f">F · Aurora OTA</span> <span class="note">0 credits</span></p>
-        <div class="phone"><div class="screen aurora" data-tpl="home"></div></div></div>
-      <div class="slot"><p class="slot-label"><span class="tag tag-g">G · Aurora Full</span> <span class="note">2 builds + review</span></p>
-        <div class="phone"><div class="screen full" data-tpl="home"></div></div></div>
-    </div>
-  </section>
-
-  <section class="pair" id="alerts">
-    <div class="pair-head"><h3>Alerts</h3>
-      <p>Presets and rules. Free tier caps at 2, so the counter does real work. <code>app/(tabs)/alerts.tsx</code></p></div>
-    <div class="stage">
-      <div class="slot"><p class="slot-label"><span class="tag tag-e">E · Grid</span></p>
-        <div class="phone"><div class="screen grid" data-tpl="alerts"></div></div></div>
-      <div class="slot"><p class="slot-label"><span class="tag tag-f">F · Aurora OTA</span></p>
-        <div class="phone"><div class="screen aurora" data-tpl="alerts"></div></div></div>
-      <div class="slot"><p class="slot-label"><span class="tag tag-g">G · Aurora Full</span></p>
-        <div class="phone"><div class="screen full" data-tpl="alerts"></div></div></div>
+      <div class="slot"><p class="slot-label"><span class="tag tag-1">1 · Blaze</span></p>
+        <div class="phone"><div class="screen blaze" data-tpl="home"></div></div></div>
+      <div class="slot"><p class="slot-label"><span class="tag tag-2">2 · First Light</span></p>
+        <div class="phone"><div class="screen firstlight" data-tpl="home"></div></div></div>
+      <div class="slot"><p class="slot-label"><span class="tag tag-3">3 · Timber</span></p>
+        <div class="phone"><div class="screen timber" data-tpl="home"></div></div></div>
+      <div class="slot"><p class="slot-label"><span class="tag tag-4">4 · Night Vision</span></p>
+        <div class="phone"><div class="screen nightvision" data-tpl="home"></div></div></div>
     </div>
   </section>
 
   <section class="pair" id="forecasts">
     <div class="pair-head"><h3>Forecasts</h3>
-      <p>Fourteen dense rows. G adds a trend sparkline — the one element here that genuinely needs a native charting library. <code>app/(tabs)/forecasts.tsx</code></p></div>
+      <p>Fourteen dense rows plus the gradient sparkline — the element that needs <code>react-native-svg</code>. Lows are rendered in the cold semantic colour, not the accent. <code>app/(tabs)/forecasts.tsx</code></p></div>
     <div class="stage">
-      <div class="slot"><p class="slot-label"><span class="tag tag-e">E · Grid</span></p>
-        <div class="phone"><div class="screen grid" data-tpl="fc"></div></div></div>
-      <div class="slot"><p class="slot-label"><span class="tag tag-f">F · Aurora OTA</span></p>
-        <div class="phone"><div class="screen aurora" data-tpl="fc"></div></div></div>
-      <div class="slot"><p class="slot-label"><span class="tag tag-g">G · Aurora Full</span></p>
-        <div class="phone"><div class="screen full" data-tpl="fc"></div></div></div>
+      <div class="slot"><p class="slot-label"><span class="tag tag-1">1 · Blaze</span></p>
+        <div class="phone"><div class="screen blaze" data-tpl="fc"></div></div></div>
+      <div class="slot"><p class="slot-label"><span class="tag tag-2">2 · First Light</span></p>
+        <div class="phone"><div class="screen firstlight" data-tpl="fc"></div></div></div>
+      <div class="slot"><p class="slot-label"><span class="tag tag-3">3 · Timber</span></p>
+        <div class="phone"><div class="screen timber" data-tpl="fc"></div></div></div>
+      <div class="slot"><p class="slot-label"><span class="tag tag-4">4 · Night Vision</span></p>
+        <div class="phone"><div class="screen nightvision" data-tpl="fc"></div></div></div>
     </div>
   </section>
 
   <section class="pair" id="settings">
     <div class="pair-head"><h3>Settings — and the two-axis control</h3>
-      <p>The dashed outline marks the only genuinely new control. <code>app/(tabs)/settings.tsx</code></p></div>
+      <p>The dashed outline marks the only new control. Whichever palette wins becomes the Default entry; the others can ship alongside it as free extra choices. <code>app/(tabs)/settings.tsx</code></p></div>
     <div class="stage">
-      <div class="slot"><p class="slot-label"><span class="tag tag-e">E · Grid</span></p>
-        <div class="phone"><div class="screen grid" data-tpl="set"></div></div></div>
-      <div class="slot"><p class="slot-label"><span class="tag tag-f">F · Aurora OTA</span></p>
-        <div class="phone"><div class="screen aurora" data-tpl="set"></div></div></div>
-      <div class="slot"><p class="slot-label"><span class="tag tag-g">G · Aurora Full</span></p>
-        <div class="phone"><div class="screen full" data-tpl="set"></div></div></div>
+      <div class="slot"><p class="slot-label"><span class="tag tag-1">1 · Blaze</span></p>
+        <div class="phone"><div class="screen blaze" data-tpl="set"></div></div></div>
+      <div class="slot"><p class="slot-label"><span class="tag tag-2">2 · First Light</span></p>
+        <div class="phone"><div class="screen firstlight" data-tpl="set"></div></div></div>
+      <div class="slot"><p class="slot-label"><span class="tag tag-3">3 · Timber</span></p>
+        <div class="phone"><div class="screen timber" data-tpl="set"></div></div></div>
+      <div class="slot"><p class="slot-label"><span class="tag tag-4">4 · Night Vision</span></p>
+        <div class="phone"><div class="screen nightvision" data-tpl="set"></div></div></div>
     </div>
   </section>
 
   <section class="spec" id="spec">
-    <h2 class="sec">What each one costs and freezes</h2>
+    <h2 class="sec">What is fixed, what is still free to change</h2>
     <div class="spec-grid">
 
-      <div class="spec-block"><h4>F · Aurora OTA</h4>
-        <table><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody>
-          <tr><td>display</td><td>68 / 300 / −3.0</td></tr>
-          <tr><td>label</td><td>10 / 700 / +2.2</td></tr>
-          <tr><td>numerals</td><td>mono</td></tr>
-          <tr><td>radius</td><td>0</td></tr>
-          <tr><td>new native deps</td><td>0</td></tr>
-          <tr><td>build credits</td><td>0</td></tr>
-          <tr><td>store review</td><td>none</td></tr>
-          <tr><td>new assets</td><td>2 PNG</td></tr>
-        </tbody></table></div>
-
-      <div class="spec-block"><h4>G · Aurora Full</h4>
-        <table><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody>
+      <div class="spec-block"><h4>Structure — locked by Aurora Full</h4>
+        <table><thead><tr><th>Token</th><th>Value</th></tr></thead><tbody>
           <tr><td>display</td><td>66 / 600 / −2.6</td></tr>
+          <tr><td>heading</td><td>19 / 600</td></tr>
+          <tr><td>body</td><td>15 / 400</td></tr>
           <tr><td>label</td><td>10.5 / 700 / +1.6</td></tr>
-          <tr><td>numerals</td><td>sans</td></tr>
           <tr><td>radius</td><td>18</td></tr>
-          <tr><td>new native deps</td><td>3</td></tr>
+          <tr><td>nav radius</td><td>26</td></tr>
+          <tr><td>surface</td><td>blur 18</td></tr>
+        </tbody></table></div>
+
+      <div class="spec-block"><h4>Per-palette tokens — 6 values</h4>
+        <table><thead><tr><th>Token</th><th>Role</th></tr></thead><tbody>
+          <tr><td>bg</td><td>ground</td></tr>
+          <tr><td>accent</td><td>brand</td></tr>
+          <tr><td>accent2</td><td>gradient end</td></tr>
+          <tr><td>cold</td><td>semantic</td></tr>
+          <tr><td>warm</td><td>semantic</td></tr>
+          <tr><td>ok</td><td>semantic</td></tr>
+        </tbody></table></div>
+
+      <div class="spec-block"><h4>One-time native cost</h4>
+        <table><thead><tr><th>Item</th><th>Count</th></tr></thead><tbody>
+          <tr><td>expo-blur</td><td>required</td></tr>
+          <tr><td>expo-linear-gradient</td><td>required</td></tr>
+          <tr><td>react-native-svg</td><td>required</td></tr>
           <tr><td>build credits</td><td>2</td></tr>
-          <tr><td>store review</td><td>Apple + Play</td></tr>
-          <tr><td>users see it</td><td>after update</td></tr>
+          <tr><td>Apple review</td><td>1 round</td></tr>
+          <tr><td>later palette edits</td><td>OTA, free</td></tr>
         </tbody></table></div>
 
-      <div class="spec-block"><h4>Shared — spacing 4/8pt</h4>
-        <table><thead><tr><th>Step</th><th>px</th></tr></thead><tbody>
-          <tr><td>xs</td><td>4</td></tr><tr><td>sm</td><td>8</td></tr><tr><td>md</td><td>12</td></tr>
-          <tr><td>lg</td><td>16</td></tr><tr><td>xl</td><td>24</td></tr><tr><td>xxl</td><td>32</td></tr>
-          <tr><td>xxxl</td><td>48</td></tr>
-        </tbody></table></div>
-
-      <div class="spec-block"><h4>Migration surface — all candidates</h4>
+      <div class="spec-block"><h4>Migration surface — unchanged</h4>
         <table><thead><tr><th>Measure</th><th>Count</th></tr></thead><tbody>
           <tr><td>Literals to replace</td><td>901</td></tr>
           <tr><td>Files touched</td><td>33</td></tr>
@@ -413,30 +370,37 @@ h2.sec{font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-s
     </div>
 
     <div class="footnote ok">
-      <strong>How F gets a gradient with no gradient library.</strong> A linear gradient that never animates
-      is just a picture. Export it once at 2&times;512px, ship it in the update, stretch it behind the hero;
-      same for the header bloom. EAS Update carries assets, not only JavaScript, so this costs zero build
-      credits. What it cannot do is respond to touch, animate between colours, or mask to an arbitrary
-      shape &mdash; which is exactly the line between F and G.
-    </div>
-
-    <div class="footnote stop">
-      <strong>G cannot ship over the air, and that is not a detail.</strong> It needs
-      <code>expo-blur</code>, <code>expo-linear-gradient</code> and <code>react-native-svg</code> &mdash;
-      three native modules, so two new store binaries and another Apple review on an app that
-      <em>just</em> cleared one after a rejection cycle. Nobody sees it until they update. F reaches every
-      existing user within hours and rolls back by republishing the previous update. If you want G, the
-      sane sequencing is to ship F now and fold the native pieces into the next scheduled binary.
+      <strong>The accent is not the weather.</strong> Blaze orange is the obvious hunting colour, but this
+      app's signature alert is a <em>freeze</em> — and an orange freeze warning is nonsense. So every
+      palette carries a separate cold semantic token, used for overnight lows and freeze figures, while
+      the accent is reserved for interface chrome: active tabs, armed pills, the hero gradient, the FAB.
+      Keeping those two channels apart is what lets a warm brand colour coexist with cold-weather data.
     </div>
 
     <div class="footnote">
-      <strong>Still true, and still unresolved.</strong> All of these are dark, which contradicts brief
-      Scenario 3 and its out-of-scope line holding the three palettes constant &mdash; the brief needs
-      revising and both gates re-running once you pick. A dark default is also the most visible thing you
-      can push over the air, so default-for-everyone versus opt-in is a spec-time decision.
-      <code>app/_layout.tsx</code> and <code>UpdateCheckScreen.tsx</code> keep hardcoded brand navy to
-      match the native splash, and <code>radar.tsx</code> line 65 carries a Mapbox-native
-      <code>style</code> prop the migration must skip.
+      <strong>Your own positioning says this app is not hunting-only.</strong> The project CLAUDE.md names
+      four target users: livestock owners, hunters, outdoor workers, and anyone wanting proactive alerts.
+      Blaze commits hardest to hunting and may read oddly to a rancher checking trough freeze risk.
+      Timber and First Light carry outdoor credibility without narrowing the category. If hunting is now
+      the wedge you go to market through, Blaze is correct and the trade is deliberate — worth saying out
+      loud rather than discovering it in a store listing.
+    </div>
+
+    <div class="footnote">
+      <strong>Night Vision's argument is physiological, not aesthetic.</strong> Rod cells recover dark
+      adaptation far better under long-wavelength light, which is why red headlamps are standard kit for a
+      4:45am walk in. A phone screen full of blue-white at that hour costs several minutes of night
+      vision. If the app is genuinely opened in the dark before a sit, this palette is the only one of the
+      four that does its user a favour — and none of your reference screenshots had any reason to think
+      about it.
+    </div>
+
+    <div class="footnote stop">
+      <strong>Still open, and both block spec freeze.</strong> The brief's Scenario 3 and out-of-scope list
+      still assert that a look change leaves the palette alone and that the three existing palettes stay
+      constant — every candidate here contradicts that, so the brief needs revising and both gates
+      re-running before Phase 1. And a dark default remains the most visible thing you can push, so
+      default-for-everyone versus opt-in is still undecided.
     </div>
   </section>
 
@@ -454,7 +418,7 @@ h2.sec{font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-s
     <div class="s-tiles">
       <div class="s-tile"><span class="v">12</span><span class="k">MPH NW</span></div>
       <div class="s-tile"><span class="v">40%</span><span class="k">Rain</span></div>
-      <div class="s-tile"><span class="v">29.7</span><span class="k">inHg ↓</span></div>
+      <div class="s-tile"><span class="v cold">28°</span><span class="k">Low</span></div>
     </div>
     <div class="s-sec">
       <p class="s-label">Active alerts</p>
@@ -465,52 +429,27 @@ h2.sec{font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-s
   </div>
 </template>
 
-<template id="tpl-alerts">
-  <div class="s-glow"></div>
-  <div class="s-body">
-    <div class="s-sec">
-      <p class="s-label">Presets</p>
-      <div class="s-chips"><span class="s-chip sel">Freeze Alert</span><span class="s-chip">North Wind</span><span class="s-chip">Pressure Drop</span><span class="s-chip">Soil Temp</span></div>
-    </div>
-    <div class="s-sec">
-      <p class="s-label">Your rules · 2 of 2 · Free</p>
-      <div class="s-row"><div class="body"><div class="t">Freeze Warning</div><div class="d">Temperature ≤ 32°F in the next 12 hours</div></div><span class="s-pill on">Armed</span></div>
-      <div class="s-row"><div class="body"><div class="t">North Wind</div><div class="d">Wind from 0° ±22.5° above 15 mph</div></div><span class="s-pill off">Paused</span></div>
-      <div class="s-card"><div class="s-note">Upgrade to Pro for 5 rules and compound conditions.</div></div>
-    </div>
-    <div class="s-nav"><i>⌂</i><i class="on">◈</i><span class="fab">+</span><i>◫</i><i>☰</i></div>
-  </div>
-</template>
-
 <template id="tpl-fc">
   <div class="s-glow"></div>
   <div class="s-body">
     <p class="s-label">North Pasture · 14 days</p>
-    <svg class="s-spark" viewBox="0 0 260 44" preserveAspectRatio="none" aria-hidden="true">
-      <defs>
-        <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#8B5CF6" stop-opacity=".55"/>
-          <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0"/>
-        </linearGradient>
-        <linearGradient id="sparkLine" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#3C6DFF"/><stop offset="100%" stop-color="#C77DFF"/>
-        </linearGradient>
-      </defs>
-      <path d="M0 34 L43 28 L87 12 L130 20 L173 7 L217 16 L260 30 L260 44 L0 44 Z" fill="url(#sparkFill)"/>
-      <path d="M0 34 L43 28 L87 12 L130 20 L173 7 L217 16 L260 30" fill="none" stroke="url(#sparkLine)" stroke-width="2"/>
-    </svg>
+    <div class="s-card" style="padding:12px 14px">
+      <svg class="s-spark" viewBox="0 0 260 46" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="sf" x1="0" y1="0" x2="0" y2="1"><stop class="f-a" offset="0%"/><stop class="f-b" offset="100%"/></linearGradient>
+          <linearGradient id="sl" x1="0" y1="0" x2="1" y2="0"><stop class="g-a" offset="0%"/><stop class="g-b" offset="100%"/></linearGradient>
+        </defs>
+        <path d="M0 36 L43 29 L87 12 L130 21 L173 7 L217 17 L260 31 L260 46 L0 46 Z" fill="url(#sf)"/>
+        <path d="M0 36 L43 29 L87 12 L130 21 L173 7 L217 17 L260 31" fill="none" stroke="url(#sl)" stroke-width="2.5"/>
+      </svg>
+    </div>
     <div class="s-card"><div class="s-fc">
       <div class="s-fc-row"><span class="day">TODAY</span><span class="ic">❄️</span><span class="hi">34°</span><span class="lo">28°</span><span class="rain">40%</span></div>
       <div class="s-fc-row"><span class="day">WED</span><span class="ic">🌧️</span><span class="hi">41°</span><span class="lo">33°</span><span class="rain">80%</span></div>
       <div class="s-fc-row"><span class="day">THU</span><span class="ic">⛅</span><span class="hi">48°</span><span class="lo">31°</span><span class="rain">10%</span></div>
       <div class="s-fc-row"><span class="day">FRI</span><span class="ic">☀️</span><span class="hi">52°</span><span class="lo">35°</span><span class="rain">0%</span></div>
       <div class="s-fc-row"><span class="day">SAT</span><span class="ic">🌫️</span><span class="hi">47°</span><span class="lo">38°</span><span class="rain">20%</span></div>
-      <div class="s-fc-row"><span class="day">SUN</span><span class="ic">🌨️</span><span class="hi">36°</span><span class="lo">26°</span><span class="rain">60%</span></div>
     </div></div>
-    <div class="s-tiles">
-      <div class="s-tile"><span class="v">0.42</span><span class="k">IN · 7 DAY</span></div>
-      <div class="s-tile"><span class="v">🌓</span><span class="k">First qtr</span></div>
-    </div>
     <div class="s-nav"><i>⌂</i><i>◈</i><span class="fab">+</span><i class="on">◫</i><i>☰</i></div>
   </div>
 </template>
@@ -526,8 +465,8 @@ h2.sec{font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-s
       <p class="s-label">Palette</p>
       <div class="s-card">
         <div class="s-set-row"><span class="k">Default</span><span class="v">●</span></div>
-        <div class="s-set-row"><span class="k">Dark</span><span class="v">○</span></div>
-        <div class="s-set-row"><span class="k">Storm</span><span class="v">○</span></div>
+        <div class="s-set-row"><span class="k">Night Vision</span><span class="v">○</span></div>
+        <div class="s-set-row"><span class="k">Timber</span><span class="v">○</span></div>
       </div>
     </div>
     <div class="s-sec">
@@ -543,14 +482,13 @@ h2.sec{font-family:var(--font-display);font-weight:600;font-size:12.5px;letter-s
 </template>
 
 <script>
-/* One template per screen, cloned into every token scope.
-   "Same markup, different tokens" is therefore literal, not asserted. */
+/* One template per screen, cloned into every palette scope.
+   "Same structure, different palette" is therefore literal, not asserted. */
 document.querySelectorAll('.screen[data-tpl]').forEach(function (el, n) {
   var tpl = document.getElementById('tpl-' + el.dataset.tpl);
   if (!tpl) return;
   var frag = tpl.content.cloneNode(true);
-  // Cloning repeats any id in the template, so scope them per instance and
-  // repoint the url(#...) references that use them.
+  // Cloning repeats template ids, so scope them per instance and repoint refs.
   frag.querySelectorAll('[id]').forEach(function (node) {
     var was = node.id, now = was + '-' + n;
     node.id = now;
