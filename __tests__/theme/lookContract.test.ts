@@ -60,6 +60,41 @@ describe('FEAT-001: structural token contract', () => {
     expect(empty).toEqual([]);
   });
 
+  // A type step without leading is not a type scale. Every screen that sets
+  // fontSize also sets lineHeight (38 uses measured 2026-09-09), so a contract
+  // that cannot express leading forces those back to literals and FEAT-002 can
+  // never reach zero. Found by the TASK-005 migration hitting 6 it could not
+  // express, and reporting rather than inventing `size * 1.4`.
+  //
+  // This does NOT change the 21-key contract: flattenKeys walks one level, so
+  // `typography.display` is a single key however many fields the step carries.
+  it.each(['aurora', 'classic'])('every type step in "%s" carries size, weight, tracking and lineHeight', (name) => {
+    const look = LOOKS[name as keyof typeof LOOKS];
+    const incomplete = Object.entries(look.typography)
+      .filter(([, step]) => {
+        const s = step as Record<string, unknown>;
+        return (
+          typeof s.size !== 'number' ||
+          typeof s.weight !== 'string' ||
+          typeof s.tracking !== 'number' ||
+          typeof s.lineHeight !== 'number'
+        );
+      })
+      .map(([stepName]) => `typography.${stepName}`);
+    expect(incomplete).toEqual([]);
+  });
+
+  it.each(['aurora', 'classic'])('leading in "%s" is never tighter than its own font size', (name) => {
+    const look = LOOKS[name as keyof typeof LOOKS];
+    const tooTight = Object.entries(look.typography)
+      .filter(([, step]) => {
+        const s = step as unknown as { size: number; lineHeight: number };
+        return s.lineHeight < s.size;
+      })
+      .map(([stepName]) => stepName);
+    expect(tooTight).toEqual([]);
+  });
+
   it('gives the two looks genuinely different structure, not a copy', () => {
     // A look set where classic === aurora would satisfy every check above while
     // making "Revert to Classic" a no-op.
