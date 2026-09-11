@@ -2,6 +2,7 @@ import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert,
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useStyles, useTokens } from '../../src/theme';
+import type { LookTokens } from '../../src/theme/looks';
 import { useLocationsStore } from '../../src/stores/locationsStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useDeviceLocation } from '../../src/hooks/useLocation';
@@ -301,52 +302,73 @@ export default function LocationsScreen() {
   );
 }
 
-const createStyles = (t: ThemeTokens) => ({
+const createStyles = (t: ThemeTokens, look: LookTokens) => ({
   container: { flex: 1 as const, backgroundColor: t.background },
-  content: { padding: 20, paddingBottom: 40, maxWidth: 600, alignSelf: 'center' as const, width: '100%' as const },
+  content: {
+    padding: look.spacing.xl,
+    paddingBottom: look.spacing.xxxl,
+    maxWidth: 600,
+    alignSelf: 'center' as const,
+    width: '100%' as const,
+  },
   headerRow: {
     flexDirection: 'row' as const,
     justifyContent: 'space-between' as const,
     alignItems: 'flex-start' as const,
     marginBottom: 16,
   },
-  title: { fontSize: 24, fontWeight: '700' as const, color: t.textPrimary },
-  subtitle: { fontSize: 13, color: t.textTertiary, marginTop: 2 },
+  title: {
+    fontSize: look.typography.title.size,
+    fontWeight: look.typography.title.weight,
+    letterSpacing: look.typography.title.tracking,
+    color: t.textPrimary,
+  },
+  subtitle: { fontSize: look.typography.caption.size, color: t.textTertiary, marginTop: 2 },
   addHeaderButton: {
     backgroundColor: t.primary,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: look.spacing.sm,
+    paddingHorizontal: look.spacing.lg,
+    borderRadius: look.radius.surface,
   },
-  addHeaderButtonText: { color: t.textOnPrimary, fontWeight: '600' as const, fontSize: 14 },
+  addHeaderButtonText: {
+    color: t.textOnPrimary,
+    fontWeight: look.typography.bodyStrong.weight,
+    fontSize: look.typography.bodyStrong.size,
+    letterSpacing: look.typography.bodyStrong.tracking,
+  },
 
   // Inactive banner
   inactiveBanner: {
     backgroundColor: t.warningLight,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.md,
     marginBottom: 12,
   },
-  inactiveBannerText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' as const },
+  inactiveBannerText: { fontSize: look.typography.body.size, color: t.textSecondary, textAlign: 'center' as const },
 
   // Error banner
   errorBanner: {
     backgroundColor: t.errorLight,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.md,
     marginBottom: 12,
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'space-between' as const,
   },
-  errorBannerText: { fontSize: 14, color: t.error, flex: 1, marginRight: 8 },
-  errorBannerDismiss: { fontSize: 16, color: t.error, fontWeight: '700' as const },
+  errorBannerText: { fontSize: look.typography.body.size, color: t.error, flex: 1, marginRight: 8 },
+  errorBannerDismiss: {
+    fontSize: look.typography.heading.size,
+    color: t.error,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
+  },
 
   // Add form
   addCard: {
     backgroundColor: t.card,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.lg,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: t.borderLight,
@@ -354,56 +376,77 @@ const createStyles = (t: ThemeTokens) => ({
   input: {
     borderWidth: 1,
     borderColor: t.border,
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    fontSize: 15,
+    borderRadius: look.radius.surface,
+    paddingVertical: look.spacing.md,
+    paddingHorizontal: look.spacing.lg,
+    fontSize: look.typography.body.size,
     color: t.textPrimary,
     backgroundColor: t.inputBackground,
     marginBottom: 10,
   },
   geoButton: {
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: look.spacing.md,
+    borderRadius: look.radius.surface,
     borderWidth: 1,
     borderColor: t.primary,
     alignItems: 'center' as const,
     marginBottom: 10,
   },
-  geoButtonText: { color: t.primary, fontWeight: '600' as const, fontSize: 14 },
-  errorText: { color: t.error, fontSize: 13, marginBottom: 8 },
-  coordRow: { flexDirection: 'row' as const, gap: 10 },
+  geoButtonText: {
+    color: t.primary,
+    fontWeight: look.typography.bodyStrong.weight,
+    fontSize: look.typography.bodyStrong.size,
+    letterSpacing: look.typography.bodyStrong.tracking,
+  },
+  errorText: { color: t.error, fontSize: look.typography.caption.size, marginBottom: 8 },
+  coordRow: { flexDirection: 'row' as const, gap: look.spacing.md },
   coordInput: { flex: 1 as const },
   saveButton: {
     backgroundColor: t.primary,
-    paddingVertical: 14,
-    borderRadius: 8,
+    paddingVertical: look.spacing.lg,
+    borderRadius: look.radius.surface,
     alignItems: 'center' as const,
     marginTop: 4,
   },
   saveButtonDisabled: { backgroundColor: t.primaryDisabled },
-  saveButtonText: { color: t.textOnPrimary, fontWeight: '600' as const, fontSize: 16 },
+  saveButtonText: {
+    color: t.textOnPrimary,
+    fontWeight: look.typography.heading.weight,
+    fontSize: look.typography.heading.size,
+    letterSpacing: look.typography.heading.tracking,
+  },
 
   // Empty state
   emptyCard: {
     backgroundColor: t.card,
-    borderRadius: 12,
-    padding: 32,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.xxl,
     alignItems: 'center' as const,
     borderWidth: 1,
     borderColor: t.borderLight,
   },
-  emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyTitle: { fontSize: 18, fontWeight: '600' as const, color: t.textPrimary, marginBottom: 8 },
-  emptyBody: { fontSize: 14, color: t.textSecondary, textAlign: 'center' as const, marginBottom: 20, lineHeight: 20 },
-  emptyButton: { backgroundColor: t.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8 },
-  emptyButtonText: { color: t.textOnPrimary, fontSize: 16, fontWeight: '600' as const },
+  emptyIcon: { fontSize: look.typography.display.size, marginBottom: 12 },
+  emptyTitle: {
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
+    color: t.textPrimary,
+    marginBottom: 8,
+  },
+  emptyBody: { fontSize: look.typography.body.size, color: t.textSecondary, textAlign: 'center' as const, marginBottom: 20, lineHeight: look.typography.body.lineHeight },
+  emptyButton: { backgroundColor: t.primary, paddingVertical: look.spacing.md, paddingHorizontal: look.spacing.xl, borderRadius: look.radius.surface },
+  emptyButtonText: {
+    color: t.textOnPrimary,
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
+  },
 
   // Location card
   locationCard: {
     backgroundColor: t.card,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.lg,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: t.borderLight,
@@ -416,30 +459,48 @@ const createStyles = (t: ThemeTokens) => ({
   locationTitleRow: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    gap: 8,
+    gap: look.spacing.sm,
   },
-  starButton: { padding: 2 },
-  starIcon: { fontSize: 18 },
-  locationName: { fontSize: 17, fontWeight: '600' as const, color: t.textPrimary },
-  locationCoords: { fontSize: 13, color: t.textTertiary, marginTop: 4, marginBottom: 8 },
+  starButton: { padding: look.spacing.xs },
+  starIcon: { fontSize: look.typography.heading.size },
+  locationName: {
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
+    color: t.textPrimary,
+  },
+  locationCoords: { fontSize: look.typography.caption.size, color: t.textTertiary, marginTop: 4, marginBottom: 8 },
   cardActions: {
     flexDirection: 'row' as const,
     justifyContent: 'space-between' as const,
     alignItems: 'center' as const,
     marginTop: 4,
   },
-  editHint: { fontSize: 12, color: t.textTertiary, fontStyle: 'italic' as const },
-  trashButton: { padding: 4 },
-  trashIcon: { fontSize: 18 },
-  formTitle: { fontSize: 16, fontWeight: '600' as const, color: t.textPrimary, marginBottom: 10 },
+  editHint: { fontSize: look.typography.label.size, color: t.textTertiary, fontStyle: 'italic' as const },
+  trashButton: { padding: look.spacing.xs },
+  trashIcon: { fontSize: look.typography.heading.size },
+  formTitle: {
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
+    color: t.textPrimary,
+    marginBottom: 10,
+  },
 
   // Limit warning
   limitCard: {
     backgroundColor: t.warningLight,
-    borderRadius: 8,
-    padding: 14,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.lg,
     marginTop: 12,
   },
-  limitText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' as const },
-  limitLink: { fontSize: 14, color: t.primary, fontWeight: '600' as const, textAlign: 'center' as const, marginTop: 4 },
+  limitText: { fontSize: look.typography.body.size, color: t.textSecondary, textAlign: 'center' as const },
+  limitLink: {
+    fontSize: look.typography.bodyStrong.size,
+    color: t.primary,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
+    textAlign: 'center' as const,
+    marginTop: 4,
+  },
 });

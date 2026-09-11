@@ -50,7 +50,17 @@ function scan(): Finding[] {
 
   for (const file of files) {
     const lines = fs.readFileSync(path.join(ROOT, file), 'utf8').split(/\r?\n/);
-    lines.forEach((line, i) => {
+    lines.forEach((raw, i) => {
+      // Strip a line comment before matching. A style declaration quoted inside
+      // prose is not a style declaration — the oracle says "matching numeric
+      // fontSize... declarations", and a comment declares nothing. Without this
+      // the scan flags its own explanatory notes: a comment reading "was an
+      // all-sides shorthand with paddingTop cancelled" counts as a finding,
+      // which pushes the next person to weaken the assertion instead.
+      // Deliberately conservative: only `//` to end-of-line, so a real
+      // declaration can never hide behind a block comment.
+      const line = raw.replace(/\/\/.*$/, '');
+
       // Mapbox-native props are not React Native styles — see spec out-of-scope.
       if (file === 'app/radar.tsx' && /rasterOpacity|styleURL/.test(line)) return;
       STYLE_PROP.lastIndex = 0;

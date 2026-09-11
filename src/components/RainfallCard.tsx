@@ -1,6 +1,7 @@
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useStyles, useTokens } from '../theme';
+import type { LookTokens } from '../theme/looks';
 import { useSettingsStore } from '../stores/settingsStore';
 import { fetchRainfallHistory } from '../services/rainfallApi';
 import type { ThemeTokens } from '../theme';
@@ -169,29 +170,29 @@ export function RainfallCard({ locationId, latitude, longitude, timezone }: Rain
   );
 }
 
-const createStyles = (t: ThemeTokens) => ({
+const createStyles = (t: ThemeTokens, look: LookTokens) => ({
   header: {
     flexDirection: 'row' as const,
     justifyContent: 'space-between' as const,
     alignItems: 'center' as const,
     marginTop: 16,
     marginBottom: 8,
-    paddingVertical: 2,
+    paddingVertical: look.spacing.xs,
   },
   sectionLabel: {
-    fontSize: 12,
-    fontWeight: '600' as const,
+    fontSize: look.typography.label.size,
+    fontWeight: look.typography.label.weight,
     color: t.textTertiary,
-    letterSpacing: 0.5,
+    letterSpacing: look.typography.label.tracking,
   },
   chevron: {
-    fontSize: 14,
+    fontSize: look.typography.body.size,
     color: t.textTertiary,
   },
 
   segmentRow: {
     flexDirection: 'row' as const,
-    borderRadius: 8,
+    borderRadius: look.radius.surface,
     borderWidth: 1,
     borderColor: t.border,
     overflow: 'hidden' as const,
@@ -199,21 +200,22 @@ const createStyles = (t: ThemeTokens) => ({
     marginBottom: 12,
   },
   segmentButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 16,
+    paddingVertical: look.spacing.sm,
+    paddingHorizontal: look.spacing.lg,
     backgroundColor: t.card,
   },
   segmentActive: {
     backgroundColor: t.rainBlue,
   },
   segmentText: {
-    fontSize: 13,
-    fontWeight: '500' as const,
+    fontSize: look.typography.caption.size,
+    fontWeight: look.typography.caption.weight,
+    letterSpacing: look.typography.caption.tracking,
     color: t.textSecondary,
   },
   segmentTextActive: {
     color: t.textOnPrimary,
-    fontWeight: '600' as const,
+    fontWeight: look.typography.bodyStrong.weight,
   },
 
   spinner: {
@@ -225,19 +227,20 @@ const createStyles = (t: ThemeTokens) => ({
     marginBottom: 8,
   },
   errorText: {
-    fontSize: 13,
+    fontSize: look.typography.caption.size,
     color: t.error,
     marginBottom: 8,
   },
   retryButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 6,
+    paddingVertical: look.spacing.sm,
+    paddingHorizontal: look.spacing.xl,
+    borderRadius: look.radius.surface,
     backgroundColor: t.primary,
   },
   retryButtonText: {
-    fontSize: 13,
-    fontWeight: '600' as const,
+    fontSize: look.typography.caption.size,
+    fontWeight: look.typography.caption.weight,
+    letterSpacing: look.typography.caption.tracking,
     color: t.textOnPrimary,
   },
 
@@ -245,22 +248,23 @@ const createStyles = (t: ThemeTokens) => ({
     marginBottom: 4,
   },
   subsectionLabel: {
-    fontSize: 10,
-    fontWeight: '600' as const,
+    fontSize: look.typography.label.size,
+    fontWeight: look.typography.label.weight,
     color: t.textTertiary,
-    letterSpacing: 0.5,
+    letterSpacing: look.typography.label.tracking,
     marginBottom: 4,
   },
   totalAmount: {
-    fontSize: 22,
-    fontWeight: '700' as const,
+    fontSize: look.typography.title.size,
+    fontWeight: look.typography.title.weight,
+    letterSpacing: look.typography.title.tracking,
     color: t.rainBlue,
     marginBottom: 8,
   },
 
   snowSection: {
     marginTop: 14,
-    paddingTop: 14,
+    paddingTop: look.spacing.lg,
     borderTopWidth: 1,
     borderTopColor: t.divider,
   },
@@ -274,27 +278,27 @@ const createStyles = (t: ThemeTokens) => ({
   dayList: {
     borderTopWidth: 1,
     borderTopColor: t.divider,
-    paddingTop: 4,
+    paddingTop: look.spacing.xs,
   },
   dayRow: {
     flexDirection: 'row' as const,
     justifyContent: 'space-between' as const,
-    paddingVertical: 5,
+    paddingVertical: look.spacing.xs,
     borderBottomWidth: 1,
     borderBottomColor: t.divider,
   },
   dayLabel: {
-    fontSize: 13,
+    fontSize: look.typography.caption.size,
     color: t.textPrimary,
   },
   dayAmount: {
-    fontSize: 13,
+    fontSize: look.typography.caption.size,
     color: t.rainBlue,
-    fontWeight: '500' as const,
+    fontWeight: look.typography.caption.weight,
   },
 
   noDataNote: {
-    fontSize: 12,
+    fontSize: look.typography.label.size,
     color: t.textTertiary,
     fontStyle: 'italic' as const,
   },

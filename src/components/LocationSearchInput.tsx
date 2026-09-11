@@ -20,6 +20,7 @@ import { formatLocationLabel, searchPlaces } from '../services/geocoding';
 import type { GeocodingResult } from '../services/geocoding';
 import { useStyles, useTokens } from '../theme';
 import type { ThemeTokens } from '../theme';
+import type { LookTokens } from '../theme/looks';
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
@@ -209,7 +210,7 @@ export function LocationSearchInput({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const createStyles = (t: ThemeTokens) =>
+const createStyles = (t: ThemeTokens, look: LookTokens) =>
   StyleSheet.create({
     wrapper: {
       // Relative positioning so the dropdown can sit directly below the input
@@ -223,19 +224,19 @@ const createStyles = (t: ThemeTokens) =>
       alignItems: 'center',
       borderWidth: 1,
       borderColor: t.border,
-      borderRadius: 8,
+      borderRadius: look.radius.surface,
       backgroundColor: t.inputBackground,
       // No marginBottom here — callers control spacing via their own container.
     },
     input: {
       flex: 1,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-      fontSize: 15,
+      paddingVertical: look.spacing.md,
+      paddingHorizontal: look.spacing.lg,
+      fontSize: look.typography.body.size,
       color: t.textPrimary,
     },
     loadingIndicator: {
-      paddingHorizontal: 12,
+      paddingHorizontal: look.spacing.md,
     },
 
     // Dropdown container — sits directly below the input row.
@@ -243,7 +244,7 @@ const createStyles = (t: ThemeTokens) =>
       backgroundColor: t.card,
       borderWidth: 1,
       borderColor: t.border,
-      borderRadius: 8,
+      borderRadius: look.radius.surface,
       marginTop: 4,
       maxHeight: 220,
       // Android elevation for subtle depth separation.
@@ -258,8 +259,8 @@ const createStyles = (t: ThemeTokens) =>
       maxHeight: 220,
     },
     resultRow: {
-      paddingVertical: 13,
-      paddingHorizontal: 14,
+      paddingVertical: look.spacing.md,
+      paddingHorizontal: look.spacing.lg,
     },
     resultRowBorder: {
       borderBottomWidth: StyleSheet.hairlineWidth,
@@ -269,17 +270,17 @@ const createStyles = (t: ThemeTokens) =>
       backgroundColor: t.primaryLight,
     },
     resultText: {
-      fontSize: 15,
+      fontSize: look.typography.body.size,
       color: t.textPrimary,
     },
 
     // Non-tappable message rows (no results / error).
     messageRow: {
-      paddingVertical: 13,
-      paddingHorizontal: 14,
+      paddingVertical: look.spacing.md,
+      paddingHorizontal: look.spacing.lg,
     },
     messageText: {
-      fontSize: 14,
+      fontSize: look.typography.body.size,
       color: t.textSecondary,
     },
   });

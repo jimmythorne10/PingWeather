@@ -2,6 +2,7 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useStyles, useTokens } from '../../src/theme';
+import type { LookTokens } from '../../src/theme/looks';
 import { useLocationsStore } from '../../src/stores/locationsStore';
 import { useAlertRulesStore } from '../../src/stores/alertRulesStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
@@ -397,118 +398,153 @@ export default function ForecastsScreen() {
   );
 }
 
-const createStyles = (t: ThemeTokens) => ({
+const createStyles = (t: ThemeTokens, look: LookTokens) => ({
   container: { flex: 1 as const, backgroundColor: t.background },
-  content: { padding: 16, paddingBottom: 40, paddingTop: 20, maxWidth: 680, alignSelf: 'center' as const, width: '100%' as const },
+  content: {
+    padding: look.spacing.lg,
+    paddingBottom: look.spacing.xxxl,
+    paddingTop: look.spacing.xl,
+    maxWidth: 680,
+    alignSelf: 'center' as const,
+    width: '100%' as const,
+  },
 
   emptyCard: {
     backgroundColor: t.card,
-    borderRadius: 12,
-    padding: 32,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.xxl,
     alignItems: 'center' as const,
     borderWidth: 1,
     borderColor: t.borderLight,
     marginTop: 40,
   },
-  emptyIcon: { fontSize: 48, marginBottom: 12 },
+  emptyIcon: { fontSize: look.typography.display.size, marginBottom: 12 },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600' as const,
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
     color: t.textPrimary,
     marginBottom: 8,
   },
   emptyBody: {
-    fontSize: 14,
+    fontSize: look.typography.body.size,
     color: t.textSecondary,
     marginBottom: 20,
     textAlign: 'center' as const,
-    lineHeight: 20,
+    lineHeight: look.typography.body.lineHeight,
   },
   addButton: {
     backgroundColor: t.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    paddingVertical: look.spacing.md,
+    paddingHorizontal: look.spacing.xl,
+    borderRadius: look.radius.surface,
   },
   addButtonText: {
     color: t.textOnPrimary,
-    fontSize: 16,
-    fontWeight: '600' as const,
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
   },
 
   locationCard: {
     backgroundColor: t.card,
-    borderRadius: 12,
+    borderRadius: look.radius.surface,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: t.borderLight,
     overflow: 'hidden' as const,
   },
   locationHeader: {
-    padding: 16,
+    padding: look.spacing.lg,
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
   },
   locationName: {
-    fontSize: 17,
-    fontWeight: '600' as const,
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
     color: t.textPrimary,
   },
   locationSummary: {
-    fontSize: 13,
+    fontSize: look.typography.caption.size,
     color: t.textSecondary,
     marginTop: 4,
   },
   expandIndicator: {
-    fontSize: 14,
+    fontSize: look.typography.body.size,
     color: t.textTertiary,
     marginLeft: 12,
   },
 
   locationDetail: {
-    padding: 16,
-    paddingTop: 0,
+    // Was an all-sides shorthand with the top side cancelled back to nothing.
+    // Naming only the sides that actually take padding says the same thing
+    // without a literal — the scale has no zero step because zero is the
+    // absence of a spacing decision, not a point on the scale.
+    paddingHorizontal: look.spacing.lg,
+    paddingBottom: look.spacing.lg,
     borderTopWidth: 1,
     borderTopColor: t.divider,
   },
 
   sectionLabel: {
-    fontSize: 12,
-    fontWeight: '600' as const,
+    fontSize: look.typography.label.size,
+    fontWeight: look.typography.label.weight,
     color: t.textTertiary,
-    letterSpacing: 0.5,
+    letterSpacing: look.typography.label.tracking,
     marginTop: 16,
     marginBottom: 8,
   },
 
   hourlyRow: {
     flexDirection: 'row' as const,
-    gap: 12,
-    paddingVertical: 4,
+    gap: look.spacing.md,
+    paddingVertical: look.spacing.xs,
   },
   hourlyItem: {
     alignItems: 'center' as const,
     minWidth: 56,
   },
-  hourlyTime: { fontSize: 11, color: t.textTertiary, marginBottom: 4 },
-  hourlyTemp: { fontSize: 16, fontWeight: '600' as const, color: t.textPrimary },
-  hourlyRain: { fontSize: 10, color: t.rainBlue, marginTop: 2 },
+  hourlyTime: { fontSize: look.typography.label.size, color: t.textTertiary, marginBottom: 4 },
+  hourlyTemp: {
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
+    color: t.textPrimary,
+  },
+  hourlyRain: { fontSize: look.typography.label.size, color: t.rainBlue, marginTop: 2 },
 
   dailyHeader: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    paddingVertical: 4,
+    paddingVertical: look.spacing.xs,
     borderBottomWidth: 1,
     borderBottomColor: t.divider,
     marginBottom: 2,
   },
   dailyIconCol: { width: 26 as const },
-  dailyHeaderCell: { fontSize: 11, color: t.textTertiary, flex: 1.5 as const, fontWeight: '500' as const },
-  dailyHeaderTemps: { fontSize: 11, color: t.textTertiary, flex: 2 as const, fontWeight: '500' as const },
-  dailyHeaderRight: { fontSize: 11, color: t.textTertiary, flex: 1.2 as const, textAlign: 'right' as const, fontWeight: '500' as const },
+  dailyHeaderCell: {
+    fontSize: look.typography.label.size,
+    color: t.textTertiary,
+    flex: 1.5 as const,
+    fontWeight: look.typography.label.weight,
+  },
+  dailyHeaderTemps: {
+    fontSize: look.typography.label.size,
+    color: t.textTertiary,
+    flex: 2 as const,
+    fontWeight: look.typography.label.weight,
+  },
+  dailyHeaderRight: {
+    fontSize: look.typography.label.size,
+    color: t.textTertiary,
+    flex: 1.2 as const,
+    textAlign: 'right' as const,
+    fontWeight: look.typography.label.weight,
+  },
 
   dailyRow: {
-    paddingVertical: 6,
+    paddingVertical: look.spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: t.divider,
   },
@@ -522,81 +558,94 @@ const createStyles = (t: ThemeTokens) => ({
     alignItems: 'center' as const,
     marginTop: 2,
     marginLeft: 26,
-    gap: 10,
+    gap: look.spacing.md,
   },
   dailyMeta: {
-    fontSize: 10,
+    fontSize: look.typography.label.size,
     color: t.textTertiary,
   },
 
-  dailyIcon: { fontSize: 16, width: 26 as const },
-  dailyDate: { fontSize: 13, color: t.textPrimary, flex: 1.5 as const },
-  dailyTemps: { fontSize: 14, color: t.textPrimary, flex: 2 as const, fontWeight: '600' as const },
-  dailyLow: { color: t.textTertiary, fontWeight: '400' as const },
-  dailyRain: { fontSize: 12, color: t.rainBlue, flex: 1.2 as const, textAlign: 'right' as const },
-  dailyWind: { fontSize: 11, color: t.textTertiary, flex: 1.2 as const, textAlign: 'right' as const },
+  dailyIcon: { fontSize: look.typography.heading.size, width: 26 as const },
+  dailyDate: { fontSize: look.typography.caption.size, color: t.textPrimary, flex: 1.5 as const },
+  dailyTemps: {
+    fontSize: look.typography.bodyStrong.size,
+    color: t.textPrimary,
+    flex: 2 as const,
+    fontWeight: look.typography.bodyStrong.weight,
+  },
+  dailyLow: { color: t.textTertiary, fontWeight: look.typography.body.weight },
+  dailyRain: { fontSize: look.typography.label.size, color: t.rainBlue, flex: 1.2 as const, textAlign: 'right' as const },
+  dailyWind: { fontSize: look.typography.label.size, color: t.textTertiary, flex: 1.2 as const, textAlign: 'right' as const },
 
   ruleStatusRow: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    paddingVertical: 10,
-    gap: 10,
+    paddingVertical: look.spacing.md,
+    gap: look.spacing.md,
   },
-  ruleStatusIcon: { fontSize: 18 },
-  ruleStatusName: { fontSize: 14, fontWeight: '500' as const, color: t.textPrimary },
-  ruleStatusDetail: { fontSize: 12, marginTop: 2 },
+  ruleStatusIcon: { fontSize: look.typography.heading.size },
+  ruleStatusName: {
+    fontSize: look.typography.bodyStrong.size,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
+    color: t.textPrimary,
+  },
+  ruleStatusDetail: { fontSize: look.typography.label.size, marginTop: 2 },
 
   historyLink: {
     marginTop: 16,
-    paddingVertical: 14,
+    paddingVertical: look.spacing.lg,
     alignItems: 'center' as const,
-    borderRadius: 8,
+    borderRadius: look.radius.surface,
     borderWidth: 1,
     borderColor: t.borderLight,
     backgroundColor: t.card,
   },
   historyLinkText: {
-    fontSize: 15,
+    fontSize: look.typography.bodyStrong.size,
     color: t.primary,
-    fontWeight: '600' as const,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
   },
 
   radarButton: {
     marginTop: 12,
     marginBottom: 4,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: look.spacing.md,
+    paddingHorizontal: look.spacing.lg,
+    borderRadius: look.radius.surface,
     borderWidth: 1,
     borderColor: t.rainBlue,
     backgroundColor: t.primaryLight,
     alignItems: 'center' as const,
   },
   radarButtonText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
+    fontSize: look.typography.bodyStrong.size,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
     color: t.primary,
   },
 
   forecastErrorBlock: {
-    paddingVertical: 20,
+    paddingVertical: look.spacing.xl,
     alignItems: 'center' as const,
   },
   forecastErrorText: {
-    fontSize: 14,
+    fontSize: look.typography.body.size,
     color: t.error,
     marginBottom: 12,
     textAlign: 'center' as const,
   },
   retryButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    paddingVertical: look.spacing.md,
+    paddingHorizontal: look.spacing.xl,
+    borderRadius: look.radius.surface,
     backgroundColor: t.primary,
   },
   retryButtonText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
+    fontSize: look.typography.bodyStrong.size,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
     color: t.textOnPrimary,
   },
 });

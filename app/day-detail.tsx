@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStyles, useTokens } from '../src/theme';
+import { useLook } from '../src/theme/useStyles';
+import type { LookTokens } from '../src/theme/looks';
 import { useLocationsStore } from '../src/stores/locationsStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { fetchForecast } from '../src/services/weatherApi';
@@ -20,6 +22,7 @@ interface ForecastState {
 export default function DayDetailScreen() {
   const styles = useStyles(createStyles);
   const tokens = useTokens();
+  const look = useLook();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -123,9 +126,9 @@ export default function DayDetailScreen() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={{
-        paddingTop: insets.top + 16,
-        paddingBottom: Math.max(insets.bottom + 40, 80),
-        paddingHorizontal: 16,
+        paddingTop: insets.top + look.spacing.lg,
+        paddingBottom: Math.max(insets.bottom + look.spacing.xxxl, 80),
+        paddingHorizontal: look.spacing.lg,
         maxWidth: 640,
         alignSelf: 'center' as const,
         width: '100%' as const,
@@ -369,31 +372,37 @@ function formatWindRange(winds: number[], unit: string): string {
   return `${Math.round(min)}–${Math.round(max)} ${unit}`;
 }
 
-const createStyles = (t: ThemeTokens) => ({
+const createStyles = (t: ThemeTokens, look: LookTokens) => ({
   container: { flex: 1 as const, backgroundColor: t.background },
 
   header: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     marginBottom: 16,
-    gap: 12,
+    gap: look.spacing.md,
   },
   backButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingVertical: look.spacing.sm,
+    paddingHorizontal: look.spacing.md,
+    borderRadius: look.radius.surface,
     backgroundColor: t.card,
     borderWidth: 1,
     borderColor: t.borderLight,
   },
-  backArrow: { fontSize: 20, color: t.primary, fontWeight: '600' as const },
+  backArrow: {
+    fontSize: look.typography.heading.size,
+    color: t.primary,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
+  },
   headerLocation: {
-    fontSize: 17,
-    fontWeight: '600' as const,
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
     color: t.textPrimary,
   },
   headerDay: {
-    fontSize: 13,
+    fontSize: look.typography.caption.size,
     color: t.textSecondary,
     marginTop: 2,
   },
@@ -401,72 +410,76 @@ const createStyles = (t: ThemeTokens) => ({
   centerBox: {
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    paddingVertical: 48,
+    paddingVertical: look.spacing.xxxl,
   },
   loadingText: {
     marginTop: 12,
     color: t.textSecondary,
-    fontSize: 13,
+    fontSize: look.typography.caption.size,
   },
 
   errorCard: {
     backgroundColor: t.card,
-    borderRadius: 12,
-    padding: 24,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.xl,
     alignItems: 'center' as const,
     borderWidth: 1,
     borderColor: t.borderLight,
     marginTop: 24,
   },
-  errorIcon: { fontSize: 40, marginBottom: 10 },
+  errorIcon: { fontSize: look.typography.display.size, marginBottom: 10 },
   errorTitle: {
-    fontSize: 16,
-    fontWeight: '600' as const,
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
     color: t.textPrimary,
     marginBottom: 6,
   },
   errorBody: {
-    fontSize: 13,
+    fontSize: look.typography.caption.size,
     color: t.textSecondary,
     textAlign: 'center' as const,
-    lineHeight: 19,
+    lineHeight: look.typography.caption.lineHeight,
   },
   errorBack: {
     marginTop: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    paddingVertical: look.spacing.sm,
+    paddingHorizontal: look.spacing.xl,
+    borderRadius: look.radius.surface,
     backgroundColor: t.primary,
   },
   errorBackText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
+    fontSize: look.typography.bodyStrong.size,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
     color: t.textOnPrimary,
   },
 
   summaryCard: {
     backgroundColor: t.card,
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.xl,
     borderWidth: 1,
     borderColor: t.borderLight,
     alignItems: 'center' as const,
   },
-  summaryEmoji: { fontSize: 64, marginBottom: 8 },
+  summaryEmoji: { fontSize: look.typography.display.size, marginBottom: 8 },
   summaryTempRow: {
     flexDirection: 'row' as const,
     alignItems: 'baseline' as const,
-    gap: 10,
+    gap: look.spacing.md,
   },
   summaryHigh: {
-    fontSize: 40,
-    fontWeight: '700' as const,
+    fontSize: look.typography.display.size,
+    fontWeight: look.typography.display.weight,
+    letterSpacing: look.typography.display.tracking,
     color: t.textPrimary,
   },
-  summarySep: { fontSize: 28, color: t.textTertiary },
+  summarySep: { fontSize: look.typography.title.size, color: t.textTertiary },
   summaryLow: {
-    fontSize: 28,
-    fontWeight: '500' as const,
+    fontSize: look.typography.title.size,
+    fontWeight: look.typography.title.weight,
+    letterSpacing: look.typography.title.tracking,
     color: t.textTertiary,
   },
   summaryMetricsRow: {
@@ -474,21 +487,22 @@ const createStyles = (t: ThemeTokens) => ({
     width: '100%' as const,
     justifyContent: 'space-around' as const,
     marginTop: 16,
-    paddingTop: 16,
+    paddingTop: look.spacing.lg,
     borderTopWidth: 1,
     borderTopColor: t.divider,
   },
   summaryMetric: { alignItems: 'center' as const, flex: 1 as const },
   summaryMetricLabel: {
-    fontSize: 10,
-    fontWeight: '600' as const,
+    fontSize: look.typography.label.size,
+    fontWeight: look.typography.label.weight,
     color: t.textTertiary,
-    letterSpacing: 0.5,
+    letterSpacing: look.typography.label.tracking,
     marginBottom: 4,
   },
   summaryMetricValue: {
-    fontSize: 14,
-    fontWeight: '600' as const,
+    fontSize: look.typography.bodyStrong.size,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
     color: t.textPrimary,
   },
   summaryAstroRow: {
@@ -496,33 +510,33 @@ const createStyles = (t: ThemeTokens) => ({
     width: '100%' as const,
     justifyContent: 'space-around' as const,
     marginTop: 14,
-    paddingTop: 14,
+    paddingTop: look.spacing.lg,
     borderTopWidth: 1,
     borderTopColor: t.divider,
     flexWrap: 'wrap' as const,
-    gap: 12,
+    gap: look.spacing.md,
   },
   summaryAstroMetric: { alignItems: 'center' as const, minWidth: 70 as const },
 
   sectionLabel: {
-    fontSize: 12,
-    fontWeight: '600' as const,
+    fontSize: look.typography.label.size,
+    fontWeight: look.typography.label.weight,
     color: t.textTertiary,
-    letterSpacing: 0.5,
+    letterSpacing: look.typography.label.tracking,
     marginTop: 20,
     marginBottom: 8,
   },
 
   hourlyList: {
     backgroundColor: t.card,
-    borderRadius: 12,
+    borderRadius: look.radius.surface,
     borderWidth: 1,
     borderColor: t.borderLight,
     overflow: 'hidden' as const,
   },
   hourlyRow: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: look.spacing.sm,
+    paddingHorizontal: look.spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: t.divider,
   },
@@ -535,33 +549,34 @@ const createStyles = (t: ThemeTokens) => ({
     alignItems: 'center' as const,
     marginTop: 3,
     marginLeft: 82, // align under temp column (time 52 + emoji 30)
-    gap: 10,
+    gap: look.spacing.md,
   },
   hourExtraItem: {
-    fontSize: 10,
+    fontSize: look.typography.label.size,
     color: t.textTertiary,
   },
   hourTime: {
-    fontSize: 13,
+    fontSize: look.typography.caption.size,
     color: t.textPrimary,
     width: 52,
   },
-  hourEmoji: { fontSize: 18, width: 30, textAlign: 'center' as const },
+  hourEmoji: { fontSize: look.typography.heading.size, width: 30, textAlign: 'center' as const },
   hourTemp: {
-    fontSize: 14,
-    fontWeight: '600' as const,
+    fontSize: look.typography.bodyStrong.size,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
     color: t.textPrimary,
     flex: 1 as const,
     textAlign: 'center' as const,
   },
   hourRain: {
-    fontSize: 12,
+    fontSize: look.typography.label.size,
     color: t.rainBlue,
     flex: 1 as const,
     textAlign: 'right' as const,
   },
   hourWind: {
-    fontSize: 12,
+    fontSize: look.typography.label.size,
     color: t.textTertiary,
     flex: 1 as const,
     textAlign: 'right' as const,
@@ -569,9 +584,9 @@ const createStyles = (t: ThemeTokens) => ({
   },
 
   emptyBody: {
-    fontSize: 14,
+    fontSize: look.typography.body.size,
     color: t.textSecondary,
     textAlign: 'center' as const,
-    paddingVertical: 20,
+    paddingVertical: look.spacing.xl,
   },
 });

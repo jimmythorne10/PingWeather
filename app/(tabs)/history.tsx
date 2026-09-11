@@ -1,6 +1,7 @@
 import { View, Text, ScrollView, ActivityIndicator, RefreshControl, Pressable } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useStyles, useTokens } from '../../src/theme';
+import type { LookTokens } from '../../src/theme/looks';
 import { useAlertHistoryStore } from '../../src/stores/alertHistoryStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { TIER_LIMITS } from '../../src/types';
@@ -80,39 +81,67 @@ export default function HistoryScreen() {
   );
 }
 
-const createStyles = (t: ThemeTokens) => ({
+const createStyles = (t: ThemeTokens, look: LookTokens) => ({
   container: { flex: 1 as const, backgroundColor: t.background },
-  content: { padding: 20, paddingBottom: 40, maxWidth: 640, alignSelf: 'center' as const, width: '100%' as const },
-  title: { fontSize: 24, fontWeight: '700' as const, color: t.textPrimary, marginBottom: 4 },
-  subtitle: { fontSize: 13, color: t.textTertiary, marginBottom: 20 },
+  content: {
+    padding: look.spacing.xl,
+    paddingBottom: look.spacing.xxxl,
+    maxWidth: 640,
+    alignSelf: 'center' as const,
+    width: '100%' as const,
+  },
+  title: {
+    fontSize: look.typography.title.size,
+    fontWeight: look.typography.title.weight,
+    letterSpacing: look.typography.title.tracking,
+    color: t.textPrimary,
+    marginBottom: 4,
+  },
+  subtitle: { fontSize: look.typography.caption.size, color: t.textTertiary, marginBottom: 20 },
 
   emptyCard: {
-    backgroundColor: t.card, borderRadius: 12, padding: 32,
+    backgroundColor: t.card, borderRadius: look.radius.surface, padding: look.spacing.xxl,
     alignItems: 'center' as const, borderWidth: 1, borderColor: t.borderLight,
   },
-  emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyTitle: { fontSize: 18, fontWeight: '600' as const, color: t.textPrimary, marginBottom: 8 },
-  emptyBody: { fontSize: 14, color: t.textSecondary, textAlign: 'center' as const, lineHeight: 20 },
+  emptyIcon: { fontSize: look.typography.display.size, marginBottom: 12 },
+  emptyTitle: {
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
+    color: t.textPrimary,
+    marginBottom: 8,
+  },
+  emptyBody: { fontSize: look.typography.body.size, color: t.textSecondary, textAlign: 'center' as const, lineHeight: look.typography.body.lineHeight },
 
   entryCard: {
-    backgroundColor: t.card, borderRadius: 12, padding: 16, marginBottom: 10,
+    backgroundColor: t.card, borderRadius: look.radius.surface, padding: look.spacing.lg, marginBottom: 10,
     borderWidth: 1, borderColor: t.borderLight,
   },
   entryHeader: {
     flexDirection: 'row' as const, justifyContent: 'space-between' as const,
     alignItems: 'center' as const, marginBottom: 4,
   },
-  entryRule: { fontSize: 16, fontWeight: '600' as const, color: t.textPrimary },
-  entryStatus: { fontSize: 12, fontWeight: '600' as const },
-  entryLocation: { fontSize: 13, color: t.textTertiary, marginBottom: 4 },
-  entrySummary: { fontSize: 14, color: t.textSecondary, lineHeight: 20, marginBottom: 6 },
+  entryRule: {
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
+    color: t.textPrimary,
+  },
+  entryStatus: { fontSize: look.typography.label.size, fontWeight: look.typography.label.weight, letterSpacing: look.typography.label.tracking },
+  entryLocation: { fontSize: look.typography.caption.size, color: t.textTertiary, marginBottom: 4 },
+  entrySummary: { fontSize: look.typography.body.size, color: t.textSecondary, lineHeight: look.typography.body.lineHeight, marginBottom: 6 },
   entryFooter: {
     flexDirection: 'row' as const,
     justifyContent: 'space-between' as const,
     alignItems: 'center' as const,
     marginTop: 4,
   },
-  entryTime: { fontSize: 12, color: t.textTertiary },
-  deleteButton: { paddingHorizontal: 6, paddingVertical: 2 },
-  deleteButtonText: { fontSize: 14, color: t.error, fontWeight: '600' as const },
+  entryTime: { fontSize: look.typography.label.size, color: t.textTertiary },
+  deleteButton: { paddingHorizontal: look.spacing.sm, paddingVertical: look.spacing.xs },
+  deleteButtonText: {
+    fontSize: look.typography.bodyStrong.size,
+    color: t.error,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
+  },
 });

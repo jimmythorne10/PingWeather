@@ -2,6 +2,7 @@ import { View, Text, ScrollView, Pressable, Switch, Alert, Modal, RefreshControl
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useStyles, useTokens } from '../../src/theme';
+import type { LookTokens } from '../../src/theme/looks';
 import { useAlertRulesStore } from '../../src/stores/alertRulesStore';
 import { useLocationsStore } from '../../src/stores/locationsStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -455,7 +456,7 @@ export default function AlertsScreen() {
           style={[styles.customButton, { borderColor: tokens.primary }]}
           onPress={() => router.push('/create-rule')}
         >
-          <Text style={{ color: tokens.primary, fontSize: 16, fontWeight: '600' }}>+ Build Custom Alert Rule</Text>
+          <Text style={styles.customButtonText}>+ Build Custom Alert Rule</Text>
         </Pressable>
       )}
 
@@ -471,58 +472,85 @@ export default function AlertsScreen() {
   );
 }
 
-const createStyles = (t: ThemeTokens) => ({
+const createStyles = (t: ThemeTokens, look: LookTokens) => ({
   container: { flex: 1 as const, backgroundColor: t.background },
-  content: { padding: 20, paddingBottom: 40, maxWidth: 600, alignSelf: 'center' as const, width: '100%' as const },
+  content: {
+    padding: look.spacing.xl,
+    paddingBottom: look.spacing.xxxl,
+    maxWidth: 600,
+    alignSelf: 'center' as const,
+    width: '100%' as const,
+  },
 
   // Filter toggle
   filterRow: {
     flexDirection: 'row' as const,
     backgroundColor: t.card,
-    borderRadius: 10,
-    padding: 4,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.xs,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: t.borderLight,
   },
   filterTab: {
     flex: 1 as const,
-    paddingVertical: 8,
+    paddingVertical: look.spacing.sm,
     alignItems: 'center' as const,
-    borderRadius: 7,
+    borderRadius: look.radius.surface,
   },
   filterTabActive: {
     backgroundColor: t.primary,
   },
-  filterTabText: { fontSize: 14, fontWeight: '600' as const, color: t.textSecondary },
+  filterTabText: {
+    fontSize: look.typography.bodyStrong.size,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
+    color: t.textSecondary,
+  },
   filterTabTextActive: { color: t.textOnPrimary },
 
-  sectionTitle: { fontSize: 20, fontWeight: '700' as const, color: t.textPrimary, marginBottom: 4 },
-  sectionSubtitle: { fontSize: 13, color: t.textTertiary, marginBottom: 16 },
+  sectionTitle: {
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
+    color: t.textPrimary,
+    marginBottom: 4,
+  },
+  sectionSubtitle: { fontSize: look.typography.caption.size, color: t.textTertiary, marginBottom: 16 },
 
   // Rule card
   ruleCard: {
-    backgroundColor: t.card, borderRadius: 12, padding: 16, marginBottom: 10,
+    backgroundColor: t.card, borderRadius: look.radius.surface, padding: look.spacing.lg, marginBottom: 10,
     borderWidth: 1, borderColor: t.borderLight,
   },
   ruleHeader: {
     flexDirection: 'row' as const, justifyContent: 'space-between' as const,
     alignItems: 'center' as const, marginBottom: 8,
   },
-  ruleName: { fontSize: 17, fontWeight: '600' as const, color: t.textPrimary },
-  ruleLocation: { fontSize: 12, color: t.textTertiary, marginBottom: 6 },
+  ruleName: {
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
+    color: t.textPrimary,
+  },
+  ruleLocation: { fontSize: look.typography.label.size, color: t.textTertiary, marginBottom: 6 },
   ruleConditions: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, marginBottom: 6 },
-  conditionText: { fontSize: 14, color: t.primary, fontWeight: '500' as const },
-  ruleDetails: { fontSize: 12, color: t.textTertiary, marginBottom: 4 },
-  ruleTriggered: { fontSize: 12, color: t.textTertiary, marginBottom: 8 },
+  conditionText: {
+    fontSize: look.typography.bodyStrong.size,
+    color: t.primary,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
+  },
+  ruleDetails: { fontSize: look.typography.label.size, color: t.textTertiary, marginBottom: 4 },
+  ruleTriggered: { fontSize: look.typography.label.size, color: t.textTertiary, marginBottom: 8 },
   ruleActions: {
     flexDirection: 'row' as const,
     justifyContent: 'flex-end' as const,
-    gap: 12,
+    gap: look.spacing.md,
     marginTop: 8,
   },
-  iconButton: { padding: 4 },
-  iconButtonText: { fontSize: 18 },
+  iconButton: { padding: look.spacing.xs },
+  iconButtonText: { fontSize: look.typography.heading.size },
 
   divider: { height: 1, backgroundColor: t.divider, marginVertical: 20 },
 
@@ -534,13 +562,18 @@ const createStyles = (t: ThemeTokens) => ({
     backgroundColor: t.card,
     borderWidth: 1,
     borderColor: t.border,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    borderRadius: look.radius.surface,
+    paddingVertical: look.spacing.md,
+    paddingHorizontal: look.spacing.lg,
     marginBottom: 12,
   },
-  dropdownButtonText: { fontSize: 15, color: t.textPrimary, fontWeight: '500' as const },
-  dropdownChevron: { fontSize: 12, color: t.textTertiary },
+  dropdownButtonText: {
+    fontSize: look.typography.bodyStrong.size,
+    color: t.textPrimary,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
+  },
+  dropdownChevron: { fontSize: look.typography.label.size, color: t.textTertiary },
 
   // Modal
   modalOverlay: {
@@ -551,79 +584,100 @@ const createStyles = (t: ThemeTokens) => ({
   },
   modalContent: {
     backgroundColor: t.card,
-    borderRadius: 14,
-    padding: 8,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.sm,
     width: '90%' as const,
     maxWidth: 320,
   },
   modalOption: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: look.spacing.lg,
+    paddingHorizontal: look.spacing.lg,
+    borderRadius: look.radius.surface,
   },
   modalOptionSelected: { backgroundColor: t.primaryLight },
-  modalOptionText: { fontSize: 16, color: t.textPrimary },
-  modalOptionTextSelected: { color: t.primary, fontWeight: '600' as const },
+  modalOptionText: { fontSize: look.typography.heading.size, color: t.textPrimary },
+  modalOptionTextSelected: { color: t.primary, fontWeight: look.typography.heading.weight },
 
   // Preset card
   presetCard: {
-    backgroundColor: t.card, borderRadius: 12, padding: 16, marginBottom: 8,
+    backgroundColor: t.card, borderRadius: look.radius.surface, padding: look.spacing.lg, marginBottom: 8,
     flexDirection: 'row' as const, alignItems: 'center' as const,
     borderWidth: 1, borderColor: t.borderLight,
   },
   presetDisabled: { opacity: 0.5 },
-  presetIcon: { fontSize: 28, marginRight: 14 },
+  presetIcon: { fontSize: look.typography.title.size, marginRight: 14 },
   presetInfo: { flex: 1 as const },
-  presetName: { fontSize: 16, fontWeight: '600' as const, color: t.textPrimary, marginBottom: 2 },
-  presetDesc: { fontSize: 13, color: t.textSecondary, lineHeight: 18 },
+  presetName: {
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
+    color: t.textPrimary,
+    marginBottom: 2,
+  },
+  presetDesc: { fontSize: look.typography.caption.size, color: t.textSecondary, lineHeight: look.typography.caption.lineHeight },
 
   // Custom builder
   customButton: {
-    borderWidth: 1, borderRadius: 12, paddingVertical: 18, alignItems: 'center' as const, marginTop: 20,
+    borderWidth: 1, borderRadius: look.radius.surface, paddingVertical: look.spacing.lg, alignItems: 'center' as const, marginTop: 20,
+  },
+  customButtonText: {
+    color: t.primary,
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
   },
 
   // Limit
-  limitCard: { backgroundColor: t.warningLight, borderRadius: 8, padding: 14, marginTop: 12 },
-  limitText: { fontSize: 14, color: t.textSecondary, textAlign: 'center' as const },
-  limitLink: { fontSize: 14, color: t.primary, fontWeight: '600' as const, textAlign: 'center' as const, marginTop: 4 },
+  limitCard: { backgroundColor: t.warningLight, borderRadius: look.radius.surface, padding: look.spacing.lg, marginTop: 12 },
+  limitText: { fontSize: look.typography.body.size, color: t.textSecondary, textAlign: 'center' as const },
+  limitLink: {
+    fontSize: look.typography.bodyStrong.size,
+    color: t.primary,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
+    textAlign: 'center' as const,
+    marginTop: 4,
+  },
 
   // Preset confirmation modal
   presetConfirmModalContent: {
     backgroundColor: t.card,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.xl,
     width: '90%' as const,
     maxWidth: 360,
   },
   presetConfirmTitle: {
-    fontSize: 18,
-    fontWeight: '700' as const,
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
     color: t.textPrimary,
     marginBottom: 8,
   },
   presetConfirmDescription: {
-    fontSize: 14,
+    fontSize: look.typography.body.size,
     color: t.textSecondary,
     marginBottom: 16,
-    lineHeight: 20,
+    lineHeight: look.typography.body.lineHeight,
   },
   presetConfirmLocationLabel: {
-    fontSize: 14,
-    fontWeight: '600' as const,
+    fontSize: look.typography.bodyStrong.size,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
     color: t.textPrimary,
     marginBottom: 10,
   },
   presetConfirmLocationButtons: {
     flexDirection: 'column' as const,
-    gap: 8,
+    gap: look.spacing.sm,
     marginBottom: 16,
   },
   presetConfirmLocationButton: {
     borderWidth: 1,
     borderColor: t.border,
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    borderRadius: look.radius.surface,
+    paddingVertical: look.spacing.md,
+    paddingHorizontal: look.spacing.md,
     alignItems: 'center' as const,
   },
   presetConfirmLocationButtonSelected: {
@@ -631,43 +685,46 @@ const createStyles = (t: ThemeTokens) => ({
     backgroundColor: t.primaryLight,
   },
   presetConfirmLocationButtonText: {
-    fontSize: 14,
+    fontSize: look.typography.bodyStrong.size,
     color: t.textPrimary,
-    fontWeight: '500' as const,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
   },
   presetConfirmLocationButtonTextSelected: {
     color: t.primary,
-    fontWeight: '600' as const,
+    fontWeight: look.typography.bodyStrong.weight,
   },
   presetConfirmActions: {
     flexDirection: 'row' as const,
-    gap: 10,
+    gap: look.spacing.md,
   },
   presetConfirmCancelButton: {
     flex: 1 as const,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: look.spacing.md,
+    paddingHorizontal: look.spacing.md,
+    borderRadius: look.radius.surface,
     borderWidth: 1,
     borderColor: t.border,
     alignItems: 'center' as const,
   },
   presetConfirmCancelButtonText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
+    fontSize: look.typography.bodyStrong.size,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
     color: t.textPrimary,
   },
   presetConfirmCreateButton: {
     flex: 1 as const,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: look.spacing.md,
+    paddingHorizontal: look.spacing.md,
+    borderRadius: look.radius.surface,
     backgroundColor: t.primary,
     alignItems: 'center' as const,
   },
   presetConfirmCreateButtonText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
+    fontSize: look.typography.bodyStrong.size,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
     color: t.textOnPrimary,
   },
 });

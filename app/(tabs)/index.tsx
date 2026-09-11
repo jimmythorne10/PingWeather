@@ -2,6 +2,8 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator, Modal, RefreshCon
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useStyles, useTokens } from '../../src/theme';
+import { useLook } from '../../src/theme/useStyles';
+import type { LookTokens } from '../../src/theme/looks';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useLocationsStore } from '../../src/stores/locationsStore';
 import { useAlertRulesStore } from '../../src/stores/alertRulesStore';
@@ -18,6 +20,7 @@ import type { DailyForecast, HourlyForecast, WatchLocation } from '../../src/typ
 export default function HomeScreen() {
   const styles = useStyles(createStyles);
   const tokens = useTokens();
+  const look = useLook();
   const router = useRouter();
   const { visible: walkthroughVisible, dismiss: dismissWalkthrough } = useWalkthrough({ autoShow: true });
   const { locations, loadLocations } = useLocationsStore();
@@ -269,7 +272,7 @@ export default function HomeScreen() {
               >
                 <Text style={[
                   styles.modalOptionText,
-                  selectedLocation?.id === loc.id && { color: tokens.primary, fontWeight: '700' },
+                  selectedLocation?.id === loc.id && { color: tokens.primary, fontWeight: look.typography.title.weight },
                 ]}>
                   {loc.name}
                 </Text>
@@ -372,12 +375,19 @@ function formatSunTime(isoDateTime: string | undefined | null): string {
   return `${h12}:${mm}${period}`;
 }
 
-const createStyles = (t: ThemeTokens) => ({
+const createStyles = (t: ThemeTokens, look: LookTokens) => ({
   container: { flex: 1 as const, backgroundColor: t.background },
-  content: { padding: 16, paddingBottom: 40, paddingTop: 20, maxWidth: 600, alignSelf: 'center' as const, width: '100%' as const },
+  content: {
+    padding: look.spacing.lg,
+    paddingBottom: look.spacing.xxxl,
+    paddingTop: look.spacing.xl,
+    maxWidth: 600,
+    alignSelf: 'center' as const,
+    width: '100%' as const,
+  },
 
   card: {
-    backgroundColor: t.card, borderRadius: 12, padding: 16, marginBottom: 12,
+    backgroundColor: t.card, borderRadius: look.radius.surface, padding: look.spacing.lg, marginBottom: 12,
     borderWidth: 1, borderColor: t.borderLight,
   },
   cardHeaderRow: {
@@ -387,30 +397,48 @@ const createStyles = (t: ThemeTokens) => ({
   cardHeaderRight: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    gap: 8,
+    gap: look.spacing.sm,
   },
-  cardTitle: { fontSize: 18, fontWeight: '600' as const, color: t.textPrimary },
+  cardTitle: {
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
+    color: t.textPrimary,
+  },
   cardBadge: {
-    backgroundColor: t.primary, color: t.textOnPrimary, fontSize: 13, fontWeight: '700' as const,
-    paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12,
+    backgroundColor: t.primary, color: t.textOnPrimary,
+    fontSize: look.typography.caption.size,
+    fontWeight: look.typography.caption.weight,
+    letterSpacing: look.typography.caption.tracking,
+    paddingHorizontal: look.spacing.md, paddingVertical: look.spacing.xs, borderRadius: look.radius.surface,
   },
-  cardBody: { fontSize: 14, color: t.textSecondary, lineHeight: 20, marginBottom: 12 },
+  cardBody: { fontSize: look.typography.body.size, color: t.textSecondary, lineHeight: look.typography.body.lineHeight, marginBottom: 12 },
 
   button: {
-    backgroundColor: t.primary, paddingVertical: 12, paddingHorizontal: 20,
-    borderRadius: 8, alignItems: 'center' as const,
+    backgroundColor: t.primary, paddingVertical: look.spacing.md, paddingHorizontal: look.spacing.xl,
+    borderRadius: look.radius.surface, alignItems: 'center' as const,
   },
-  buttonText: { color: t.textOnPrimary, fontSize: 16, fontWeight: '600' as const },
+  buttonText: {
+    color: t.textOnPrimary,
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
+  },
 
-  cardSubtitle: { fontSize: 13, color: t.textTertiary },
+  cardSubtitle: { fontSize: look.typography.caption.size, color: t.textTertiary },
 
   locationPicker: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 6,
+    paddingVertical: look.spacing.xs,
+    paddingHorizontal: look.spacing.md,
+    borderRadius: look.radius.surface,
     backgroundColor: t.primaryLight,
   },
-  locationPickerText: { fontSize: 13, color: t.primary, fontWeight: '600' as const },
+  locationPickerText: {
+    fontSize: look.typography.caption.size,
+    color: t.primary,
+    fontWeight: look.typography.caption.weight,
+    letterSpacing: look.typography.caption.tracking,
+  },
 
   // ── Today's conditions block ──────────────────────────────────
   todayBlock: {
@@ -421,49 +449,51 @@ const createStyles = (t: ThemeTokens) => ({
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    gap: 12,
+    gap: look.spacing.md,
     marginBottom: 8,
   },
   todayEmoji: {
-    fontSize: 48,
-    lineHeight: 56,
+    fontSize: look.typography.display.size,
+    lineHeight: look.typography.display.lineHeight,
   },
   todayTempGroup: {
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
   },
   todayNow: {
-    fontSize: 28,
-    fontWeight: '700' as const,
+    fontSize: look.typography.title.size,
+    fontWeight: look.typography.title.weight,
+    letterSpacing: look.typography.title.tracking,
     color: t.textPrimary,
-    lineHeight: 34,
+    lineHeight: look.typography.title.lineHeight,
   },
   todayHiLoRow: {
     flexDirection: 'row' as const,
-    gap: 12,
+    gap: look.spacing.md,
     marginTop: 2,
   },
   todayHigh: {
-    fontSize: 15,
-    fontWeight: '600' as const,
+    fontSize: look.typography.bodyStrong.size,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
     color: t.textPrimary,
   },
   todayLow: {
-    fontSize: 15,
+    fontSize: look.typography.body.size,
     color: t.textTertiary,
   },
   todayDetailsRow: {
     flexDirection: 'row' as const,
-    gap: 16,
+    gap: look.spacing.lg,
     marginBottom: 6,
     justifyContent: 'center' as const,
   },
   todayDetail: {
-    fontSize: 14,
+    fontSize: look.typography.body.size,
     color: t.textSecondary,
   },
   todaySunRow: {
-    fontSize: 13,
+    fontSize: look.typography.caption.size,
     color: t.textTertiary,
     textAlign: 'center' as const,
   },
@@ -480,44 +510,46 @@ const createStyles = (t: ThemeTokens) => ({
   nextDayRow: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    paddingVertical: 10,
+    paddingVertical: look.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: t.divider,
-    gap: 8,
+    gap: look.spacing.sm,
   },
   nextDayLabel: {
-    fontSize: 13,
-    fontWeight: '600' as const,
+    fontSize: look.typography.caption.size,
+    fontWeight: look.typography.caption.weight,
+    letterSpacing: look.typography.caption.tracking,
     color: t.textSecondary,
     width: 80,
   },
   nextDayEmoji: {
-    fontSize: 20,
+    fontSize: look.typography.heading.size,
     width: 28,
     textAlign: 'center' as const,
   },
   nextDayTemps: {
     flexDirection: 'row' as const,
-    gap: 6,
+    gap: look.spacing.sm,
     flex: 1 as const,
   },
   nextDayHigh: {
-    fontSize: 14,
-    fontWeight: '600' as const,
+    fontSize: look.typography.bodyStrong.size,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
     color: t.textPrimary,
   },
   nextDayLow: {
-    fontSize: 14,
+    fontSize: look.typography.body.size,
     color: t.textTertiary,
   },
   nextDayRain: {
-    fontSize: 12,
+    fontSize: look.typography.label.size,
     color: t.rainBlue,
     width: 48,
     textAlign: 'right' as const,
   },
   nextDayWind: {
-    fontSize: 12,
+    fontSize: look.typography.label.size,
     color: t.textTertiary,
     width: 72,
     textAlign: 'right' as const,
@@ -529,35 +561,51 @@ const createStyles = (t: ThemeTokens) => ({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
-    padding: 20,
+    padding: look.spacing.xl,
   },
   modalContent: {
     backgroundColor: t.card,
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.xl,
     width: '100%' as const,
     maxWidth: 320,
   },
-  modalTitle: { fontSize: 18, fontWeight: '600' as const, color: t.textPrimary, marginBottom: 12 },
-  modalOption: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: t.divider },
-  modalOptionText: { fontSize: 16, color: t.textPrimary },
+  modalTitle: {
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    letterSpacing: look.typography.heading.tracking,
+    color: t.textPrimary,
+    marginBottom: 12,
+  },
+  modalOption: { paddingVertical: look.spacing.md, borderBottomWidth: 1, borderBottomColor: t.divider },
+  modalOptionText: { fontSize: look.typography.heading.size, color: t.textPrimary },
 
   // ── Alert rules ───────────────────────────────────────────────
   ruleRow: {
     flexDirection: 'row' as const, justifyContent: 'space-between' as const,
-    alignItems: 'center' as const, paddingVertical: 10,
+    alignItems: 'center' as const, paddingVertical: look.spacing.md,
     borderBottomWidth: 1, borderBottomColor: t.divider,
   },
-  ruleName: { fontSize: 15, color: t.textPrimary, fontWeight: '500' as const },
-  ruleInterval: { fontSize: 13, color: t.textTertiary },
+  ruleName: {
+    fontSize: look.typography.bodyStrong.size,
+    color: t.textPrimary,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
+  },
+  ruleInterval: { fontSize: look.typography.caption.size, color: t.textTertiary },
 
   // ── History rows ──────────────────────────────────────────────
   historyRow: {
     flexDirection: 'row' as const, justifyContent: 'space-between' as const,
-    alignItems: 'flex-start' as const, paddingVertical: 8,
+    alignItems: 'flex-start' as const, paddingVertical: look.spacing.sm,
     borderBottomWidth: 1, borderBottomColor: t.divider,
   },
-  historyRule: { fontSize: 15, fontWeight: '500' as const, color: t.textPrimary },
-  historySummary: { fontSize: 13, color: t.textSecondary, marginTop: 2 },
-  historyTime: { fontSize: 12, color: t.textTertiary, marginLeft: 8 },
+  historyRule: {
+    fontSize: look.typography.bodyStrong.size,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.bodyStrong.tracking,
+    color: t.textPrimary,
+  },
+  historySummary: { fontSize: look.typography.caption.size, color: t.textSecondary, marginTop: 2 },
+  historyTime: { fontSize: look.typography.label.size, color: t.textTertiary, marginLeft: 8 },
 });
