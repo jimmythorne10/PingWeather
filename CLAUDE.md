@@ -230,8 +230,17 @@ reshape it. Prose belongs underneath, not in the cells.
 
 | Layer | verified_by | Command |
 |---|---|---|
-| pure-logic | unit-real-path | `npx jest --selectProjects logic` |
+| pure-logic | unit-real-path | `npx jest --selectProjects logic --runTestsByPath` |
 | mobile-ui | device | `npx expo start --dev-client` |
+
+**`--runTestsByPath` is load-bearing — do not remove it.** `tct-run-test.sh`
+appends the entry's `test_file` to this command. Without the flag, the appended
+path is treated as a positional test-name pattern, and under `--selectProjects`
+jest **ignores it and runs all 56 suites** (measured 2026-09-11: with the flag,
+1 suite / 7 tests; without it, 56 suites / 912 tests). Every chain record would
+then carry the whole suite's result under a single feature's id — a record
+saying `FEAT-001 fail` while FEAT-001 passes and something unrelated is red.
+That is per-feature evidence in name only.
 
 **pure-logic / unit-real-path** — the Jest `logic` project (node env). **This is
 acceptable verification per the ruthless-mentor contract.** Its `testMatch`
