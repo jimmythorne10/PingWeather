@@ -166,6 +166,29 @@
         "automated": false,
         "confidence": "medium"
       }
+    },
+    {
+      "id": "FEAT-008",
+      "name": "Onboarding and legal screens render under both looks",
+      "acceptance": "When the operator opens each of the 9 screens under app/onboarding/ and app/legal/ in the EAS dev build, under look aurora and then under look classic, then every screen renders with readable text and reachable controls in both.",
+      "layer": "mobile-ui",
+      "passes": false,
+      "verified_by": "device",
+      "test_file": "__tests__/theme/noHardcodedLiterals.test.ts",
+      "source_scenario": "AGENT-DERIVED: these 9 files are on the tdd-guard.yaml exclusion list and have no per-screen test of any kind, so nothing observes how they RENDER after the migration. FEAT-002's scan proves their literals are gone; no automated check on this project proves they still look right. The operator asked for EVERY screen to be upgraded, so leaving the only screens with zero UI coverage unowned would silently narrow that scope.",
+      "impl_file": null,
+      "last_run_at": null,
+      "last_run_result": null,
+      "owner": "operator",
+      "blockers": [],
+      "notes": "OPERATOR-ONLY, and added by the orchestrator without being asked — the original write-up left this hole as a prose warning in tasks.md instead of giving it an owner, which is the failure mode this framework exists to remove. Scope: app/onboarding/{welcome,privacy,eula,battery-setup,location-setup,notification-setup,complete}.tsx and app/legal/{eula,privacy-policy}.tsx. The bound test_file is FEAT-002's scanner, listed because every entry must be bound; it proves the literals are gone, NOT that the screens render, and must never be cited as proof of the latter. To close, record device model, date, and a per-screen line for all 9 under BOTH looks. tdd-guard cannot be armed for these files: it matches by basename and no per-screen test exists, so removing the exclusion would block all work on them without adding any real coverage.",
+      "oracle": {
+        "condition": "Install the EAS dev build carrying the migration. Walk the onboarding wizard end to end and open both legal screens, first with look set to aurora, then repeat with look set to classic.",
+        "assertion": "All 9 screens render with no clipped or overlapping text, every button and link is reachable and tappable, and no screen is blank or red-boxed — in both looks.",
+        "failure_mode": "A screen renders with text clipped by a container sized for the other look's proportions, a control pushed off-screen, or a blank body where a factory conversion dropped the style object.",
+        "automated": false,
+        "confidence": "medium"
+      }
     }
   ]
 }
