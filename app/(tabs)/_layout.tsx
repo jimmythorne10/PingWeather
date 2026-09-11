@@ -4,7 +4,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeStore } from '../../src/stores/themeStore';
 
 export default function TabLayout() {
-  const tokens = useThemeStore((s) => s.tokens);
+  // `tokens` now holds STRUCTURE; colour moved to `colors` when the look axis
+  // landed. Aliased rather than renamed so the JSX below stays untouched.
+  const tokens = useThemeStore((s) => s.colors);
   const insets = useSafeAreaInsets();
 
   return (

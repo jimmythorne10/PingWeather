@@ -31,10 +31,10 @@ function resetSettingsStore() {
 }
 
 function resetThemeStore() {
-  useThemeStore.setState({
-    themeName: 'classic',
-    tokens: THEMES.classic,
-  });
+  // Go through the real setter rather than hand-seeding state: `tokens` now
+  // holds STRUCTURE and `colors` holds colour, and setTheme resolves both
+  // together (plus the look that owns the palette).
+  useThemeStore.getState().setTheme('classic');
 }
 
 beforeEach(() => {
@@ -107,22 +107,22 @@ describe('settingsStore', () => {
       useThemeStore.getState().setTheme('dark');
       const state = useThemeStore.getState();
       expect(state.themeName).toBe('dark');
-      expect(state.tokens).toEqual(THEMES.dark);
+      expect(state.colors).toEqual(THEMES.dark);
     });
 
     it('updates to storm theme and sets correct tokens', () => {
       useThemeStore.getState().setTheme('storm');
       const state = useThemeStore.getState();
       expect(state.themeName).toBe('storm');
-      expect(state.tokens).toEqual(THEMES.storm);
+      expect(state.colors).toEqual(THEMES.storm);
     });
 
     it('updates to classic theme and sets correct tokens', () => {
-      useThemeStore.setState({ themeName: 'dark', tokens: THEMES.dark });
+      useThemeStore.getState().setTheme('dark');
       useThemeStore.getState().setTheme('classic');
       const state = useThemeStore.getState();
       expect(state.themeName).toBe('classic');
-      expect(state.tokens).toEqual(THEMES.classic);
+      expect(state.colors).toEqual(THEMES.classic);
     });
   });
 

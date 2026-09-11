@@ -59,7 +59,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     if (this.state.hasError) {
       // Read theme tokens synchronously — safe in a class render because
       // getState() is a plain object read, not a subscription.
-      const tokens = useThemeStore.getState().tokens;
+      const tokens = useThemeStore.getState().colors;
 
       return (
         <View style={[styles.container, { backgroundColor: tokens.background }]}>

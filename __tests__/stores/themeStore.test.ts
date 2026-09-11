@@ -19,7 +19,7 @@ import { useThemeStore } from '../../src/stores/themeStore';
 import { THEMES, type ThemeName, type ThemeTokens } from '../../src/theme/tokens';
 
 function resetStore() {
-  useThemeStore.setState({ themeName: 'classic', tokens: THEMES.classic });
+  useThemeStore.getState().setTheme('classic');
 }
 
 // Required token keys that every theme must define
@@ -69,7 +69,7 @@ describe('themeStore', () => {
     it('defaults to classic theme with classic tokens', () => {
       const state = useThemeStore.getState();
       expect(state.themeName).toBe('classic');
-      expect(state.tokens).toEqual(THEMES.classic);
+      expect(state.colors).toEqual(THEMES.classic);
     });
 
     it('setTheme updates themeName and tokens together', () => {
@@ -78,7 +78,7 @@ describe('themeStore', () => {
 
       const state = useThemeStore.getState();
       expect(state.themeName).toBe('dark');
-      expect(state.tokens).toEqual(THEMES.dark);
+      expect(state.colors).toEqual(THEMES.dark);
     });
 
     it('setTheme switches to storm theme', () => {
@@ -86,7 +86,7 @@ describe('themeStore', () => {
 
       const state = useThemeStore.getState();
       expect(state.themeName).toBe('storm');
-      expect(state.tokens).toEqual(THEMES.storm);
+      expect(state.colors).toEqual(THEMES.storm);
     });
 
     it('setTheme switches back to classic', () => {
@@ -94,7 +94,7 @@ describe('themeStore', () => {
       useThemeStore.getState().setTheme('classic');
 
       expect(useThemeStore.getState().themeName).toBe('classic');
-      expect(useThemeStore.getState().tokens).toEqual(THEMES.classic);
+      expect(useThemeStore.getState().colors).toEqual(THEMES.classic);
     });
   });
 
@@ -129,7 +129,7 @@ describe('themeStore', () => {
       it(`${name} theme can be set via setTheme`, () => {
         useThemeStore.getState().setTheme(name);
         expect(useThemeStore.getState().themeName).toBe(name);
-        expect(useThemeStore.getState().tokens).toEqual(THEMES[name]);
+        expect(useThemeStore.getState().colors).toEqual(THEMES[name]);
       });
     });
   });
@@ -142,10 +142,23 @@ describe('themeStore', () => {
       expect(AsyncStorage).toBeDefined();
     });
 
-    it('only persists themeName (not tokens) via partialize', () => {
-      // tokens are rehydrated from THEMES lookup on restart
+    it('only persists the look and palette NAMES via partialize', () => {
+      // Resolved token objects are rebuilt on rehydration, never stored —
+      // persisting them would freeze a copy of the design system onto every
+      // device, so a later token change would never reach anyone who had
+      // already launched the app.
       useThemeStore.getState().setTheme('storm');
       expect(useThemeStore.getState().themeName).toBe('storm');
+
+      const opts = (useThemeStore as unknown as {
+        persist: { getOptions: () => { partialize?: (s: unknown) => unknown } };
+      }).persist.getOptions();
+      const persisted = opts.partialize?.(useThemeStore.getState()) as Record<string, unknown>;
+
+      expect(Object.keys(persisted).sort()).toEqual(['look', 'palette']);
+      expect(persisted.palette).toBe('storm');
+      // storm belongs to the classic look, so asking for it carries the look.
+      expect(persisted.look).toBe('classic');
     });
   });
 });
