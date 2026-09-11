@@ -2,7 +2,147 @@
   "$schema": "https://example.com/ship-framework/manifest.schema.json",
   "spec_version": "1.0",
   "project": "WeatherBeacon",
-  "spec_hash": null,
-  "generated_at": "2026-09-09T00:00:00Z",
-  "features": []
+  "spec_file": ".claude/specs/design-system-v2/spec.md",
+  "spec_hash": "sha256:241114cb5a25e96ec287f6cdc96c0bee05d950161e48170132416353d413b2b3",
+  "generated_at": "2026-09-11T00:00:00Z",
+  "features": [
+    {
+      "id": "FEAT-001",
+      "name": "Structural token contract complete for every look",
+      "acceptance": "When a unit test enumerates every entry of the exported LOOKS record, then every look object exposes all 21 required structural token keys with non-null values.",
+      "layer": "pure-logic",
+      "passes": false,
+      "verified_by": "unit-real-path",
+      "test_file": "__tests__/theme/lookContract.test.ts",
+      "source_scenario": "Scenario 1",
+      "impl_file": "src/theme/looks.ts",
+      "last_run_at": null,
+      "last_run_result": null,
+      "owner": "orchestrator",
+      "blockers": [],
+      "notes": "21 keys = typography 7 + spacing 7 + radius 2 + surface 1 + motion 4. The existing __tests__/stores/themeStore.test.ts asserts every token value matches a hex/rgba regex, which numeric structural tokens will violate — that suite needs new describe blocks, not a patched regex.",
+      "oracle": {
+        "condition": "Import LOOKS from src/theme/looks.ts and iterate Object.entries(LOOKS). For each look, read the key set of its typography, spacing, radius, surface and motion groups.",
+        "assertion": "For each of the 2 looks, the flattened key set deep-equals the exported REQUIRED_STRUCTURAL_KEYS array of length 21, and every resolved value is neither null nor undefined.",
+        "failure_mode": "A look is missing a key (length < 21), carries an extra undeclared key, or resolves a key to null or undefined — any of which crashes a screen that reads that token at render time.",
+        "automated": true,
+        "confidence": "high"
+      }
+    },
+    {
+      "id": "FEAT-002",
+      "name": "Zero hardcoded style literals outside documented exceptions",
+      "acceptance": "When a unit test scans app/** and src/components/** excluding the three files documented as deliberately hardcoded, then the scan reports zero numeric style literals.",
+      "layer": "pure-logic",
+      "passes": false,
+      "verified_by": "unit-real-path",
+      "test_file": "__tests__/theme/noHardcodedLiterals.test.ts",
+      "source_scenario": "Scenario 2",
+      "impl_file": null,
+      "last_run_at": null,
+      "last_run_result": null,
+      "owner": "orchestrator",
+      "blockers": [],
+      "notes": "impl_file is deliberately null: the implementation is the ABSENCE of literals across 33 files, not a single module, so there is no file that can carry CHALLENGER sentinels. Baseline 901 literals measured 2026-09-09. Exclusions: app/_layout.tsx and src/components/UpdateCheckScreen.tsx pin brand navy to match the native splash; app/radar.tsx Mapbox-native props are not React Native styles. 15 of 33 files use module-scope StyleSheet.create with no access to tokens and need factory conversion before any literal is reachable.",
+      "oracle": {
+        "condition": "Walk every .ts/.tsx file under app/ and src/components/, excluding app/_layout.tsx, src/components/UpdateCheckScreen.tsx and the Mapbox-native props in app/radar.tsx, matching numeric fontSize, fontWeight, borderRadius, padding*, gap, lineHeight and letterSpacing declarations.",
+        "assertion": "The collected match array has length 0, down from the 901 measured on 2026-09-09.",
+        "failure_mode": "Any file still carries an inline numeric style value, meaning that screen does not respond to a look change and renders Aurora proportions while set to Classic.",
+        "automated": true,
+        "confidence": "high"
+      }
+    },
+    {
+      "id": "FEAT-003",
+      "name": "Each look offers only its own palettes",
+      "acceptance": "When a unit test reads the palette set exposed for look aurora and for look classic, then aurora exposes exactly blaze plus timber while classic exposes exactly classic, dark, storm.",
+      "layer": "pure-logic",
+      "passes": false,
+      "verified_by": "unit-real-path",
+      "test_file": "__tests__/theme/palettesForLook.test.ts",
+      "source_scenario": "Scenario 3",
+      "impl_file": "src/theme/looks.ts",
+      "last_run_at": null,
+      "last_run_result": null,
+      "owner": "orchestrator",
+      "blockers": [],
+      "notes": "This entry exists because holding look and palette fully independent broke once every Aurora candidate became dark. Pairing them is the fix; this test is what stops the pairing being silently undone.",
+      "oracle": {
+        "condition": "Call palettesForLook('aurora') and palettesForLook('classic') from src/theme/looks.ts.",
+        "assertion": "palettesForLook('aurora') sorted deep-equals ['blaze','timber'] with length 2, and palettesForLook('classic') sorted deep-equals ['classic','dark','storm'] with length 3.",
+        "failure_mode": "A palette is returned under the wrong look — blaze offered under classic — rendering a near-black ground against 12px radii and light-palette text colours.",
+        "automated": true,
+        "confidence": "high"
+      }
+    },
+    {
+      "id": "FEAT-004",
+      "name": "Revert to Classic restores proportions and colours together",
+      "acceptance": "When setLook('classic') is dispatched from a state where look equals aurora, then the resolved structural tokens and palette deep-equal the frozen Classic snapshot.",
+      "layer": "pure-logic",
+      "passes": false,
+      "verified_by": "unit-real-path",
+      "test_file": "__tests__/stores/themeStoreLook.test.ts",
+      "source_scenario": "Scenario 4",
+      "impl_file": "src/stores/themeStore.ts",
+      "last_run_at": null,
+      "last_run_result": null,
+      "owner": "orchestrator",
+      "blockers": [],
+      "notes": "The Classic snapshot must match src/theme/tokens.ts THEMES.classic byte-for-byte: background #F0F4F8, primary #1E3A5F, textPrimary #1A202C, freezeBlue #63B3ED. A partial revert leaves the user in a state neither look defines.",
+      "oracle": {
+        "condition": "Set useThemeStore state to { look: 'aurora', palette: 'timber' }, then call getState().setLook('classic').",
+        "assertion": "getState().tokens deep-equals LOOKS.classic AND getState().palette equals 'classic' with getState().colors deep-equalling PALETTES.classic, whose values match src/theme/tokens.ts THEMES.classic byte-for-byte.",
+        "failure_mode": "Structure reverts but colours stay dark, or colours revert but radii stay at 18 — a partial revert leaving a state neither look defines.",
+        "automated": true,
+        "confidence": "high"
+      }
+    },
+    {
+      "id": "FEAT-005",
+      "name": "Look choice survives an app restart",
+      "acceptance": "When the theme store rehydrates from AsyncStorage carrying a persisted look of classic, then the store resolves structural tokens to the classic set before first render.",
+      "layer": "pure-logic",
+      "passes": false,
+      "verified_by": "unit-real-path",
+      "test_file": "__tests__/stores/themeStoreRehydrate.test.ts",
+      "source_scenario": "Scenario 5",
+      "impl_file": "src/stores/themeStore.ts",
+      "last_run_at": null,
+      "last_run_result": null,
+      "owner": "orchestrator",
+      "blockers": [],
+      "notes": "The existing store persists only themeName via partialize and re-resolves tokens in onRehydrateStorage. The look axis must follow the same pattern or a restart silently discards the user's choice. Persisted key is 'pingweather-theme' — unchanged, since renaming it would orphan every existing user's stored preference.",
+      "oracle": {
+        "condition": "Seed the AsyncStorage mock with key 'pingweather-theme' holding { state: { look: 'classic', palette: 'classic' } }, then trigger the store's onRehydrateStorage callback.",
+        "assertion": "Immediately after rehydration and before any setLook call, getState().tokens deep-equals LOOKS.classic and getState().look equals 'classic'.",
+        "failure_mode": "tokens remain LOOKS.aurora because onRehydrateStorage restored the look name without re-resolving the token object.",
+        "automated": true,
+        "confidence": "high"
+      }
+    },
+    {
+      "id": "FEAT-006",
+      "name": "Radar screen renders after the migration",
+      "acceptance": "When the operator opens the Radar screen in the EAS dev build on a physical Android device, then the Mapbox raster layer renders without crashing the screen.",
+      "layer": "mobile-ui",
+      "passes": false,
+      "verified_by": "device",
+      "test_file": "__tests__/theme/radarNativeProps.test.ts",
+      "source_scenario": "Scenario 6",
+      "impl_file": "app/radar.tsx",
+      "last_run_at": null,
+      "last_run_result": null,
+      "owner": "operator",
+      "blockers": [],
+      "notes": "TWO LAYERS, deliberately split. The bound test is a real falsifiable guard: it asserts the literal scanner excludes MapboxGL props and that app/radar.tsx line 65 RasterLayer style prop is not rewritten into a React Native style object. It does NOT prove the map draws. __tests__/screens/radar.test.tsx mocks @rnmapbox/maps entirely at lines 28-44 and can never observe a native regression, so it is NOT cited here. Device verification by the operator covers actual rendering and must record: device model, date, map tiles drawn, scrub control responsive, no red-box. Two broken OTAs shipped 2026-05-07 through exactly this gap.",
+      "oracle": {
+        "condition": "Install the EAS dev build carrying the migration, open the app, navigate to the Radar screen, and scrub the frame timeline.",
+        "assertion": "The map tiles draw, the scrub control responds, and no red-box error or blank screen appears.",
+        "failure_mode": "Blank screen or a native crash, indicating the migration rewrote MapboxGL.RasterLayer's style prop at app/radar.tsx line 65 as if it were a React Native style object.",
+        "automated": false,
+        "confidence": "medium"
+      }
+    }
+  ]
 }
