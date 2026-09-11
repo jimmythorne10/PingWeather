@@ -19,6 +19,8 @@ export interface TypeStep {
   weight: '200' | '300' | '400' | '500' | '600' | '700' | '800';
   /** px, negative tightens */
   tracking: number;
+  /** px. Leading. Never below `size`. */
+  lineHeight: number;
 }
 
 export interface LookTokens {
@@ -96,13 +98,13 @@ export const LOOKS: Record<LookName, LookTokens> = {
   // scale collapsing the 21 shipped font sizes down to 7 steps.
   aurora: {
     typography: {
-      display: { size: 66, weight: '600', tracking: -2.6 },
-      title: { size: 40, weight: '700', tracking: -1.4 },
-      heading: { size: 19, weight: '600', tracking: -0.3 },
-      body: { size: 15, weight: '400', tracking: 0 },
-      bodyStrong: { size: 15, weight: '600', tracking: 0 },
-      caption: { size: 13, weight: '500', tracking: 0 },
-      label: { size: 10.5, weight: '700', tracking: 1.6 },
+      display: { size: 66, weight: '600', tracking: -2.6, lineHeight: 68 },
+      title: { size: 40, weight: '700', tracking: -1.4, lineHeight: 44 },
+      heading: { size: 19, weight: '600', tracking: -0.3, lineHeight: 24 },
+      body: { size: 15, weight: '400', tracking: 0, lineHeight: 22 },
+      bodyStrong: { size: 15, weight: '600', tracking: 0, lineHeight: 22 },
+      caption: { size: 13, weight: '500', tracking: 0, lineHeight: 18 },
+      label: { size: 10.5, weight: '700', tracking: 1.6, lineHeight: 14 },
     },
     spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 },
     radius: { surface: 18, nav: 26 },
@@ -117,13 +119,13 @@ export const LOOKS: Record<LookName, LookTokens> = {
   // "Revert to Classic" restores.
   classic: {
     typography: {
-      display: { size: 48, weight: '700', tracking: 0 },
-      title: { size: 28, weight: '700', tracking: 0 },
-      heading: { size: 16, weight: '600', tracking: 0 },
-      body: { size: 14, weight: '400', tracking: 0 },
-      bodyStrong: { size: 14, weight: '600', tracking: 0 },
-      caption: { size: 13, weight: '600', tracking: 0 },
-      label: { size: 12, weight: '600', tracking: 0.5 },
+      display: { size: 48, weight: '700', tracking: 0, lineHeight: 52 },
+      title: { size: 28, weight: '700', tracking: 0, lineHeight: 34 },
+      heading: { size: 16, weight: '600', tracking: 0, lineHeight: 22 },
+      body: { size: 14, weight: '400', tracking: 0, lineHeight: 20 },
+      bodyStrong: { size: 14, weight: '600', tracking: 0, lineHeight: 20 },
+      caption: { size: 13, weight: '600', tracking: 0, lineHeight: 18 },
+      label: { size: 12, weight: '600', tracking: 0.5, lineHeight: 16 },
     },
     spacing: { xs: 4, sm: 8, md: 10, lg: 16, xl: 20, xxl: 24, xxxl: 40 },
     radius: { surface: 12, nav: 0 },
