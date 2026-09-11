@@ -1,12 +1,77 @@
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useTokens } from '../../src/theme';
+import { useStyles } from '../../src/theme';
 import { useAuthStore } from '../../src/stores/authStore';
 
 export default function CompleteScreen() {
   const router = useRouter();
-  const t = useTokens();
   const updateProfile = useAuthStore((s) => s.updateProfile);
+  const styles = useStyles((c, look) => ({
+    container: {
+      flex: 1,
+      justifyContent: 'space-between',
+      padding: look.spacing.xxl,
+      paddingTop: look.spacing.xxxl + look.spacing.xxl,
+      paddingBottom: look.spacing.xxxl,
+      backgroundColor: c.primary,
+    },
+    content: {
+      alignItems: 'center',
+      maxWidth: 480,
+      alignSelf: 'center',
+      width: '100%',
+    },
+    icon: {
+      fontSize: look.typography.display.size,
+      marginBottom: 16,
+    },
+    title: {
+      fontSize: look.typography.title.size,
+      fontWeight: look.typography.title.weight,
+      marginBottom: 12,
+      color: c.textOnPrimary,
+    },
+    subtitle: {
+      fontSize: look.typography.heading.size,
+      textAlign: 'center',
+      lineHeight: look.typography.heading.lineHeight,
+      marginBottom: 32,
+      color: c.textOnPrimary,
+      opacity: 0.9,
+    },
+    summaryCard: {
+      width: '100%',
+      borderRadius: look.radius.surface,
+      padding: look.spacing.xl,
+      backgroundColor: 'rgba(255,255,255,0.15)',
+    },
+    summaryTitle: {
+      fontSize: look.typography.heading.size,
+      fontWeight: look.typography.heading.weight,
+      marginBottom: 12,
+      color: c.textOnPrimary,
+    },
+    summaryItem: {
+      fontSize: look.typography.body.size,
+      lineHeight: look.typography.body.lineHeight,
+      color: c.textOnPrimary,
+      opacity: 0.9,
+    },
+    button: {
+      paddingVertical: look.spacing.lg,
+      borderRadius: look.radius.surface,
+      alignItems: 'center',
+      maxWidth: 480,
+      alignSelf: 'center',
+      width: '100%',
+      backgroundColor: c.textOnPrimary,
+    },
+    buttonText: {
+      fontSize: look.typography.heading.size,
+      fontWeight: look.typography.heading.weight,
+      color: c.primary,
+    },
+  }));
 
   const handleComplete = async () => {
     const ok = await updateProfile({ onboarding_completed: true });
@@ -20,24 +85,24 @@ export default function CompleteScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: t.primary }]}>
+    <View style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.icon}>{'✅'}</Text>
-        <Text style={[styles.title, { color: t.textOnPrimary }]}>You're All Set!</Text>
-        <Text style={[styles.subtitle, { color: t.textOnPrimary, opacity: 0.9 }]}>
+        <Text style={styles.title}>You're All Set!</Text>
+        <Text style={styles.subtitle}>
           WeatherBeacon is ready to keep you informed. Set up your first alert
           rule and never miss critical weather again.
         </Text>
 
-        <View style={[styles.summaryCard, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
-          <Text style={[styles.summaryTitle, { color: t.textOnPrimary }]}>Next Steps</Text>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Next Steps</Text>
           {[
             'Add a location to monitor',
             'Choose an alert preset or build a custom rule',
             'Set your polling interval',
             'Sit back — we\'ll notify you',
           ].map((step, i) => (
-            <Text key={i} style={[styles.summaryItem, { color: t.textOnPrimary, opacity: 0.9 }]}>
+            <Text key={i} style={styles.summaryItem}>
               {i + 1}. {step}
             </Text>
           ))}
@@ -45,68 +110,11 @@ export default function CompleteScreen() {
       </View>
 
       <Pressable
-        style={[styles.button, { backgroundColor: t.textOnPrimary }]}
+        style={styles.button}
         onPress={handleComplete}
       >
-        <Text style={[styles.buttonText, { color: t.primary }]}>Start Using WeatherBeacon</Text>
+        <Text style={styles.buttonText}>Start Using WeatherBeacon</Text>
       </Pressable>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'space-between',
-    padding: 32,
-    paddingTop: 80,
-    paddingBottom: 48,
-  },
-  content: {
-    alignItems: 'center',
-    maxWidth: 480,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  icon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '800',
-    marginBottom: 12,
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
-  },
-  summaryCard: {
-    width: '100%',
-    borderRadius: 12,
-    padding: 20,
-  },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-  summaryItem: {
-    fontSize: 15,
-    lineHeight: 28,
-  },
-  button: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    maxWidth: 480,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-});

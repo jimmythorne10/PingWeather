@@ -1,7 +1,7 @@
-import { View, Text, Pressable, StyleSheet, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { useTokens } from '../../src/theme';
+import { useStyles, useTokens } from '../../src/theme';
 import { useDeviceLocation } from '../../src/hooks/useLocation';
 import { useLocationsStore } from '../../src/stores/locationsStore';
 import { LocationSearchInput } from '../../src/components/LocationSearchInput';
@@ -17,6 +17,113 @@ export default function LocationSetupScreen() {
   const [gpsCoords, setGpsCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [timezone, setTimezone] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const styles = useStyles((c, look) => ({
+    container: {
+      flex: 1,
+      justifyContent: 'space-between',
+      padding: look.spacing.xl,
+      paddingTop: look.spacing.xxxl + look.spacing.md,
+      paddingBottom: look.spacing.xxxl,
+      backgroundColor: c.background,
+    },
+    content: {
+      alignItems: 'center',
+      maxWidth: 480,
+      alignSelf: 'center',
+      width: '100%',
+    },
+    icon: {
+      fontSize: look.typography.display.size,
+      marginBottom: 16,
+    },
+    title: {
+      fontSize: look.typography.title.size,
+      fontWeight: look.typography.title.weight,
+      marginBottom: 8,
+      textAlign: 'center',
+      color: c.textPrimary,
+    },
+    subtitle: {
+      fontSize: look.typography.body.size,
+      textAlign: 'center',
+      lineHeight: look.typography.body.lineHeight,
+      marginBottom: 32,
+      color: c.textSecondary,
+    },
+    input: {
+      width: '100%',
+      borderWidth: 1,
+      borderRadius: look.radius.surface,
+      paddingVertical: look.spacing.lg,
+      paddingHorizontal: look.spacing.lg,
+      fontSize: look.typography.heading.size,
+      marginBottom: 16,
+      backgroundColor: c.inputBackground,
+      borderColor: c.border,
+      color: c.textPrimary,
+    },
+    locationButton: {
+      width: '100%',
+      // Tie between md(12)/lg(16) for literal 14 — no exact guide entry;
+      // md chosen for consistency with the same tie elsewhere in this migration.
+      paddingVertical: look.spacing.md,
+      borderRadius: look.radius.surface,
+      borderWidth: 1,
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    locationButtonText: {
+      fontSize: look.typography.bodyStrong.size,
+      fontWeight: look.typography.bodyStrong.weight,
+    },
+    errorText: {
+      fontSize: look.typography.caption.size,
+      marginTop: 4,
+      marginBottom: 8,
+      color: c.error,
+    },
+    orText: {
+      fontSize: look.typography.caption.size,
+      marginTop: 12,
+      marginBottom: 12,
+      color: c.textTertiary,
+    },
+    coordRow: {
+      flexDirection: 'row',
+      gap: look.spacing.md,
+      width: '100%',
+    },
+    coordInput: {
+      flex: 1,
+      borderWidth: 1,
+      borderRadius: look.radius.surface,
+      // Tie between md(12)/lg(16) for literal 14 — no exact guide entry;
+      // md chosen for consistency with the same tie elsewhere in this migration.
+      paddingVertical: look.spacing.md,
+      paddingHorizontal: look.spacing.md,
+      fontSize: look.typography.bodyStrong.size,
+      backgroundColor: c.inputBackground,
+      borderColor: c.border,
+      color: c.textPrimary,
+    },
+    buttons: {
+      gap: look.spacing.md,
+      maxWidth: 480,
+      alignSelf: 'center',
+      width: '100%',
+    },
+    nextButton: {
+      paddingVertical: look.spacing.lg,
+      borderRadius: look.radius.surface,
+      alignItems: 'center',
+      backgroundColor: c.primary,
+    },
+    nextButtonText: {
+      fontSize: look.typography.heading.size,
+      fontWeight: look.typography.heading.weight,
+      color: c.textOnPrimary,
+    },
+  }));
 
   const parsedLat = parseFloat(latStr);
   const parsedLon = parseFloat(lonStr);
@@ -51,24 +158,17 @@ export default function LocationSetupScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: t.background }]}>
+    <View style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.icon}>📍</Text>
-        <Text style={[styles.title, { color: t.textPrimary }]}>Add Your First Location</Text>
-        <Text style={[styles.subtitle, { color: t.textSecondary }]}>
+        <Text style={styles.title}>Add Your First Location</Text>
+        <Text style={styles.subtitle}>
           Give it a name (e.g., "Home", "North Pasture", "Job Site") and we'll
           find its coordinates.
         </Text>
 
         <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: t.inputBackground,
-              borderColor: t.border,
-              color: t.textPrimary,
-            },
-          ]}
+          style={styles.input}
           placeholder="Location name"
           placeholderTextColor={t.textTertiary}
           value={locationName}
@@ -108,19 +208,16 @@ export default function LocationSetupScreen() {
         </Pressable>
 
         {locError && (
-          <Text style={[styles.errorText, { color: t.error }]}>{locError}</Text>
+          <Text style={styles.errorText}>{locError}</Text>
         )}
 
-        <Text style={[styles.orText, { color: t.textTertiary }]}>
+        <Text style={styles.orText}>
           — or enter coordinates manually —
         </Text>
 
         <View style={styles.coordRow}>
           <TextInput
-            style={[
-              styles.coordInput,
-              { backgroundColor: t.inputBackground, borderColor: t.border, color: t.textPrimary },
-            ]}
+            style={styles.coordInput}
             placeholder="Latitude"
             placeholderTextColor={t.textTertiary}
             keyboardType="numeric"
@@ -128,10 +225,7 @@ export default function LocationSetupScreen() {
             onChangeText={setLatStr}
           />
           <TextInput
-            style={[
-              styles.coordInput,
-              { backgroundColor: t.inputBackground, borderColor: t.border, color: t.textPrimary },
-            ]}
+            style={styles.coordInput}
             placeholder="Longitude"
             placeholderTextColor={t.textTertiary}
             keyboardType="numeric"
@@ -143,11 +237,11 @@ export default function LocationSetupScreen() {
 
       <View style={styles.buttons}>
         <Pressable
-          style={[styles.nextButton, { backgroundColor: t.primary }]}
+          style={styles.nextButton}
           onPress={handleNext}
           disabled={saving}
         >
-          <Text style={[styles.nextButtonText, { color: t.textOnPrimary }]}>
+          <Text style={styles.nextButtonText}>
             {saving ? 'Saving...' : 'Next'}
           </Text>
         </Pressable>
@@ -155,94 +249,3 @@ export default function LocationSetupScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'space-between',
-    padding: 24,
-    paddingTop: 60,
-    paddingBottom: 48,
-  },
-  content: {
-    alignItems: 'center',
-    maxWidth: 480,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  icon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 15,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 32,
-  },
-  input: {
-    width: '100%',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  locationButton: {
-    width: '100%',
-    paddingVertical: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  locationButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  errorText: {
-    fontSize: 13,
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  orText: {
-    fontSize: 13,
-    marginTop: 12,
-    marginBottom: 12,
-  },
-  coordRow: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  coordInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    fontSize: 15,
-  },
-  buttons: {
-    gap: 12,
-    maxWidth: 480,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  nextButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  nextButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-});

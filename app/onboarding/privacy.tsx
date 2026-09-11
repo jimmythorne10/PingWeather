@@ -1,17 +1,84 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useTokens } from '../../src/theme';
+import { useStyles } from '../../src/theme';
 
 export default function PrivacyScreen() {
   const router = useRouter();
-  const t = useTokens();
+  const styles = useStyles((c, look) => ({
+    container: {
+      flex: 1,
+      justifyContent: 'space-between',
+      padding: look.spacing.xl,
+      paddingTop: look.spacing.xxxl + look.spacing.md,
+      paddingBottom: look.spacing.xxxl,
+      backgroundColor: c.background,
+    },
+    content: {
+      maxWidth: 480,
+      alignSelf: 'center',
+      width: '100%',
+    },
+    title: {
+      fontSize: look.typography.title.size,
+      fontWeight: look.typography.title.weight,
+      marginBottom: 24,
+      textAlign: 'center',
+      color: c.textPrimary,
+    },
+    card: {
+      borderRadius: look.radius.surface,
+      padding: look.spacing.xl,
+      borderWidth: 1,
+      gap: look.spacing.xl,
+      backgroundColor: c.card,
+      borderColor: c.borderLight,
+    },
+    item: {
+      flexDirection: 'row',
+      // Tie between md(12)/lg(16) for literal 14 — no exact guide entry;
+      // md chosen for consistency with the same tie elsewhere in this migration.
+      gap: look.spacing.md,
+    },
+    itemIcon: {
+      fontSize: look.typography.title.size,
+      marginTop: 2,
+    },
+    itemText: {
+      flex: 1,
+    },
+    itemHeading: {
+      fontSize: look.typography.heading.size,
+      fontWeight: look.typography.heading.weight,
+      marginBottom: 4,
+      color: c.textPrimary,
+    },
+    itemBody: {
+      fontSize: look.typography.body.size,
+      lineHeight: look.typography.body.lineHeight,
+      color: c.textSecondary,
+    },
+    button: {
+      paddingVertical: look.spacing.lg,
+      borderRadius: look.radius.surface,
+      alignItems: 'center',
+      maxWidth: 480,
+      alignSelf: 'center',
+      width: '100%',
+      backgroundColor: c.primary,
+    },
+    buttonText: {
+      fontSize: look.typography.heading.size,
+      fontWeight: look.typography.heading.weight,
+      color: c.textOnPrimary,
+    },
+  }));
 
   return (
-    <View style={[styles.container, { backgroundColor: t.background }]}>
+    <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={[styles.title, { color: t.textPrimary }]}>Your Privacy Matters</Text>
+        <Text style={styles.title}>Your Privacy Matters</Text>
 
-        <View style={[styles.card, { backgroundColor: t.card, borderColor: t.borderLight }]}>
+        <View style={styles.card}>
           {[
             ['📍', 'Location Privacy', 'We only store the coordinates you choose to monitor. No continuous tracking.'],
             ['🔒', 'Minimal Data', 'We collect only what is needed to deliver your alerts. No ads, no data selling.'],
@@ -21,8 +88,8 @@ export default function PrivacyScreen() {
             <View key={heading} style={styles.item}>
               <Text style={styles.itemIcon}>{icon}</Text>
               <View style={styles.itemText}>
-                <Text style={[styles.itemHeading, { color: t.textPrimary }]}>{heading}</Text>
-                <Text style={[styles.itemBody, { color: t.textSecondary }]}>{body}</Text>
+                <Text style={styles.itemHeading}>{heading}</Text>
+                <Text style={styles.itemBody}>{body}</Text>
               </View>
             </View>
           ))}
@@ -30,70 +97,11 @@ export default function PrivacyScreen() {
       </View>
 
       <Pressable
-        style={[styles.button, { backgroundColor: t.primary }]}
+        style={styles.button}
         onPress={() => router.push('/onboarding/eula')}
       >
-        <Text style={[styles.buttonText, { color: t.textOnPrimary }]}>Continue</Text>
+        <Text style={styles.buttonText}>Continue</Text>
       </Pressable>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'space-between',
-    padding: 24,
-    paddingTop: 60,
-    paddingBottom: 48,
-  },
-  content: {
-    maxWidth: 480,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  card: {
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    gap: 20,
-  },
-  item: {
-    flexDirection: 'row',
-    gap: 14,
-  },
-  itemIcon: {
-    fontSize: 28,
-    marginTop: 2,
-  },
-  itemText: {
-    flex: 1,
-  },
-  itemHeading: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  itemBody: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  button: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    maxWidth: 480,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-});

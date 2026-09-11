@@ -4,14 +4,13 @@ import {
   Text,
   TextInput,
   Pressable,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../src/utils/supabase';
-import { useTokens } from '../src/theme';
+import { useStyles, useTokens } from '../src/theme';
 
 type Status = 'parsing' | 'ready' | 'invalid' | 'submitting' | 'done';
 
@@ -29,6 +28,102 @@ export default function ResetPasswordScreen() {
   const [error, setError] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+
+  const styles = useStyles((c, look) => ({
+    container: {
+      flex: 1,
+      justifyContent: 'center',
+      padding: look.spacing.xl,
+      backgroundColor: c.background,
+    },
+    center: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: c.background,
+    },
+    header: {
+      alignItems: 'center',
+      marginBottom: 32,
+    },
+    icon: {
+      fontSize: look.typography.display.size,
+      marginBottom: 12,
+    },
+    title: {
+      fontSize: look.typography.title.size,
+      fontWeight: look.typography.title.weight,
+      marginBottom: 8,
+      color: c.textPrimary,
+    },
+    subtitle: {
+      fontSize: look.typography.body.size,
+      textAlign: 'center',
+      // No token exists for lineHeight — LookTokens' TypeStep carries only
+      // { size, weight, tracking }. Left as a literal and reported as a
+      // contract gap (see migration report).
+      lineHeight: look.typography.body.lineHeight,
+      paddingHorizontal: look.spacing.sm,
+      color: c.textSecondary,
+    },
+    form: {
+      gap: look.spacing.md,
+    },
+    errorBox: {
+      padding: look.spacing.md,
+      borderRadius: look.radius.surface,
+      backgroundColor: c.errorLight,
+    },
+    errorText: {
+      fontSize: look.typography.body.size,
+      textAlign: 'center',
+      color: c.error,
+    },
+    input: {
+      borderWidth: 1,
+      borderRadius: look.radius.surface,
+      paddingVertical: look.spacing.lg,
+      paddingHorizontal: look.spacing.lg,
+      fontSize: look.typography.heading.size,
+      backgroundColor: c.inputBackground,
+      borderColor: c.border,
+      color: c.textPrimary,
+    },
+    button: {
+      paddingVertical: look.spacing.lg,
+      borderRadius: look.radius.surface,
+      alignItems: 'center',
+      marginTop: 8,
+      backgroundColor:
+        status === 'submitting' || !password || !confirm ? c.primaryDisabled : c.primary,
+    },
+    buttonInvalid: {
+      paddingVertical: look.spacing.lg,
+      borderRadius: look.radius.surface,
+      alignItems: 'center',
+      marginTop: 8,
+      backgroundColor: c.primary,
+    },
+    buttonText: {
+      fontSize: look.typography.heading.size,
+      fontWeight: look.typography.heading.weight,
+      color: c.textOnPrimary,
+    },
+    link: {
+      alignItems: 'center',
+      paddingVertical: look.spacing.md,
+    },
+    linkText: {
+      fontSize: look.typography.body.size,
+      fontWeight: look.typography.body.weight,
+      color: c.primary,
+    },
+    inner: {
+      maxWidth: 420,
+      alignSelf: 'center',
+      width: '100%',
+    },
+  }));
 
   useEffect(() => {
     let cancelled = false;
@@ -93,7 +188,7 @@ export default function ResetPasswordScreen() {
 
   if (status === 'parsing') {
     return (
-      <View style={[styles.center, { backgroundColor: t.background }]}>
+      <View style={styles.center}>
         <ActivityIndicator size="large" color={t.primary} />
       </View>
     );
@@ -101,41 +196,38 @@ export default function ResetPasswordScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: t.background }]}
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.inner}>
       <View style={styles.header}>
         <Text style={styles.icon}>{'🔒'}</Text>
-        <Text style={[styles.title, { color: t.textPrimary }]}>Set New Password</Text>
-        <Text style={[styles.subtitle, { color: t.textSecondary }]}>
+        <Text style={styles.title}>Set New Password</Text>
+        <Text style={styles.subtitle}>
           Choose a new password for your WeatherBeacon account.
         </Text>
       </View>
 
       <View style={styles.form}>
         {error && (
-          <View style={[styles.errorBox, { backgroundColor: t.errorLight }]}>
-            <Text style={[styles.errorText, { color: t.error }]}>{error}</Text>
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
 
         {status === 'invalid' ? (
           <Pressable
-            style={[styles.button, { backgroundColor: t.primary }]}
+            style={styles.buttonInvalid}
             onPress={() => router.replace('/forgot-password')}
           >
-            <Text style={[styles.buttonText, { color: t.textOnPrimary }]}>
+            <Text style={styles.buttonText}>
               Request a new link
             </Text>
           </Pressable>
         ) : (
           <>
             <TextInput
-              style={[
-                styles.input,
-                { backgroundColor: t.inputBackground, borderColor: t.border, color: t.textPrimary },
-              ]}
+              style={styles.input}
               placeholder="New password (min 8 characters)"
               placeholderTextColor={t.textTertiary}
               secureTextEntry
@@ -146,10 +238,7 @@ export default function ResetPasswordScreen() {
               editable={status === 'ready'}
             />
             <TextInput
-              style={[
-                styles.input,
-                { backgroundColor: t.inputBackground, borderColor: t.border, color: t.textPrimary },
-              ]}
+              style={styles.input}
               placeholder="Confirm password"
               placeholderTextColor={t.textTertiary}
               secureTextEntry
@@ -160,19 +249,11 @@ export default function ResetPasswordScreen() {
               editable={status === 'ready'}
             />
             <Pressable
-              style={[
-                styles.button,
-                {
-                  backgroundColor:
-                    status === 'submitting' || !password || !confirm
-                      ? t.primaryDisabled
-                      : t.primary,
-                },
-              ]}
+              style={styles.button}
               onPress={handleSubmit}
               disabled={status !== 'ready' || !password || !confirm}
             >
-              <Text style={[styles.buttonText, { color: t.textOnPrimary }]}>
+              <Text style={styles.buttonText}>
                 {status === 'submitting' ? 'Updating...' : 'Update Password'}
               </Text>
             </Pressable>
@@ -180,83 +261,10 @@ export default function ResetPasswordScreen() {
         )}
 
         <Pressable style={styles.link} onPress={() => router.replace('/login')}>
-          <Text style={[styles.linkText, { color: t.primary }]}>Back to Sign In</Text>
+          <Text style={styles.linkText}>Back to Sign In</Text>
         </Pressable>
       </View>
       </View>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  icon: {
-    fontSize: 56,
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    textAlign: 'center',
-    lineHeight: 21,
-    paddingHorizontal: 8,
-  },
-  form: {
-    gap: 12,
-  },
-  errorBox: {
-    padding: 12,
-    borderRadius: 8,
-  },
-  errorText: {
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    fontSize: 16,
-  },
-  button: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  link: {
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  linkText: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  inner: {
-    maxWidth: 420,
-    alignSelf: 'center',
-    width: '100%',
-  },
-});

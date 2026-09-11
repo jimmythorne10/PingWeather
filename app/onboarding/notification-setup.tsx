@@ -1,7 +1,7 @@
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Platform } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { useTokens } from '../../src/theme';
+import { useStyles, useTokens } from '../../src/theme';
 import { usePushNotifications } from '../../src/hooks/usePushNotifications';
 
 export default function NotificationSetupScreen() {
@@ -10,6 +10,61 @@ export default function NotificationSetupScreen() {
   const { registerForPushNotifications, error } = usePushNotifications();
   const [registering, setRegistering] = useState(false);
   const [done, setDone] = useState(false);
+  const styles = useStyles((c, look) => ({
+    container: {
+      flex: 1,
+      justifyContent: 'space-between',
+      padding: look.spacing.xl,
+      paddingTop: look.spacing.xxxl + look.spacing.md,
+      paddingBottom: look.spacing.xxxl,
+      backgroundColor: c.background,
+    },
+    content: { alignItems: 'center', maxWidth: 480, alignSelf: 'center', width: '100%' },
+    icon: { fontSize: look.typography.display.size, marginBottom: 16 },
+    title: {
+      fontSize: look.typography.title.size,
+      fontWeight: look.typography.title.weight,
+      marginBottom: 8,
+      textAlign: 'center',
+      color: c.textPrimary,
+    },
+    subtitle: {
+      fontSize: look.typography.body.size,
+      textAlign: 'center',
+      lineHeight: look.typography.body.lineHeight,
+      marginBottom: 24,
+      color: c.textSecondary,
+    },
+    card: {
+      borderRadius: look.radius.surface,
+      padding: look.spacing.lg,
+      borderWidth: 1,
+      width: '100%',
+      backgroundColor: c.card,
+      borderColor: c.borderLight,
+    },
+    cardText: {
+      fontSize: look.typography.body.size,
+      lineHeight: look.typography.body.lineHeight,
+      textAlign: 'center',
+      color: c.textSecondary,
+    },
+    errorText: { fontSize: look.typography.caption.size, marginTop: 12, color: c.error },
+    buttons: { gap: look.spacing.md, maxWidth: 480, alignSelf: 'center', width: '100%' },
+    enableButton: {
+      paddingVertical: look.spacing.lg,
+      borderRadius: look.radius.surface,
+      alignItems: 'center',
+      backgroundColor: c.primary,
+    },
+    enableButtonText: {
+      fontSize: look.typography.heading.size,
+      fontWeight: look.typography.heading.weight,
+      color: c.textOnPrimary,
+    },
+    skipButton: { alignItems: 'center', paddingVertical: look.spacing.md },
+    skipText: { fontSize: look.typography.body.size, color: c.textTertiary },
+  }));
 
   const handleEnable = async () => {
     setRegistering(true);
@@ -28,41 +83,41 @@ export default function NotificationSetupScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: t.background }]}>
+    <View style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.icon}>{done ? '✅' : '🔔'}</Text>
-        <Text style={[styles.title, { color: t.textPrimary }]}>
+        <Text style={styles.title}>
           {done ? 'Notifications Enabled!' : 'Stay Informed'}
         </Text>
-        <Text style={[styles.subtitle, { color: t.textSecondary }]}>
+        <Text style={styles.subtitle}>
           {done
             ? "You're all set to receive weather alerts."
             : 'WeatherBeacon needs push notifications to alert you when weather conditions match your rules. This is the core of what the app does.'}
         </Text>
 
         {!done && (
-          <View style={[styles.card, { backgroundColor: t.card, borderColor: t.borderLight }]}>
-            <Text style={[styles.cardText, { color: t.textSecondary }]}>
+          <View style={styles.card}>
+            <Text style={styles.cardText}>
               We'll only send notifications you've explicitly configured. No
               marketing, no spam, no surprises.
             </Text>
           </View>
         )}
 
-        {error && <Text style={[styles.errorText, { color: t.error }]}>{error}</Text>}
+        {error && <Text style={styles.errorText}>{error}</Text>}
       </View>
 
       {!done && (
         <View style={styles.buttons}>
           <Pressable
-            style={[styles.enableButton, { backgroundColor: t.primary }]}
+            style={styles.enableButton}
             onPress={handleEnable}
             disabled={registering}
           >
             {registering ? (
               <ActivityIndicator color={t.textOnPrimary} />
             ) : (
-              <Text style={[styles.enableButtonText, { color: t.textOnPrimary }]}>
+              <Text style={styles.enableButtonText}>
                 Continue
               </Text>
             )}
@@ -77,7 +132,7 @@ export default function NotificationSetupScreen() {
               router.push(nextScreen);
             }}
           >
-            <Text style={[styles.skipText, { color: t.textTertiary }]}>
+            <Text style={styles.skipText}>
               I'll do this later in Settings
             </Text>
           </Pressable>
@@ -86,25 +141,3 @@ export default function NotificationSetupScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'space-between',
-    padding: 24,
-    paddingTop: 60,
-    paddingBottom: 48,
-  },
-  content: { alignItems: 'center', maxWidth: 480, alignSelf: 'center', width: '100%' },
-  icon: { fontSize: 64, marginBottom: 16 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 8, textAlign: 'center' },
-  subtitle: { fontSize: 15, textAlign: 'center', lineHeight: 22, marginBottom: 24 },
-  card: { borderRadius: 12, padding: 16, borderWidth: 1, width: '100%' },
-  cardText: { fontSize: 14, lineHeight: 20, textAlign: 'center' },
-  errorText: { fontSize: 13, marginTop: 12 },
-  buttons: { gap: 12, maxWidth: 480, alignSelf: 'center', width: '100%' },
-  enableButton: { paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
-  enableButtonText: { fontSize: 18, fontWeight: '700' },
-  skipButton: { alignItems: 'center', paddingVertical: 12 },
-  skipText: { fontSize: 15 },
-});

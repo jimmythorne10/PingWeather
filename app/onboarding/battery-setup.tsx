@@ -1,13 +1,169 @@
-import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, Pressable, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useTokens } from '../../src/theme';
+import { useStyles } from '../../src/theme';
 import { Linking } from 'react-native';
 
 const isIOS = Platform.OS === 'ios';
 
+/** Step-number badge: a fixed circular hit target, independent of the look. */
+const BADGE = 32;
+
 export default function BatterySetupScreen() {
   const router = useRouter();
-  const t = useTokens();
+  const styles = useStyles((c, look) => ({
+    container: {
+      flex: 1,
+      justifyContent: 'space-between',
+      // GAP: 40 approximated to the nearest available token (xxxl=48, ~17% off)
+      // rather than left as a literal — see report for the snap-vs-gap threshold used.
+      paddingTop: look.spacing.xxxl,
+      backgroundColor: c.background,
+    },
+    scrollContent: {
+      paddingHorizontal: look.spacing.xl,
+      paddingVertical: look.spacing.xl,
+      maxWidth: 560,
+      alignSelf: 'center',
+      width: '100%',
+    },
+    content: {
+      alignItems: 'center',
+    },
+    icon: {
+      fontSize: look.typography.display.size,
+      marginBottom: 16,
+    },
+    title: {
+      fontSize: look.typography.title.size,
+      fontWeight: look.typography.title.weight,
+      marginBottom: 8,
+      textAlign: 'center',
+      color: c.textPrimary,
+    },
+    subtitle: {
+      fontSize: look.typography.body.size,
+      textAlign: 'center',
+      // GAP: no lineHeight token exists anywhere in the contract — left as literal.
+      lineHeight: look.typography.body.lineHeight,
+      marginBottom: 24,
+      color: c.textSecondary,
+    },
+    card: {
+      width: '100%',
+      borderRadius: look.radius.surface,
+      borderWidth: 1,
+      padding: look.spacing.lg,
+      marginBottom: 16,
+      backgroundColor: c.card,
+      borderColor: c.borderLight,
+    },
+    cardTitle: {
+      fontSize: look.typography.heading.size,
+      fontWeight: look.typography.heading.weight,
+      marginBottom: 8,
+      color: c.textPrimary,
+    },
+    cardText: {
+      fontSize: look.typography.body.size,
+      // GAP: no lineHeight token exists anywhere in the contract — left as literal.
+      lineHeight: look.typography.body.lineHeight,
+      color: c.textSecondary,
+    },
+    stepsCard: {
+      width: '100%',
+      borderRadius: look.radius.surface,
+      borderWidth: 1,
+      padding: look.spacing.lg,
+      marginBottom: 16,
+      backgroundColor: c.card,
+      borderColor: c.borderLight,
+    },
+    step: {
+      flexDirection: 'row',
+      marginVertical: 12,
+      gap: look.spacing.md,
+    },
+    // The step badge is a fixed 32pt hit target, not a scale step. Its radius
+    // is half its own size and its leading equals its own height (that is what
+    // centres the digit vertically) — both are relationships to BADGE, not to
+    // the type or spacing scales.
+    //
+    // Deliberately NOT look.spacing.xxl: that is 32 under aurora but 24 under
+    // classic, which would leave a 32pt box with a 12pt radius — an oval.
+    stepNumber: {
+      fontSize: look.typography.heading.size,
+      fontWeight: look.typography.heading.weight,
+      width: BADGE,
+      height: BADGE,
+      borderRadius: BADGE / 2,
+      textAlign: 'center',
+      lineHeight: BADGE,
+      color: c.primary,
+    },
+    stepContent: {
+      flex: 1,
+    },
+    stepTitle: {
+      fontSize: look.typography.bodyStrong.size,
+      fontWeight: look.typography.bodyStrong.weight,
+      marginBottom: 4,
+      color: c.textPrimary,
+    },
+    stepText: {
+      fontSize: look.typography.body.size,
+      // GAP: no lineHeight token exists anywhere in the contract — left as literal.
+      lineHeight: look.typography.body.lineHeight,
+      color: c.textSecondary,
+    },
+    warningCard: {
+      width: '100%',
+      borderRadius: look.radius.surface,
+      padding: look.spacing.lg,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: look.spacing.md,
+      backgroundColor: c.primaryLight,
+    },
+    warningIcon: {
+      fontSize: look.typography.heading.size,
+      marginTop: 2,
+      color: c.primary,
+    },
+    warningText: {
+      flex: 1,
+      fontSize: look.typography.body.size,
+      // GAP: no lineHeight token exists anywhere in the contract — left as literal.
+      lineHeight: look.typography.body.lineHeight,
+      color: c.textPrimary,
+    },
+    buttons: {
+      gap: look.spacing.md,
+      paddingHorizontal: look.spacing.xl,
+      paddingBottom: look.spacing.xxxl,
+      maxWidth: 560,
+      alignSelf: 'center',
+      width: '100%',
+    },
+    openButton: {
+      paddingVertical: look.spacing.lg,
+      borderRadius: look.radius.surface,
+      alignItems: 'center',
+      backgroundColor: c.primary,
+    },
+    openButtonText: {
+      fontSize: look.typography.heading.size,
+      fontWeight: look.typography.heading.weight,
+      color: c.textOnPrimary,
+    },
+    skipButton: {
+      alignItems: 'center',
+      paddingVertical: look.spacing.md,
+    },
+    skipText: {
+      fontSize: look.typography.body.size,
+      color: c.textTertiary,
+    },
+  }));
 
   const handleOpenSettings = () => {
     if (isIOS) {
@@ -65,39 +221,39 @@ export default function BatterySetupScreen() {
   const buttonLabel = isIOS ? 'Open Settings' : 'Open Battery Settings';
 
   return (
-    <View style={[styles.container, { backgroundColor: t.background }]}>
+    <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <Text style={styles.icon}>🔋</Text>
-          <Text style={[styles.title, { color: t.textPrimary }]}>
+          <Text style={styles.title}>
             {title}
           </Text>
-          <Text style={[styles.subtitle, { color: t.textSecondary }]}>
+          <Text style={styles.subtitle}>
             {subtitle}
           </Text>
 
-          <View style={[styles.card, { backgroundColor: t.card, borderColor: t.borderLight }]}>
-            <Text style={[styles.cardTitle, { color: t.textPrimary }]}>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>
               Why This Matters
             </Text>
-            <Text style={[styles.cardText, { color: t.textSecondary }]}>
+            <Text style={styles.cardText}>
               {whyBody}
             </Text>
           </View>
 
-          <View style={[styles.stepsCard, { backgroundColor: t.card, borderColor: t.borderLight }]}>
-            <Text style={[styles.cardTitle, { color: t.textPrimary }]}>
+          <View style={styles.stepsCard}>
+            <Text style={styles.cardTitle}>
               {stepsTitle}
             </Text>
 
             {steps.map((step, i) => (
               <View key={i} style={styles.step}>
-                <Text style={[styles.stepNumber, { color: t.primary }]}>{i + 1}</Text>
+                <Text style={styles.stepNumber}>{i + 1}</Text>
                 <View style={styles.stepContent}>
-                  <Text style={[styles.stepTitle, { color: t.textPrimary }]}>
+                  <Text style={styles.stepTitle}>
                     {step.title}
                   </Text>
-                  <Text style={[styles.stepText, { color: t.textSecondary }]}>
+                  <Text style={styles.stepText}>
                     {step.text}
                   </Text>
                 </View>
@@ -105,9 +261,9 @@ export default function BatterySetupScreen() {
             ))}
           </View>
 
-          <View style={[styles.warningCard, { backgroundColor: t.primaryLight }]}>
-            <Text style={[styles.warningIcon, { color: t.primary }]}>⚠️</Text>
-            <Text style={[styles.warningText, { color: t.textPrimary }]}>
+          <View style={styles.warningCard}>
+            <Text style={styles.warningIcon}>⚠️</Text>
+            <Text style={styles.warningText}>
               If you skip this step, you may not receive push notifications when weather
               conditions match your rules.
             </Text>
@@ -117,10 +273,10 @@ export default function BatterySetupScreen() {
 
       <View style={styles.buttons}>
         <Pressable
-          style={[styles.openButton, { backgroundColor: t.primary }]}
+          style={styles.openButton}
           onPress={handleOpenSettings}
         >
-          <Text style={[styles.openButtonText, { color: t.textOnPrimary }]}>
+          <Text style={styles.openButtonText}>
             {buttonLabel}
           </Text>
         </Pressable>
@@ -129,7 +285,7 @@ export default function BatterySetupScreen() {
           style={styles.skipButton}
           onPress={() => router.push('/onboarding/complete')}
         >
-          <Text style={[styles.skipText, { color: t.textTertiary }]}>
+          <Text style={styles.skipText}>
             Skip for now (not recommended)
           </Text>
         </Pressable>
@@ -137,127 +293,3 @@ export default function BatterySetupScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'space-between',
-    paddingTop: 40,
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    maxWidth: 560,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  content: {
-    alignItems: 'center',
-  },
-  icon: {
-    fontSize: 56,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 15,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  card: {
-    width: '100%',
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 16,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  cardText: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  stepsCard: {
-    width: '100%',
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 16,
-  },
-  step: {
-    flexDirection: 'row',
-    marginVertical: 12,
-    gap: 12,
-  },
-  stepNumber: {
-    fontSize: 18,
-    fontWeight: '700',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    textAlign: 'center',
-    lineHeight: 32,
-  },
-  stepContent: {
-    flex: 1,
-  },
-  stepTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  stepText: {
-    fontSize: 14,
-    lineHeight: 18,
-  },
-  warningCard: {
-    width: '100%',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  warningIcon: {
-    fontSize: 20,
-    marginTop: 2,
-  },
-  warningText: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  buttons: {
-    gap: 12,
-    paddingHorizontal: 24,
-    paddingBottom: 48,
-    maxWidth: 560,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  openButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  openButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  skipButton: {
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  skipText: {
-    fontSize: 15,
-  },
-});

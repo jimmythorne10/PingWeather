@@ -1,7 +1,7 @@
-import { View, Text, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator, Platform, Linking } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert, ActivityIndicator, Platform, Linking } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { useTokens } from '../src/theme';
+import { useStyles, useTokens } from '../src/theme';
 import { useAuthStore } from '../src/stores/authStore';
 import { TIER_LIMITS } from '../src/types';
 import { purchasePackage as doPurchase, restorePurchases as doRestore, TIER_PACKAGE_MAP, getOfferings } from '../src/services/purchases';
@@ -66,6 +66,145 @@ export default function UpgradeScreen() {
   const [purchasing, setPurchasing] = useState<SubscriptionTier | null>(null);
   const [restoring, setRestoring] = useState(false);
   const [tierPrices, setTierPrices] = useState<Partial<Record<string, string>>>({});
+
+  const styles = useStyles((c, look) => ({
+    container: { flex: 1, backgroundColor: c.background },
+    content: {
+      padding: look.spacing.xl,
+      paddingBottom: look.spacing.xxxl,
+      maxWidth: 560,
+      alignSelf: 'center',
+      width: '100%',
+    },
+    title: {
+      fontSize: look.typography.title.size,
+      fontWeight: look.typography.title.weight,
+      marginBottom: 4,
+      color: c.textPrimary,
+    },
+    subtitle: {
+      fontSize: look.typography.body.size,
+      // No token exists for lineHeight — LookTokens' TypeStep carries only
+      // { size, weight, tracking }. Left as a literal and reported as a
+      // contract gap (see migration report).
+      lineHeight: look.typography.body.lineHeight,
+      marginBottom: 24,
+      color: c.textSecondary,
+    },
+    tierCard: {
+      borderRadius: look.radius.surface,
+      padding: look.spacing.xl,
+      marginBottom: 16,
+      borderWidth: 1,
+      backgroundColor: c.card,
+      borderColor: c.borderLight,
+    },
+    tierCardCurrent: {
+      borderColor: c.primary,
+      borderWidth: 2,
+    },
+    tierHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      marginBottom: 12,
+    },
+    tierLabel: {
+      fontSize: look.typography.heading.size,
+      fontWeight: look.typography.heading.weight,
+      color: c.textPrimary,
+    },
+    tierTagline: {
+      fontSize: look.typography.caption.size,
+      marginTop: 2,
+      color: c.textTertiary,
+    },
+    tierPrice: {
+      fontSize: look.typography.heading.size,
+      fontWeight: look.typography.heading.weight,
+      color: c.primary,
+    },
+    highlightRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      paddingVertical: look.spacing.xs,
+    },
+    checkmark: {
+      fontSize: look.typography.bodyStrong.size,
+      fontWeight: look.typography.bodyStrong.weight,
+      marginRight: 8,
+      marginTop: 1,
+      color: c.success,
+    },
+    highlightText: {
+      fontSize: look.typography.body.size,
+      flex: 1,
+      // Same lineHeight gap as `subtitle` above — no token exists for it.
+      lineHeight: look.typography.body.lineHeight,
+      color: c.textSecondary,
+    },
+    subscribeButton: {
+      paddingVertical: look.spacing.lg,
+      borderRadius: look.radius.surface,
+      alignItems: 'center',
+      marginTop: 16,
+      backgroundColor: c.primary,
+    },
+    subscribeButtonPurchasing: {
+      backgroundColor: c.primaryDisabled,
+    },
+    subscribeButtonText: {
+      fontSize: look.typography.heading.size,
+      fontWeight: look.typography.heading.weight,
+      color: c.textOnPrimary,
+    },
+    currentBadge: {
+      paddingVertical: look.spacing.md,
+      borderRadius: look.radius.surface,
+      alignItems: 'center',
+      marginTop: 16,
+      backgroundColor: c.primaryLight,
+    },
+    currentBadgeText: {
+      fontSize: look.typography.bodyStrong.size,
+      fontWeight: look.typography.bodyStrong.weight,
+      color: c.primary,
+    },
+    limitsFootnote: {
+      fontSize: look.typography.label.size,
+      marginTop: 10,
+      textAlign: 'center',
+      color: c.textTertiary,
+    },
+    restoreLink: { alignItems: 'center', paddingVertical: look.spacing.md, marginTop: 8 },
+    restoreLinkText: {
+      fontSize: look.typography.bodyStrong.size,
+      fontWeight: look.typography.bodyStrong.weight,
+      color: c.primary,
+    },
+    cancelLink: { alignItems: 'center', paddingVertical: look.spacing.md },
+    cancelLinkText: { fontSize: look.typography.body.size, color: c.textTertiary },
+    legalText: {
+      fontSize: look.typography.label.size,
+      textAlign: 'center',
+      marginTop: 20,
+      // Same lineHeight gap as `subtitle` above — no token exists for it.
+      lineHeight: look.typography.label.lineHeight,
+      color: c.textTertiary,
+    },
+    legalLinks: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 12,
+      marginBottom: 8,
+    },
+    legalLinkText: {
+      fontSize: look.typography.label.size,
+      fontWeight: look.typography.label.weight,
+      color: c.primary,
+    },
+    legalLinkSeparator: { fontSize: look.typography.label.size, color: c.textTertiary },
+  }));
 
   useEffect(() => {
     getOfferings().then((offering) => {
@@ -141,11 +280,11 @@ export default function UpgradeScreen() {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: t.background }]}
+      style={styles.container}
       contentContainerStyle={styles.content}
     >
-      <Text style={[styles.title, { color: t.textPrimary }]}>Choose Your Plan</Text>
-      <Text style={[styles.subtitle, { color: t.textSecondary }]}>
+      <Text style={styles.title}>Choose Your Plan</Text>
+      <Text style={styles.subtitle}>
         Unlock more locations, more rules, faster polling, and compound conditions.
       </Text>
 
@@ -155,36 +294,32 @@ export default function UpgradeScreen() {
         return (
           <View
             key={card.tier}
-            style={[
-              styles.tierCard,
-              { backgroundColor: t.card, borderColor: isCurrent ? t.primary : t.borderLight },
-              isCurrent && { borderWidth: 2 },
-            ]}
+            style={[styles.tierCard, isCurrent && styles.tierCardCurrent]}
           >
             <View style={styles.tierHeader}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.tierLabel, { color: t.textPrimary }]}>{card.label}</Text>
-                <Text style={[styles.tierTagline, { color: t.textTertiary }]}>{card.tagline}</Text>
+                <Text style={styles.tierLabel}>{card.label}</Text>
+                <Text style={styles.tierTagline}>{card.tagline}</Text>
               </View>
-              <Text style={[styles.tierPrice, { color: t.primary }]}>{getDisplayPrice(card.tier)}</Text>
+              <Text style={styles.tierPrice}>{getDisplayPrice(card.tier)}</Text>
             </View>
 
             {card.highlights.map((line) => (
               <View key={line} style={styles.highlightRow}>
-                <Text style={[styles.checkmark, { color: t.success }]}>✓</Text>
-                <Text style={[styles.highlightText, { color: t.textSecondary }]}>{line}</Text>
+                <Text style={styles.checkmark}>✓</Text>
+                <Text style={styles.highlightText}>{line}</Text>
               </View>
             ))}
 
             {isCurrent ? (
-              <View style={[styles.currentBadge, { backgroundColor: t.primaryLight }]}>
-                <Text style={[styles.currentBadgeText, { color: t.primary }]}>Current Plan</Text>
+              <View style={styles.currentBadge}>
+                <Text style={styles.currentBadgeText}>Current Plan</Text>
               </View>
             ) : (
               <Pressable
                 style={[
                   styles.subscribeButton,
-                  { backgroundColor: purchasing === card.tier ? t.primaryDisabled : t.primary },
+                  purchasing === card.tier && styles.subscribeButtonPurchasing,
                 ]}
                 onPress={() => handleSubscribe(card.tier)}
                 disabled={purchasing !== null}
@@ -192,14 +327,14 @@ export default function UpgradeScreen() {
                 {purchasing === card.tier ? (
                   <ActivityIndicator color={t.textOnPrimary} />
                 ) : (
-                  <Text style={[styles.subscribeButtonText, { color: t.textOnPrimary }]}>
+                  <Text style={styles.subscribeButtonText}>
                     {card.tier === 'free' ? 'Downgrade' : `Subscribe — ${getDisplayPrice(card.tier)}`}
                   </Text>
                 )}
               </Pressable>
             )}
 
-            <Text style={[styles.limitsFootnote, { color: t.textTertiary }]}>
+            <Text style={styles.limitsFootnote}>
               {limits.maxLocations} locations · {limits.maxAlertRules === 999 ? 'unlimited' : limits.maxAlertRules} rules · {limits.minPollingIntervalHours}h min polling
             </Text>
           </View>
@@ -207,16 +342,16 @@ export default function UpgradeScreen() {
       })}
 
       <Pressable style={styles.restoreLink} onPress={handleRestore} disabled={restoring}>
-        <Text style={[styles.restoreLinkText, { color: t.primary }]}>
+        <Text style={styles.restoreLinkText}>
           {restoring ? 'Restoring...' : 'Restore Purchases'}
         </Text>
       </Pressable>
 
       <Pressable style={styles.cancelLink} onPress={() => router.back()}>
-        <Text style={[styles.cancelLinkText, { color: t.textTertiary }]}>Not now</Text>
+        <Text style={styles.cancelLinkText}>Not now</Text>
       </Pressable>
 
-      <Text style={[styles.legalText, { color: t.textTertiary }]}>
+      <Text style={styles.legalText}>
         {Platform.select({
           ios: 'Payment will be charged to your Apple Account at confirmation of purchase. Subscriptions automatically renew unless auto-renewal is turned off at least 24 hours before the end of the current period. Manage subscriptions in your App Store account settings.',
           default: 'Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. Manage or cancel in your Google Play account settings.',
@@ -225,75 +360,13 @@ export default function UpgradeScreen() {
 
       <View style={styles.legalLinks}>
         <Pressable onPress={() => Linking.openURL('https://www.truthcenteredtech.com/terms-weatherbeacon')}>
-          <Text style={[styles.legalLinkText, { color: t.primary }]}>Terms of Use</Text>
+          <Text style={styles.legalLinkText}>Terms of Use</Text>
         </Pressable>
-        <Text style={[styles.legalLinkSeparator, { color: t.textTertiary }]}> · </Text>
+        <Text style={styles.legalLinkSeparator}> · </Text>
         <Pressable onPress={() => Linking.openURL('https://www.truthcenteredtech.com/weatherbeacon-privacy')}>
-          <Text style={[styles.legalLinkText, { color: t.primary }]}>Privacy Policy</Text>
+          <Text style={styles.legalLinkText}>Privacy Policy</Text>
         </Pressable>
       </View>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { padding: 20, paddingBottom: 60, maxWidth: 560, alignSelf: 'center', width: '100%' },
-  title: { fontSize: 26, fontWeight: '700', marginBottom: 4 },
-  subtitle: { fontSize: 15, lineHeight: 22, marginBottom: 24 },
-  tierCard: {
-    borderRadius: 14,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-  },
-  tierHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  tierLabel: { fontSize: 22, fontWeight: '700' },
-  tierTagline: { fontSize: 13, marginTop: 2 },
-  tierPrice: { fontSize: 16, fontWeight: '700' },
-  highlightRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 4,
-  },
-  checkmark: { fontSize: 14, fontWeight: '700', marginRight: 8, marginTop: 1 },
-  highlightText: { fontSize: 14, flex: 1, lineHeight: 20 },
-  subscribeButton: {
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  subscribeButtonText: { fontSize: 16, fontWeight: '700' },
-  currentBadge: {
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  currentBadgeText: { fontSize: 14, fontWeight: '700' },
-  limitsFootnote: { fontSize: 11, marginTop: 10, textAlign: 'center' },
-  restoreLink: { alignItems: 'center', paddingVertical: 12, marginTop: 8 },
-  restoreLinkText: { fontSize: 15, fontWeight: '600' },
-  cancelLink: { alignItems: 'center', paddingVertical: 10 },
-  cancelLinkText: { fontSize: 14 },
-  legalText: {
-    fontSize: 11,
-    textAlign: 'center',
-    marginTop: 20,
-    lineHeight: 16,
-  },
-  legalLinks: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  legalLinkText: { fontSize: 12, fontWeight: '500' },
-  legalLinkSeparator: { fontSize: 12 },
-});

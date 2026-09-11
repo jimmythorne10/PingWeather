@@ -72,7 +72,9 @@ describe('FEAT-001: structural token contract', () => {
     const look = LOOKS[name as keyof typeof LOOKS];
     const incomplete = Object.entries(look.typography)
       .filter(([, step]) => {
-        const s = step as Record<string, unknown>;
+        // Through `unknown` — TypeStep has no index signature, so a direct
+        // cast to Record<string, unknown> is a TS2352 error.
+        const s = step as unknown as Record<string, unknown>;
         return (
           typeof s.size !== 'number' ||
           typeof s.weight !== 'string' ||
