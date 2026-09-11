@@ -64,4 +64,28 @@ describe('FEAT-006 guard: Mapbox native props are not React Native styles', () =
     // reintroduce the 2026-05-07 crash class.
     expect(fs.readFileSync(SCANNER, 'utf8')).toMatch(/rasterOpacity\|styleURL/);
   });
+
+  // ── The red-before-green half ───────────────────────────────────────────
+  // Every assertion above is a REGRESSION GUARD: it protects state that is
+  // already correct, so it passes today and can never go red before green.
+  // A criterion made only of guards is unfalsifiable at Phase 4 — which is
+  // exactly what this file was on its first run (6/6 green before any
+  // implementation existed). The assertion below is the one that is FALSE
+  // today and true only once radar.tsx consumes the token contract, so the
+  // entry as a whole is genuinely red now and green after TASK-009.
+  it('radar.tsx consumes the token contract instead of inline style literals', () => {
+    const STYLE_PROP = new RegExp(
+      '\\b(fontSize|fontWeight|borderRadius|padding[A-Za-z]*|gap|lineHeight|letterSpacing)' +
+        ':\\s*[\'"]?[0-9]',
+      ''
+    );
+    const located = source()
+      .split(/\r?\n/)
+      .map((line, i) => ({ line: line.trim(), n: i + 1 }))
+      // Mapbox-native props are not RN styles and are excluded by contract.
+      .filter(({ line }) => !/rasterOpacity|styleURL/.test(line))
+      .filter(({ line }) => STYLE_PROP.test(line))
+      .map(({ line, n }) => `app/radar.tsx:${n}  ${line.slice(0, 80)}`);
+    expect(located).toEqual([]);
+  });
 });

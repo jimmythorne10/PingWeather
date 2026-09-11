@@ -43,7 +43,7 @@
       "last_run_result": null,
       "owner": "orchestrator",
       "blockers": [],
-      "notes": "impl_file is deliberately null: the implementation is the ABSENCE of literals across 33 files, not a single module, so there is no file that can carry CHALLENGER sentinels. Baseline 901 literals measured 2026-09-09. Exclusions: app/_layout.tsx and src/components/UpdateCheckScreen.tsx pin brand navy to match the native splash; app/radar.tsx Mapbox-native props are not React Native styles. 15 of 33 files use module-scope StyleSheet.create with no access to tokens and need factory conversion before any literal is reachable.",
+      "notes": "impl_file is deliberately null: the implementation is the ABSENCE of literals across 33 files, not a single module, so there is no file that can carry CHALLENGER sentinels. TWO BASELINE NUMBERS, both real, different scopes — the spec cites 901 from the 2026-09-09 audit, which counted app/_layout.tsx, UpdateCheckScreen.tsx and margin/elevation props now out of scope; this test's own first run under its exact exclusion rules located 767. The oracle's ASSERTION is length 0, which both satisfy; 901 is historical context, not a threshold. Recorded here so a later reader does not mistake the discrepancy for fraud. Exclusions: app/_layout.tsx and src/components/UpdateCheckScreen.tsx pin brand navy to match the native splash; app/radar.tsx Mapbox-native props are not React Native styles. 15 of 33 files use module-scope StyleSheet.create with no access to tokens and need factory conversion before any literal is reachable.",
       "oracle": {
         "condition": "Walk every .ts/.tsx file under app/ and src/components/, excluding app/_layout.tsx, src/components/UpdateCheckScreen.tsx and the Mapbox-native props in app/radar.tsx, matching numeric fontSize, fontWeight, borderRadius, padding*, gap, lineHeight and letterSpacing declarations.",
         "assertion": "The collected match array has length 0, down from the 901 measured on 2026-09-09.",
@@ -123,7 +123,30 @@
     },
     {
       "id": "FEAT-006",
-      "name": "Radar screen renders after the migration",
+      "name": "Mapbox native props survive the migration untouched",
+      "acceptance": "When the migration has rewritten styling in app/radar.tsx, then the Mapbox-native RasterLayer style prop and styleURL constant are still present in Mapbox shape and the literal scanner is configured to skip them.",
+      "layer": "pure-logic",
+      "passes": false,
+      "verified_by": "unit-real-path",
+      "test_file": "__tests__/theme/radarNativeProps.test.ts",
+      "source_scenario": "Scenario 6",
+      "impl_file": "app/radar.tsx",
+      "last_run_at": null,
+      "last_run_result": null,
+      "owner": "orchestrator",
+      "blockers": [],
+      "notes": "The automated HALF of Scenario 6. Split from FEAT-007 deliberately: this proves the native prop SHAPE is preserved, which is a real falsifiable claim a unit test can own. It does NOT prove the map draws — that is FEAT-007 and only the operator can close it. Collapsing the two would let a unit test stand in as evidence for device rendering, which is exactly the laundering the contract forbids. FALSE-RED ON RECORD, 2026-09-11T04:17:44Z: chain record 6 says result=fail but this file was 6/6 GREEN in isolation at that moment. Cause — the file was written as pure regression guards, which protect already-correct state and therefore cannot go red before green; the recorded failure came from sibling suites in the same jest invocation, not from this test. Fixed by adding the 'radar.tsx consumes the token contract' assertion, which is false today (21 literals) and true only after TASK-009. Chain record 7 is the genuine RED, verified in isolation via --runTestsByPath. Record 6 is left in place because the chain is append-only and tamper-evident; deleting it would be the worse crime.",
+      "oracle": {
+        "condition": "Read app/radar.tsx from disk and assert on its source: the RasterLayer carries rasterOpacity, styleURL is a MapboxGL.StyleURL constant rather than a theme token, no MapboxGL element is assigned a React Native styles.* object, and setAccessToken remains above the default export.",
+        "assertion": "All four source assertions hold, and __tests__/theme/noHardcodedLiterals.test.ts still contains the rasterOpacity|styleURL exclusion.",
+        "failure_mode": "A migration rewrote MapboxGL.RasterLayer's style prop as an RN style object, or dropped the scanner exclusion so a later pass would rewrite it — the 2026-05-07 crash class.",
+        "automated": true,
+        "confidence": "high"
+      }
+    },
+    {
+      "id": "FEAT-007",
+      "name": "Radar screen renders on a physical device",
       "acceptance": "When the operator opens the Radar screen in the EAS dev build on a physical Android device, then the Mapbox raster layer renders without crashing the screen.",
       "layer": "mobile-ui",
       "passes": false,
@@ -135,7 +158,7 @@
       "last_run_result": null,
       "owner": "operator",
       "blockers": [],
-      "notes": "TWO LAYERS, deliberately split. The bound test is a real falsifiable guard: it asserts the literal scanner excludes MapboxGL props and that app/radar.tsx line 65 RasterLayer style prop is not rewritten into a React Native style object. It does NOT prove the map draws. __tests__/screens/radar.test.tsx mocks @rnmapbox/maps entirely at lines 28-44 and can never observe a native regression, so it is NOT cited here. Device verification by the operator covers actual rendering and must record: device model, date, map tiles drawn, scrub control responsive, no red-box. Two broken OTAs shipped 2026-05-07 through exactly this gap.",
+      "notes": "OPERATOR-ONLY. The bound test_file is FEAT-006's guard and is listed solely because every entry must be bound; it does NOT prove this claim and must never be cited as doing so. Nothing automated on this project can close this entry: the device tier has no runner, and __tests__/screens/radar.test.tsx mocks @rnmapbox/maps entirely at lines 28-44 so it cannot observe a native regression. To close, the operator must record device model, date, that map tiles drew, that the scrub control responded, and that no red-box appeared. Two broken OTAs shipped 2026-05-07 through exactly this gap.",
       "oracle": {
         "condition": "Install the EAS dev build carrying the migration, open the app, navigate to the Radar screen, and scrub the frame timeline.",
         "assertion": "The map tiles draw, the scrub control responds, and no red-box error or blank screen appears.",

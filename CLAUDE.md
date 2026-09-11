@@ -223,14 +223,43 @@ google-services.json              # Firebase config for FCM, in project root
 
 WeatherBeacon's verification strategy, by layer:
 
-| Layer | Tool | Runs how |
+This table is machine-read. `scripts/hooks/tct-run-test.sh` parses it to resolve
+the real runner for a manifest entry's `verified_by` tier, so the column order
+`Layer | verified_by | Command` is fixed by the framework template — do not
+reshape it. Prose belongs underneath, not in the cells.
+
+| Layer | verified_by | Command |
 |---|---|---|
-| Pure logic (stores, helpers, engine functions) | Jest `logic` project (node env) | `npx jest --selectProjects logic` — **THIS IS ACCEPTABLE VERIFICATION per the ruthless-mentor contract** |
-| React Native screens | jsdom component tests exist but are **FLAGGED AS FRAUDULENT** — text presence only, not behavior. Do NOT treat as verification. | `npx jest --selectProjects components` — runs the suite but results should never be cited as proof that a UI works |
-| Full UI behavior | Maestro E2E | **DEFERRED** (INFRA-001). Currently no E2E. |
-| Real UI behavior | Jimmy on device, manual, noted in the completion line | The current truth — "Verified by: Jimmy on device YYYY-MM-DD" is the only accepted UI verification method until Maestro lands |
-| Backend (Edge Functions) | `net.http_post` from the Supabase SQL editor, inspecting `net._http_response` + function logs + database row state | No automated backend tests — integration is validated via live calls |
-| TypeScript correctness | `tsc --noEmit` | Catches type errors but **NEVER counts as runtime verification** per the contract |
+| pure-logic | unit-real-path | `npx jest --selectProjects logic` |
+| mobile-ui | device | `npx expo start --dev-client` |
+
+**pure-logic / unit-real-path** — the Jest `logic` project (node env). **This is
+acceptable verification per the ruthless-mentor contract.** Its `testMatch`
+covers `__tests__/` subdirectories `stores`, `engine`, `data`, `flows`,
+`services` and `theme` **only**. A test written outside those directories is
+silently never collected and reports green by never running — this has already
+happened once (62 tests, see MEMORY.md) and again on 2026-09-11 when
+`__tests__/theme/` had to be added. **Adding a new test directory means adding it
+to `testMatch` in the same commit.**
+
+**mobile-ui / device** — Jimmy on a physical Android device via the EAS dev
+build. There is no automatable runner; `tct-run-test.sh` skips this tier, so a
+`device` entry must carry a non-empty `notes` field recording device model, date,
+and exactly what was checked. This is the only accepted UI verification on this
+project.
+
+**Not verification, and never to be cited as such:**
+
+- `npx jest --selectProjects components` — jsdom, text-presence only, **FLAGGED
+  AS FRAUDULENT**. It mocks away precisely the native surfaces that break;
+  `__tests__/screens/radar.test.tsx` mocks `@rnmapbox/maps` entirely and could
+  not see the crash that shipped two broken OTAs on 2026-05-07.
+- `npx tsc --noEmit` — catches type errors, never runtime correctness.
+- Maestro E2E — **DEFERRED** (INFRA-001). No E2E exists. Descope rationale for
+  design-system-v2 is recorded in `.claude/preflight.yaml` BLOCK-005.
+- Backend Edge Functions — validated by live `net.http_post` calls from the
+  Supabase SQL editor, inspecting `net._http_response`, function logs and row
+  state. No automated backend tests exist, so there is no `integration` row.
 
 **What "done" means for a UI change on this project:** the change hot-reloads
 in Jimmy's EAS dev build and Jimmy tests it on his physical Android device,
