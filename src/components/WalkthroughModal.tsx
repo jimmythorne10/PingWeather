@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, Pressable, useWindowDimensions } from 'react-native';
-import { useTokens } from '../theme';
+import { useStyles, useTokens } from '../theme';
+import { useLook } from '../theme/useStyles';
+import type { LookTokens } from '../theme/looks';
+import type { ThemeTokens } from '../theme';
 
 const STEPS = [
   {
@@ -41,10 +44,14 @@ interface WalkthroughModalProps {
 }
 
 export function WalkthroughModal({ visible, onDismiss }: WalkthroughModalProps) {
+  const styles = useStyles(createStyles);
   const t = useTokens();
+  const look = useLook();
   const [step, setStep] = useState(0);
   const { width: screenWidth } = useWindowDimensions();
-  const cardMaxWidth = Math.min(screenWidth - 48, 480);
+  // 48 is exact under aurora: spacing.xxxl. `maxWidth` isn't a scanned
+  // property, but the input to the computation tokenises cleanly, so it does.
+  const cardMaxWidth = Math.min(screenWidth - look.spacing.xxxl, 480);
 
   useEffect(() => {
     if (!visible) {
@@ -71,94 +78,33 @@ export function WalkthroughModal({ visible, onDismiss }: WalkthroughModalProps) 
       animationType="fade"
       onRequestClose={onDismiss}
     >
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.55)',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: 24,
-        }}
-      >
-        <View
-          style={{
-            backgroundColor: t.card,
-            borderRadius: 16,
-            padding: 28,
-            width: '100%',
-            maxWidth: cardMaxWidth,
-          }}
-        >
-          <Text style={{ fontSize: 52, textAlign: 'center', marginBottom: 16 }}>
-            {current.emoji}
-          </Text>
+      <View style={styles.overlay}>
+        <View style={[styles.card, { backgroundColor: t.card, maxWidth: cardMaxWidth }]}>
+          <Text style={styles.emoji}>{current.emoji}</Text>
 
-          <Text
-            style={{
-              fontSize: 22,
-              fontWeight: '700',
-              color: t.textPrimary,
-              textAlign: 'center',
-              marginBottom: 12,
-            }}
-          >
-            {current.title}
-          </Text>
+          <Text style={[styles.title, { color: t.textPrimary }]}>{current.title}</Text>
 
-          <Text
-            style={{
-              fontSize: 15,
-              color: t.textSecondary,
-              lineHeight: 22,
-              textAlign: 'center',
-              marginBottom: 28,
-            }}
-          >
-            {current.body}
-          </Text>
+          <Text style={[styles.body, { color: t.textSecondary }]}>{current.body}</Text>
 
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'center',
-              gap: 8,
-              marginBottom: 24,
-            }}
-          >
+          <View style={styles.dotsRow}>
             {STEPS.map((_, i) => (
               <View
                 key={i}
                 testID="step-dot"
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: i === step ? t.primary : t.borderLight,
-                }}
+                style={[styles.dot, { backgroundColor: i === step ? t.primary : t.borderLight }]}
               />
             ))}
           </View>
 
-          <Pressable
-            style={{
-              backgroundColor: t.primary,
-              paddingVertical: 14,
-              borderRadius: 12,
-              alignItems: 'center',
-            }}
-            onPress={handleNext}
-          >
-            <Text style={{ color: t.textOnPrimary, fontSize: 16, fontWeight: '700' }}>
+          <Pressable style={[styles.nextButton, { backgroundColor: t.primary }]} onPress={handleNext}>
+            <Text style={[styles.nextButtonText, { color: t.textOnPrimary }]}>
               {isLast ? 'Done' : 'Next'}
             </Text>
           </Pressable>
 
           {!isLast && (
-            <Pressable
-              style={{ paddingTop: 14, alignItems: 'center' }}
-              onPress={onDismiss}
-            >
-              <Text style={{ color: t.textTertiary, fontSize: 14 }}>Skip</Text>
+            <Pressable style={styles.skipButton} onPress={onDismiss}>
+              <Text style={[styles.skipText, { color: t.textTertiary }]}>Skip</Text>
             </Pressable>
           )}
         </View>
@@ -166,3 +112,68 @@ export function WalkthroughModal({ visible, onDismiss }: WalkthroughModalProps) 
     </Modal>
   );
 }
+
+const createStyles = (t: ThemeTokens, look: LookTokens) => ({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    padding: look.spacing.xl,
+  },
+  card: {
+    borderRadius: look.radius.surface,
+    // 28 has no single spacing step (xl=24, xxl=32) but composes exactly,
+    // same technique as the xxxl+md / xxxl+xxl precedent set in TASK-005/006.
+    padding: look.spacing.xl + look.spacing.xs,
+    width: '100%' as const,
+  },
+  emoji: {
+    fontSize: look.typography.display.size,
+    textAlign: 'center' as const,
+    marginBottom: look.spacing.lg,
+  },
+  title: {
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    textAlign: 'center' as const,
+    marginBottom: look.spacing.md,
+  },
+  body: {
+    fontSize: look.typography.body.size,
+    lineHeight: look.typography.body.lineHeight,
+    textAlign: 'center' as const,
+    marginBottom: look.spacing.xl + look.spacing.xs,
+  },
+  dotsRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'center' as const,
+    gap: look.spacing.sm,
+    marginBottom: look.spacing.xl,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    // Renders as a full circle at any radius >= half the dimension (RN
+    // clamps), so the surface token is visually identical to the old 4.
+    borderRadius: look.radius.surface,
+  },
+  nextButton: {
+    // 14 snapped to lg (16) — see ErrorBoundary for the rationale.
+    paddingVertical: look.spacing.lg,
+    borderRadius: look.radius.surface,
+    alignItems: 'center' as const,
+  },
+  nextButtonText: {
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+  },
+  skipButton: {
+    // 14 snapped to lg (16), same rationale as nextButton above.
+    paddingTop: look.spacing.lg,
+    alignItems: 'center' as const,
+  },
+  skipText: {
+    fontSize: look.typography.body.size,
+  },
+});

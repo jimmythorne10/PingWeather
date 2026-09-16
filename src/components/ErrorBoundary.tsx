@@ -12,7 +12,9 @@ import { useThemeStore } from '../stores/themeStore';
  *
  * Theme: class components cannot use hooks, so we read the current tokens
  * synchronously from the store's getState() at render time. This gives us the
- * correct dark/storm theme colors on crash without a subscription.
+ * correct dark/storm theme colors AND the correct look structure (spacing,
+ * type scale, radius) on crash without a subscription. `colors` holds colour,
+ * `tokens` holds the LOOK (structure) tokens — see themeStore.ts.
  *
  * Crash reporter: wire @sentry/react-native (or equivalent) in
  * componentDidCatch before production. The call site is marked below.
@@ -60,22 +62,79 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       // Read theme tokens synchronously — safe in a class render because
       // getState() is a plain object read, not a subscription.
       const tokens = useThemeStore.getState().colors;
+      const look = useThemeStore.getState().tokens;
 
       return (
-        <View style={[styles.container, { backgroundColor: tokens.background }]}>
-          <Text style={styles.icon}>{'⚠️'}</Text>
-          <Text style={[styles.title, { color: tokens.textPrimary }]}>Something went wrong</Text>
-          <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>
+        <View style={[styles.container, { backgroundColor: tokens.background, padding: look.spacing.xl }]}>
+          <Text style={[styles.icon, { fontSize: look.typography.display.size }]}>{'⚠️'}</Text>
+          <Text
+            style={[
+              styles.title,
+              {
+                color: tokens.textPrimary,
+                fontSize: look.typography.heading.size,
+                fontWeight: look.typography.heading.weight,
+              },
+            ]}
+          >
+            Something went wrong
+          </Text>
+          <Text
+            style={[
+              styles.subtitle,
+              {
+                color: tokens.textSecondary,
+                fontSize: look.typography.body.size,
+                lineHeight: look.typography.body.lineHeight,
+                paddingHorizontal: look.spacing.md,
+              },
+            ]}
+          >
             WeatherBeacon hit an unexpected error. Tap "Try again" to recover.
             If this keeps happening, close and reopen the app.
           </Text>
           {this.state.errorMessage && (
-            <Text style={[styles.errorDetail, { color: tokens.textTertiary }]} selectable>
+            <Text
+              style={[
+                styles.errorDetail,
+                {
+                  color: tokens.textTertiary,
+                  fontSize: look.typography.label.size,
+                  paddingHorizontal: look.spacing.lg,
+                },
+              ]}
+              selectable
+            >
               {this.state.errorMessage}
             </Text>
           )}
-          <Pressable style={[styles.button, { backgroundColor: tokens.primary }]} onPress={this.handleReset}>
-            <Text style={[styles.buttonText, { color: tokens.textOnPrimary }]}>Try again</Text>
+          <Pressable
+            style={[
+              styles.button,
+              {
+                backgroundColor: tokens.primary,
+                paddingHorizontal: look.spacing.xxl,
+                // Was 14: no exact step and no composition reaches it, so it is
+                // snapped to lg (16). A 2pt change on a button, inside the
+                // normalized-Classic tolerance. Flagged for the device sweep.
+                paddingVertical: look.spacing.lg,
+                borderRadius: look.radius.surface,
+              },
+            ]}
+            onPress={this.handleReset}
+          >
+            <Text
+              style={[
+                styles.buttonText,
+                {
+                  color: tokens.textOnPrimary,
+                  fontSize: look.typography.heading.size,
+                  fontWeight: look.typography.heading.weight,
+                },
+              ]}
+            >
+              Try again
+            </Text>
           </Pressable>
         </View>
       );
@@ -90,39 +149,28 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
   },
   icon: {
-    fontSize: 64,
     marginBottom: 16,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
     textAlign: 'center',
     marginBottom: 16,
-    paddingHorizontal: 12,
   },
   errorDetail: {
-    fontSize: 11,
     fontFamily: 'monospace',
     marginBottom: 20,
     textAlign: 'center',
-    paddingHorizontal: 16,
   },
   button: {
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 10,
+    // Intentionally empty of structural values: this file is a CLASS component
+    // (React error boundaries cannot be function components), so the sheet is
+    // module-scope and cannot read the store. Structure is merged inline at
+    // render, where `look` is in scope — see handleReset's Pressable below.
   },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  buttonText: {},
 });

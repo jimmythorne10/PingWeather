@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, Switch, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, Switch, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
@@ -14,10 +14,25 @@ import { isDevAccount } from '../../src/utils/devAccount';
 import { supabase } from '../../src/utils/supabase';
 import { TIER_LIMITS } from '../../src/types';
 import type { ThemeTokens } from '../../src/theme';
-import type { ThemeName } from '../../src/theme/tokens';
+import type { LookTokens } from '../../src/theme/looks';
+import { palettesForLook, type LookName } from '../../src/theme/looks';
+import type { PaletteName } from '../../src/theme/palettes';
 import type { SubscriptionTier } from '../../src/types';
 
 const APP_VERSION = Constants.expoConfig?.version ?? '0.0.0';
+
+const LOOK_OPTIONS: { name: LookName; label: string }[] = [
+  { name: 'aurora', label: 'Aurora' },
+  { name: 'classic', label: 'Classic' },
+];
+
+const PALETTE_LABELS: Record<string, string> = {
+  classic: 'Classic',
+  dark: 'Dark',
+  storm: 'Storm',
+  blaze: 'Blaze',
+  timber: 'Timber',
+};
 
 const DAY_LABELS = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -37,7 +52,11 @@ export default function SettingsScreen() {
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const fetchProfile = useAuthStore((s) => s.fetchProfile);
   const settings = useSettingsStore();
-  const { themeName, setTheme } = useThemeStore();
+  const lookName = useThemeStore((s) => s.look);
+  const look = useThemeStore((s) => s.tokens);
+  const palette = useThemeStore((s) => s.palette);
+  const setLook = useThemeStore((s) => s.setLook);
+  const setPalette = useThemeStore((s) => s.setPalette);
   const { registerForPushNotifications } = usePushNotifications();
 
   const locations = useLocationsStore((s) => s.locations);
@@ -144,11 +163,13 @@ export default function SettingsScreen() {
   const canOverrideTier = isDevAccount(profile?.email);
   const currentLimits = TIER_LIMITS[currentTier];
 
-  const themeOptions: { name: ThemeName; label: string }[] = [
-    { name: 'classic', label: 'Classic' },
-    { name: 'dark', label: 'Dark' },
-    { name: 'storm', label: 'Storm' },
-  ];
+  // Palettes are scoped to the active look — see FEAT-003. Deriving the list
+  // from palettesForLook() rather than hardcoding it is what stops a dark
+  // Aurora palette being offered against Classic's light proportions.
+  const paletteOptions = palettesForLook(lookName).map((name) => ({
+    name: name as PaletteName,
+    label: PALETTE_LABELS[name] ?? name,
+  }));
 
   const tierOptions: { value: SubscriptionTier; label: string }[] = [
     { value: 'free', label: 'Free' },
@@ -338,15 +359,39 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      {/* Theme */}
-      <Text style={styles.sectionTitle}>{'THEME'}</Text>
+      {/* Look — structure. Independent of palette, which is colour. */}
+      <Text style={styles.sectionTitle}>{'LOOK'}</Text>
+      <View style={styles.segment}>
+        {LOOK_OPTIONS.map((opt) => {
+          const active = lookName === opt.name;
+          return (
+            <Pressable
+              key={opt.name}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              style={[styles.segmentBtn, active && styles.segmentBtnActive]}
+              onPress={() => setLook(opt.name)}
+            >
+              <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                {opt.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={styles.segmentHint}>
+        {lookName === 'classic'
+          ? 'The original WeatherBeacon layout and colours.'
+          : 'Larger type, rounder surfaces, and the dark palettes.'}
+      </Text>
+
+      {/* Palette — colour. The list changes with the look. */}
+      <Text style={styles.sectionTitle}>{'PALETTE'}</Text>
       <View style={styles.card}>
-        {themeOptions.map((opt) => (
-          <Pressable key={opt.name} style={[styles.row, { paddingVertical: 12 }]} onPress={() => setTheme(opt.name)}>
+        {paletteOptions.map((opt) => (
+          <Pressable key={opt.name} style={styles.themeRow} onPress={() => setPalette(opt.name)}>
             <Text style={styles.label}>{opt.label}</Text>
-            <Text style={{ fontSize: 18, color: tokens.primary }}>
-              {themeName === opt.name ? '●' : '○'}
-            </Text>
+            <Text style={styles.radio}>{palette === opt.name ? '●' : '○'}</Text>
           </Pressable>
         ))}
       </View>
@@ -436,7 +481,7 @@ export default function SettingsScreen() {
 
             {/* Day of week (weekly only) */}
             {digestFrequency === 'weekly' && (
-              <View style={[styles.row, { marginTop: 8, flexWrap: 'wrap' as const, gap: 4 }]}>
+              <View style={[styles.row, { marginTop: look.spacing.sm, flexWrap: 'wrap' as const, gap: look.spacing.xs }]}>
                 <Text style={[styles.label, { width: '100%' as unknown as number, marginBottom: 6 }]}>Day</Text>
                 {DAY_LABELS.slice(1).map((label, i) => {
                   const day = i + 1;
@@ -457,9 +502,9 @@ export default function SettingsScreen() {
             )}
 
             {/* Hour picker */}
-            <View style={[styles.row, { marginTop: 8 }]}>
+            <View style={[styles.row, { marginTop: look.spacing.sm }]}>
               <Text style={styles.label}>Send at</Text>
-              <View style={{ flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12 }}>
+              <View style={{ flexDirection: 'row' as const, alignItems: 'center' as const, gap: look.spacing.md }}>
                 <Pressable
                   onPress={() => handleDigestUpdate({ digest_hour: (digestHour + 23) % 24 })}
                   disabled={digestSaving}
@@ -488,12 +533,12 @@ export default function SettingsScreen() {
               locations.map((loc) => (
                 <Pressable
                   key={loc.id}
-                  style={[styles.row, { paddingVertical: 10 }]}
+                  style={[styles.row, { paddingVertical: look.spacing.md }]}
                   onPress={() => handleDigestUpdate({ digest_location_id: loc.id })}
                   disabled={digestSaving}
                 >
                   <Text style={styles.label}>{loc.name}</Text>
-                  <Text style={{ fontSize: 16, color: tokens.primary }}>
+                  <Text style={{ fontSize: look.typography.heading.size, color: tokens.primary }}>
                     {digestLocationId === loc.id ? '●' : '○'}
                   </Text>
                 </Pressable>
@@ -501,7 +546,7 @@ export default function SettingsScreen() {
             )}
 
             {digestSaving && (
-              <ActivityIndicator size="small" color={tokens.primary} style={{ marginTop: 8 }} />
+              <ActivityIndicator size="small" color={tokens.primary} style={{ marginTop: look.spacing.sm }} />
             )}
           </>
         )}
@@ -512,7 +557,7 @@ export default function SettingsScreen() {
       <View style={styles.card}>
         <Pressable style={styles.row} onPress={() => router.push('/history')}>
           <Text style={styles.label}>Alert History</Text>
-          <Text style={{ fontSize: 16, color: tokens.textTertiary }}>{'›'}</Text>
+          <Text style={{ fontSize: look.typography.heading.size, color: tokens.textTertiary }}>{'›'}</Text>
         </Pressable>
       </View>
 
@@ -521,7 +566,7 @@ export default function SettingsScreen() {
       <View style={styles.card}>
         <Pressable style={styles.row} onPress={showWalkthrough}>
           <Text style={styles.label}>Watch Tutorial</Text>
-          <Text style={{ fontSize: 16, color: tokens.textTertiary }}>{'›'}</Text>
+          <Text style={{ fontSize: look.typography.heading.size, color: tokens.textTertiary }}>{'›'}</Text>
         </Pressable>
       </View>
 
@@ -564,21 +609,21 @@ export default function SettingsScreen() {
   );
 }
 
-const createStyles = (t: ThemeTokens) => ({
+const createStyles = (t: ThemeTokens, look: LookTokens) => ({
   container: { flex: 1 as const, backgroundColor: t.background },
-  content: { padding: 20, paddingBottom: 60, maxWidth: 600, alignSelf: 'center' as const, width: '100%' as const },
+  content: { padding: look.spacing.xl, paddingBottom: look.spacing.xxxl, maxWidth: 600, alignSelf: 'center' as const, width: '100%' as const },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700' as const,
+    fontSize: look.typography.label.size,
+    fontWeight: look.typography.bodyStrong.weight,
     color: t.textTertiary,
-    letterSpacing: 0.5,
+    letterSpacing: look.typography.label.tracking,
     marginTop: 20,
     marginBottom: 8,
   },
   card: {
     backgroundColor: t.card,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.lg,
     borderWidth: 1,
     borderColor: t.borderLight,
   },
@@ -586,23 +631,63 @@ const createStyles = (t: ThemeTokens) => ({
     flexDirection: 'row' as const,
     justifyContent: 'space-between' as const,
     alignItems: 'center' as const,
-    paddingVertical: 8,
+    paddingVertical: look.spacing.sm,
   },
-  label: { fontSize: 15, color: t.textPrimary },
-  value: { fontSize: 14, color: t.textSecondary, marginBottom: 12 },
-  valueBold: { fontSize: 15, fontWeight: '600' as const, color: t.textPrimary, marginBottom: 4 },
-  limitsLine: { fontSize: 12, color: t.textTertiary },
+  label: { fontSize: look.typography.body.size, color: t.textPrimary },
+  value: { fontSize: look.typography.body.size, color: t.textSecondary, marginBottom: 12 },
+  valueBold: { fontSize: look.typography.body.size, fontWeight: look.typography.bodyStrong.weight, color: t.textPrimary, marginBottom: 4 },
+  limitsLine: { fontSize: look.typography.label.size, color: t.textTertiary },
+
+  // Look control — a segmented switch, distinct from the Palette radio list
+  // because look and palette are different axes and should not look alike.
+  segment: {
+    flexDirection: 'row' as const,
+    backgroundColor: t.inputBackground,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.xs,
+    gap: look.spacing.xs,
+  },
+  segmentBtn: {
+    flex: 1 as const,
+    paddingVertical: look.spacing.md,
+    borderRadius: look.radius.surface,
+    alignItems: 'center' as const,
+  },
+  segmentBtnActive: { backgroundColor: t.primary },
+  segmentText: {
+    fontSize: look.typography.caption.size,
+    fontWeight: look.typography.bodyStrong.weight,
+    letterSpacing: look.typography.label.tracking,
+    color: t.textSecondary,
+  },
+  segmentTextActive: { color: t.textOnPrimary },
+  segmentHint: {
+    fontSize: look.typography.label.size,
+    color: t.textTertiary,
+    marginTop: look.spacing.sm,
+    lineHeight: look.typography.label.lineHeight,
+  },
+  themeRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    paddingVertical: look.spacing.md,
+  },
+  radio: {
+    fontSize: look.typography.heading.size,
+    color: t.primary,
+  },
 
   // Upgrade CTA
   upgradeButton: {
     backgroundColor: t.primary,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.lg,
     marginTop: 12,
     alignItems: 'center' as const,
   },
-  upgradeButtonText: { color: t.textOnPrimary, fontSize: 16, fontWeight: '700' as const },
-  upgradeButtonSubtext: { color: t.textOnPrimary, fontSize: 12, marginTop: 4, opacity: 0.85 },
+  upgradeButtonText: { color: t.textOnPrimary, fontSize: look.typography.heading.size, fontWeight: look.typography.bodyStrong.weight },
+  upgradeButtonSubtext: { color: t.textOnPrimary, fontSize: look.typography.label.size, marginTop: 4, opacity: 0.85 },
 
   // Dev override
   devCard: {
@@ -613,19 +698,25 @@ const createStyles = (t: ThemeTokens) => ({
     alignSelf: 'flex-start' as const,
     backgroundColor: t.warning,
     color: '#000000',
-    fontSize: 10,
-    fontWeight: '700' as const,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    fontSize: look.typography.label.size,
+    fontWeight: look.typography.bodyStrong.weight,
+    paddingHorizontal: look.spacing.sm,
+    paddingVertical: look.spacing.xs,
+    borderRadius: look.radius.surface,
     marginBottom: 8,
   },
-  devHint: { fontSize: 12, color: t.textSecondary, marginTop: 4, marginBottom: 12, lineHeight: 18 },
-  tierRow: { flexDirection: 'row' as const, gap: 8 },
+  devHint: {
+    fontSize: look.typography.label.size,
+    color: t.textSecondary,
+    marginTop: 4,
+    marginBottom: 12,
+    lineHeight: look.typography.label.lineHeight,
+  },
+  tierRow: { flexDirection: 'row' as const, gap: look.spacing.sm },
   tierButton: {
     flex: 1 as const,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: look.spacing.md,
+    borderRadius: look.radius.surface,
     borderWidth: 1,
     borderColor: t.border,
     alignItems: 'center' as const,
@@ -635,30 +726,30 @@ const createStyles = (t: ThemeTokens) => ({
     backgroundColor: t.primary,
     borderColor: t.primary,
   },
-  tierButtonText: { fontSize: 14, fontWeight: '600' as const, color: t.textSecondary },
+  tierButtonText: { fontSize: look.typography.body.size, fontWeight: look.typography.bodyStrong.weight, color: t.textSecondary },
   tierButtonTextActive: { color: t.textOnPrimary },
 
   // Push register button + result
   pushRegisterButton: {
     marginTop: 12,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: look.spacing.md,
+    borderRadius: look.radius.surface,
     borderWidth: 1,
     alignItems: 'center' as const,
   },
-  pushRegisterText: { fontSize: 14, fontWeight: '600' as const },
+  pushRegisterText: { fontSize: look.typography.body.size, fontWeight: look.typography.bodyStrong.weight },
   pushResult: {
     marginTop: 8,
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: look.typography.label.size,
+    lineHeight: look.typography.caption.lineHeight,
   },
 
   // Toggles
-  toggleRow: { flexDirection: 'row' as const, gap: 4 },
+  toggleRow: { flexDirection: 'row' as const, gap: look.spacing.xs },
   toggleButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 6,
+    paddingVertical: look.spacing.sm,
+    paddingHorizontal: look.spacing.lg,
+    borderRadius: look.radius.surface,
     backgroundColor: t.inputBackground,
     borderWidth: 1,
     borderColor: t.borderLight,
@@ -667,41 +758,45 @@ const createStyles = (t: ThemeTokens) => ({
     backgroundColor: t.primary,
     borderColor: t.primary,
   },
-  toggleText: { fontSize: 14, color: t.textSecondary, fontWeight: '500' as const },
+  toggleText: { fontSize: look.typography.body.size, color: t.textSecondary, fontWeight: look.typography.bodyStrong.weight },
   toggleTextActive: { color: t.textOnPrimary },
 
   // Destructive
   deleteButton: {
     marginTop: 24,
-    paddingVertical: 14,
+    paddingVertical: look.spacing.lg,
     alignItems: 'center' as const,
-    borderRadius: 8,
+    borderRadius: look.radius.surface,
     backgroundColor: t.error,
   },
-  deleteButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' as const },
+  deleteButtonText: { color: '#ffffff', fontSize: look.typography.heading.size, fontWeight: look.typography.bodyStrong.weight },
   signOutButton: {
     marginTop: 12,
-    paddingVertical: 14,
+    paddingVertical: look.spacing.lg,
     alignItems: 'center' as const,
-    borderRadius: 8,
+    borderRadius: look.radius.surface,
     borderWidth: 1,
     borderColor: t.error,
   },
-  signOutText: { color: t.error, fontSize: 16, fontWeight: '600' as const },
+  signOutText: { color: t.error, fontSize: look.typography.heading.size, fontWeight: look.typography.bodyStrong.weight },
 
   // Digest hour picker
   hourButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: look.spacing.md,
+    paddingVertical: look.spacing.sm,
+    borderRadius: look.radius.surface,
     backgroundColor: t.inputBackground,
     borderWidth: 1,
     borderColor: t.borderLight,
   },
-  hourButtonText: { fontSize: 20, fontWeight: '600' as const, lineHeight: 24 },
+  hourButtonText: {
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.bodyStrong.weight,
+    lineHeight: look.typography.heading.lineHeight,
+  },
 
   // Version
-  versionContainer: { marginTop: 24, alignItems: 'center' as const, paddingVertical: 8 },
-  versionText: { fontSize: 13, color: t.textTertiary, fontWeight: '600' as const },
-  versionSubtext: { fontSize: 11, color: t.textTertiary, marginTop: 2 },
+  versionContainer: { marginTop: 24, alignItems: 'center' as const, paddingVertical: look.spacing.sm },
+  versionText: { fontSize: look.typography.caption.size, color: t.textTertiary, fontWeight: look.typography.bodyStrong.weight },
+  versionSubtext: { fontSize: look.typography.label.size, color: t.textTertiary, marginTop: 2 },
 });

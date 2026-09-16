@@ -2,6 +2,8 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import MapboxGL from '@rnmapbox/maps';
 import { useTokens } from '../src/theme';
+import { useLook } from '../src/theme/useStyles';
+import type { LookTokens } from '../src/theme/looks';
 import { useRadarTiles } from '../src/hooks/useRadarTiles';
 
 const _mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? '';
@@ -13,6 +15,7 @@ const DEFAULT_ZOOM = 7;
 
 export default function RadarScreen() {
   const tokens = useTokens();
+  const look = useLook();
   const { lat, lng, locationName } = useLocalSearchParams<{
     lat: string;
     lng: string;
@@ -26,7 +29,7 @@ export default function RadarScreen() {
           setFrameIndex, play, pause, goToNow } = useRadarTiles();
 
   const nowIndex = frames.findIndex(f => f.isCurrent);
-  const styles = createStyles(tokens);
+  const styles = createStyles(tokens, look);
 
   return (
     <View style={styles.container}>
@@ -144,7 +147,12 @@ export default function RadarScreen() {
   );
 }
 
-const createStyles = (t: ReturnType<typeof useTokens>) =>
+// NOTE FOR ANYONE MIGRATING THIS FILE LATER: nothing here touches the Mapbox
+// layer. `styleURL` and `RasterLayer`'s `style` prop are Mapbox-native values,
+// NOT React Native styles — rewriting either as an RN style object is the
+// regression that shipped two broken OTAs on 2026-05-07, and
+// __tests__/theme/radarNativeProps.test.ts exists to catch it.
+const createStyles = (t: ReturnType<typeof useTokens>, look: LookTokens) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -154,9 +162,9 @@ const createStyles = (t: ReturnType<typeof useTokens>) =>
       flex: 1,
     },
     controls: {
-      paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: 24,
+      paddingHorizontal: look.spacing.lg,
+      paddingTop: look.spacing.md,
+      paddingBottom: look.spacing.xl,
       borderTopWidth: 1,
       borderTopColor: t.borderLight,
     },
@@ -167,22 +175,26 @@ const createStyles = (t: ReturnType<typeof useTokens>) =>
       marginBottom: 10,
     },
     frameLabel: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: look.typography.heading.size,
+      fontWeight: look.typography.heading.weight,
+      letterSpacing: look.typography.heading.tracking,
     },
     frameCount: {
-      fontSize: 12,
+      fontSize: look.typography.label.size,
     },
     scrubberRow: {
       flexDirection: 'row',
-      gap: 3,
+      gap: look.spacing.xs,
       alignItems: 'center',
       marginBottom: 4,
     },
     scrubTick: {
       flex: 1,
       height: 8,
-      borderRadius: 2,
+      // radius.surface exceeds this element's 8pt height, so RN clamps it to a
+      // pill. That is the intended Aurora reading of a scrub tick, and under
+      // classic (12) it clamps identically — the tick is never square either way.
+      borderRadius: look.radius.surface,
     },
     scrubberLabels: {
       flexDirection: 'row',
@@ -190,39 +202,41 @@ const createStyles = (t: ReturnType<typeof useTokens>) =>
       marginBottom: 14,
     },
     scrubLabel: {
-      fontSize: 10,
+      fontSize: look.typography.label.size,
     },
     buttonRow: {
       flexDirection: 'row',
-      gap: 10,
+      gap: look.spacing.md,
       alignItems: 'center',
       marginBottom: 12,
     },
     controlBtn: {
       flex: 1,
-      paddingVertical: 10,
-      borderRadius: 8,
+      paddingVertical: look.spacing.md,
+      borderRadius: look.radius.surface,
       borderWidth: 1,
       alignItems: 'center',
     },
     controlBtnText: {
-      fontSize: 13,
-      fontWeight: '600',
+      fontSize: look.typography.caption.size,
+      fontWeight: look.typography.caption.weight,
+      letterSpacing: look.typography.caption.tracking,
     },
     playBtn: {
       flex: 2,
-      paddingVertical: 10,
-      borderRadius: 8,
+      paddingVertical: look.spacing.md,
+      borderRadius: look.radius.surface,
       alignItems: 'center',
     },
     playBtnText: {
-      fontSize: 14,
-      fontWeight: '700',
+      fontSize: look.typography.bodyStrong.size,
+      fontWeight: look.typography.bodyStrong.weight,
+      letterSpacing: look.typography.bodyStrong.tracking,
     },
     attribution: {
       alignItems: 'center',
     },
     attributionText: {
-      fontSize: 10,
+      fontSize: look.typography.label.size,
     },
   });

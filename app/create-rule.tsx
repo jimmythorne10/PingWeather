@@ -1,7 +1,9 @@
-import { View, Text, ScrollView, Pressable, TextInput, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { useTokens } from '../src/theme';
+import { useStyles, useTokens } from '../src/theme';
+import type { ThemeTokens } from '../src/theme';
+import type { LookTokens } from '../src/theme/looks';
 import { useAlertRulesStore } from '../src/stores/alertRulesStore';
 import { useLocationsStore } from '../src/stores/locationsStore';
 import { useAuthStore } from '../src/stores/authStore';
@@ -157,6 +159,7 @@ function NumericInput({
 export default function CreateRuleScreen() {
   const router = useRouter();
   const t = useTokens();
+  const styles = useStyles(createStyles);
   const params = useLocalSearchParams<{ mode?: string; ruleId?: string }>();
   const mode = params.mode; // 'edit' | 'clone' | undefined (create)
   const ruleId = params.ruleId;
@@ -353,7 +356,7 @@ export default function CreateRuleScreen() {
               ]}
               onPress={() => setSelectedLocationId(loc.id)}
             >
-              <Text style={{ color: selectedLocationId === loc.id ? t.primary : t.textSecondary, fontSize: 14 }}>
+              <Text style={[styles.locationChipLabel, { color: selectedLocationId === loc.id ? t.primary : t.textSecondary }]}>
                 {loc.name}
               </Text>
             </Pressable>
@@ -371,13 +374,13 @@ export default function CreateRuleScreen() {
                 style={[styles.logicalChip, { borderColor: t.border }, logicalOp === 'AND' && { backgroundColor: t.primary }]}
                 onPress={() => setLogicalOp('AND')}
               >
-                <Text style={{ color: logicalOp === 'AND' ? t.textOnPrimary : t.textSecondary, fontSize: 13 }}>AND</Text>
+                <Text style={[styles.chipLabelCaption, { color: logicalOp === 'AND' ? t.textOnPrimary : t.textSecondary }]}>AND</Text>
               </Pressable>
               <Pressable
                 style={[styles.logicalChip, { borderColor: t.border }, logicalOp === 'OR' && { backgroundColor: t.primary }]}
                 onPress={() => setLogicalOp('OR')}
               >
-                <Text style={{ color: logicalOp === 'OR' ? t.textOnPrimary : t.textSecondary, fontSize: 13 }}>OR</Text>
+                <Text style={[styles.chipLabelCaption, { color: logicalOp === 'OR' ? t.textOnPrimary : t.textSecondary }]}>OR</Text>
               </Pressable>
             </View>
           )}
@@ -399,7 +402,7 @@ export default function CreateRuleScreen() {
                     ]}
                     onPress={() => setConditionCategory(index, cat.value)}
                   >
-                    <Text style={{ color: isActive ? t.primary : t.textTertiary, fontSize: 12, fontWeight: '500' }}>
+                    <Text style={[styles.categoryChipLabel, { color: isActive ? t.primary : t.textTertiary }]}>
                       {cat.label}
                     </Text>
                   </Pressable>
@@ -436,7 +439,7 @@ export default function CreateRuleScreen() {
                     }
                   }}
                 >
-                  <Text style={{ color: condition.metric === m.value ? t.primary : t.textSecondary, fontSize: 13 }}>
+                  <Text style={[styles.chipLabelCaption, { color: condition.metric === m.value ? t.primary : t.textSecondary }]}>
                     {m.label}
                   </Text>
                 </Pressable>
@@ -458,7 +461,7 @@ export default function CreateRuleScreen() {
                       ]}
                       onPress={() => updateCondition(index, { operator: op.value })}
                     >
-                      <Text style={{ color: condition.operator === op.value ? t.primary : t.textSecondary, fontSize: 13 }}>
+                      <Text style={[styles.chipLabelCaption, { color: condition.operator === op.value ? t.primary : t.textSecondary }]}>
                         {op.label}
                       </Text>
                     </Pressable>
@@ -488,10 +491,10 @@ export default function CreateRuleScreen() {
                       ]}
                       onPress={() => updateCondition(index, { value: preset.value })}
                     >
-                      <Text style={{ color: isSelected ? t.primary : t.textPrimary, fontSize: 14, fontWeight: '500' }}>
+                      <Text style={[styles.moonPresetLabel, { color: isSelected ? t.primary : t.textPrimary }]}>
                         {preset.label}
                       </Text>
-                      <Text style={{ color: isSelected ? t.primary : t.textTertiary, fontSize: 11 }}>
+                      <Text style={[styles.moonPresetDesc, { color: isSelected ? t.primary : t.textTertiary }]}>
                         {preset.description}
                       </Text>
                     </Pressable>
@@ -520,7 +523,7 @@ export default function CreateRuleScreen() {
                           });
                         }}
                       >
-                        <Text style={{ color: isSelected ? t.primary : t.textSecondary, fontSize: 13 }}>
+                        <Text style={[styles.chipLabelCaption, { color: isSelected ? t.primary : t.textSecondary }]}>
                           {label}
                         </Text>
                       </Pressable>
@@ -557,7 +560,13 @@ export default function CreateRuleScreen() {
                         ]}
                         onPress={() => updateCondition(index, { value: dir.value })}
                       >
-                        <Text style={{ color: isSelected ? t.primary : t.textSecondary, fontSize: 14, fontWeight: isSelected ? '700' : '400' }}>
+                        <Text
+                          style={[
+                            styles.compassLabel,
+                            isSelected && styles.compassLabelSelected,
+                            { color: isSelected ? t.primary : t.textSecondary },
+                          ]}
+                        >
                           {dir.label}
                         </Text>
                       </Pressable>
@@ -578,7 +587,7 @@ export default function CreateRuleScreen() {
                         ]}
                         onPress={() => updateCondition(index, { tolerance: tol.value })}
                       >
-                        <Text style={{ color: isSelected ? t.primary : t.textSecondary, fontSize: 13 }}>
+                        <Text style={[styles.chipLabelCaption, { color: isSelected ? t.primary : t.textSecondary }]}>
                           {tol.label}
                         </Text>
                       </Pressable>
@@ -648,7 +657,7 @@ export default function CreateRuleScreen() {
             {/* Remove button */}
             {conditions.length > 1 && (
               <Pressable onPress={() => removeCondition(index)} style={styles.removeBtn}>
-                <Text style={{ color: t.error, fontSize: 14 }}>Remove condition</Text>
+                <Text style={[styles.removeConditionText, { color: t.error }]}>Remove condition</Text>
               </Pressable>
             )}
           </View>
@@ -659,7 +668,7 @@ export default function CreateRuleScreen() {
         style={[styles.addCondBtn, { borderColor: t.primary }]}
         onPress={addCondition}
       >
-        <Text style={{ color: t.primary, fontSize: 15 }}>+ Add Condition</Text>
+        <Text style={[styles.addConditionText, { color: t.primary }]}>+ Add Condition</Text>
       </Pressable>
 
       {/* Lookahead */}
@@ -678,7 +687,7 @@ export default function CreateRuleScreen() {
             ]}
             onPress={() => setLookaheadHours(opt.hours)}
           >
-            <Text style={{ color: lookaheadHours === opt.hours ? t.primary : t.textSecondary, fontSize: 13 }}>
+            <Text style={[styles.chipLabelCaption, { color: lookaheadHours === opt.hours ? t.primary : t.textSecondary }]}>
               {opt.label}
             </Text>
           </Pressable>
@@ -701,7 +710,7 @@ export default function CreateRuleScreen() {
             ]}
             onPress={() => setPollingHours(h)}
           >
-            <Text style={{ color: pollingHours === h ? t.primary : t.textSecondary, fontSize: 13 }}>
+            <Text style={[styles.chipLabelCaption, { color: pollingHours === h ? t.primary : t.textSecondary }]}>
               {h === 1 ? 'Every hour' : h < 24 ? `Every ${h} hrs` : 'Once a day'}
             </Text>
           </Pressable>
@@ -724,7 +733,7 @@ export default function CreateRuleScreen() {
             ]}
             onPress={() => setCooldownHours(opt.hours)}
           >
-            <Text style={{ color: cooldownHours === opt.hours ? t.primary : t.textSecondary, fontSize: 13 }}>
+            <Text style={[styles.chipLabelCaption, { color: cooldownHours === opt.hours ? t.primary : t.textSecondary }]}>
               {opt.label}
             </Text>
           </Pressable>
@@ -800,57 +809,130 @@ export default function CreateRuleScreen() {
       </Pressable>
 
       <Pressable style={styles.cancelBtn} onPress={() => router.back()}>
-        <Text style={{ color: t.textTertiary, fontSize: 16 }}>Cancel</Text>
+        <Text style={[styles.cancelText, { color: t.textTertiary }]}>Cancel</Text>
       </Pressable>
     </ScrollView>
     </>
   );
 }
 
-const styles = StyleSheet.create({
+// Colour is intentionally unused here — every colour value in this screen is
+// still resolved inline from `useTokens()` at the call site (selection-state
+// ternaries choose between existing colour tokens, none of which changed).
+// This factory only collapses the structural (size/weight/spacing) literals
+// onto the shared look. Keeping the `(c, look)` signature matches the rest of
+// the migrated screens even though `c` isn't referenced.
+const createStyles = (_c: ThemeTokens, look: LookTokens) => ({
   container: { flex: 1 },
-  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { padding: 20, paddingBottom: 60, maxWidth: 640, alignSelf: 'center', width: '100%' },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 20 },
-  label: { fontSize: 12, fontWeight: '600', letterSpacing: 0.5, marginTop: 20, marginBottom: 4 },
-  helperText: { fontSize: 13, lineHeight: 18, marginBottom: 10 },
+  loadingContainer: { flex: 1, alignItems: 'center' as const, justifyContent: 'center' as const },
+  content: { padding: look.spacing.xl, paddingBottom: look.spacing.xxxl, maxWidth: 640, alignSelf: 'center' as const, width: '100%' as const },
+  title: { fontSize: look.typography.title.size, fontWeight: look.typography.title.weight, marginBottom: 20 },
+  label: {
+    fontSize: look.typography.label.size,
+    fontWeight: look.typography.label.weight,
+    letterSpacing: look.typography.label.tracking,
+    marginTop: 20,
+    marginBottom: 4,
+  },
+  helperText: { fontSize: look.typography.caption.size, lineHeight: look.typography.caption.lineHeight, marginBottom: 10 },
   input: {
-    borderWidth: 1, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 16, fontSize: 16,
+    borderWidth: 1,
+    borderRadius: look.radius.surface,
+    paddingVertical: look.spacing.lg,
+    paddingHorizontal: look.spacing.lg,
+    fontSize: look.typography.heading.size,
   },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chipRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: look.spacing.sm },
   chip: {
-    borderWidth: 1, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14,
+    borderWidth: 1,
+    borderRadius: look.radius.surface,
+    paddingVertical: look.spacing.sm,
+    paddingHorizontal: look.spacing.lg,
   },
+  // Chip label text where only the colour varies by selection — fontSize 13
+  // across every one of these sites (metric, operator, AND/OR, pressure
+  // direction, bearing tolerance, lookahead, polling, cooldown chips).
+  chipLabelCaption: { fontSize: look.typography.caption.size },
+  locationChipLabel: { fontSize: look.typography.body.size },
+  categoryChipLabel: { fontSize: look.typography.label.size, fontWeight: look.typography.label.weight },
   moonChip: {
-    paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center', minWidth: 100,
+    paddingVertical: look.spacing.md,
+    paddingHorizontal: look.spacing.lg,
+    alignItems: 'center' as const,
+    minWidth: 100,
   },
+  moonPresetLabel: { fontSize: look.typography.bodyStrong.size, fontWeight: look.typography.bodyStrong.weight },
+  moonPresetDesc: { fontSize: look.typography.label.size },
   categoryChip: {
-    paddingVertical: 5, paddingHorizontal: 10,
+    paddingVertical: look.spacing.xs,
+    paddingHorizontal: look.spacing.md,
   },
   conditionCard: {
-    borderWidth: 1, borderRadius: 12, padding: 16, marginBottom: 8,
+    borderWidth: 1,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.lg,
+    marginBottom: 8,
   },
-  condLabel: { fontSize: 11, fontWeight: '600', letterSpacing: 0.5, marginTop: 12, marginBottom: 6 },
-  valueRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  condLabel: {
+    fontSize: look.typography.label.size,
+    fontWeight: look.typography.label.weight,
+    letterSpacing: look.typography.label.tracking,
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  valueRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: look.spacing.md },
   valueInput: {
-    borderWidth: 1, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14, fontSize: 20, fontWeight: '700', width: 100, textAlign: 'center',
+    borderWidth: 1,
+    borderRadius: look.radius.surface,
+    paddingVertical: look.spacing.md,
+    paddingHorizontal: look.spacing.lg,
+    fontSize: look.typography.heading.size,
+    fontWeight: look.typography.heading.weight,
+    width: 100,
+    textAlign: 'center' as const,
   },
-  unitLabel: { fontSize: 16 },
-  metricHelperText: { fontSize: 12, lineHeight: 17, marginTop: 8 },
-  removeBtn: { marginTop: 12, alignItems: 'flex-end' },
-  logicalRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginVertical: 8 },
-  logicalChip: { borderRadius: 6, paddingVertical: 6, paddingHorizontal: 16, borderWidth: 1, borderColor: '#ccc' },
+  unitLabel: { fontSize: look.typography.heading.size },
+  metricHelperText: { fontSize: look.typography.label.size, lineHeight: look.typography.label.lineHeight, marginTop: 8 },
+  removeBtn: { marginTop: 12, alignItems: 'flex-end' as const },
+  removeConditionText: { fontSize: look.typography.body.size },
+  addConditionText: { fontSize: look.typography.body.size },
+  logicalRow: { flexDirection: 'row' as const, justifyContent: 'center' as const, gap: look.spacing.sm, marginVertical: 8 },
+  logicalChip: {
+    borderRadius: look.radius.surface,
+    paddingVertical: look.spacing.sm,
+    paddingHorizontal: look.spacing.lg,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  // Wind-direction compass label: fontSize is constant, but fontWeight is
+  // selection-driven ('700' when selected, '400' otherwise in the original).
+  // Split into a base + selected override so the ternary lives in the JSX
+  // style array instead of inside a literal object. bodyStrong is the closest
+  // token weight to the original bold '700' (both looks define it as '600').
+  compassLabel: { fontSize: look.typography.body.size, fontWeight: look.typography.body.weight },
+  compassLabelSelected: { fontWeight: look.typography.bodyStrong.weight },
   addCondBtn: {
-    borderWidth: 1, borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 12,
+    borderWidth: 1,
+    borderRadius: look.radius.surface,
+    paddingVertical: look.spacing.lg,
+    alignItems: 'center' as const,
+    marginTop: 12,
   },
   summaryCard: {
-    borderWidth: 1, borderRadius: 12, padding: 16, marginTop: 24,
+    borderWidth: 1,
+    borderRadius: look.radius.surface,
+    padding: look.spacing.lg,
+    marginTop: 24,
   },
-  summaryTitle: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
-  summaryText: { fontSize: 14, lineHeight: 22 },
+  summaryTitle: { fontSize: look.typography.heading.size, fontWeight: look.typography.heading.weight, marginBottom: 8 },
+  summaryText: { fontSize: look.typography.body.size, lineHeight: look.typography.body.lineHeight },
   saveBtn: {
-    paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 20,
+    paddingVertical: look.spacing.lg,
+    borderRadius: look.radius.surface,
+    alignItems: 'center' as const,
+    marginTop: 20,
   },
-  saveBtnText: { fontSize: 18, fontWeight: '700' },
-  cancelBtn: { alignItems: 'center', paddingVertical: 16 },
+  saveBtnText: { fontSize: look.typography.heading.size, fontWeight: look.typography.heading.weight },
+  cancelBtn: { alignItems: 'center' as const, paddingVertical: look.spacing.lg },
+  cancelText: { fontSize: look.typography.heading.size },
 });

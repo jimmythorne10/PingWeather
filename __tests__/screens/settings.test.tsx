@@ -27,7 +27,23 @@ let mockSettingsState: any = {
   ...settingsActions,
 };
 const mockSetTheme = jest.fn();
-let mockThemeState: any = { themeName: 'classic', setTheme: mockSetTheme };
+const mockSetLook = jest.fn();
+const mockSetPalette = jest.fn();
+// The store now carries TWO axes: `look` is structure (and `tokens` holds its
+// values), `palette` is colour (and `colors` holds its values). The screen
+// reads both, so the mock has to supply both or every render throws.
+const { LOOKS } = jest.requireActual('../../src/theme/looks');
+const { PALETTES } = jest.requireActual('../../src/theme/palettes');
+let mockThemeState: any = {
+  look: 'classic',
+  palette: 'classic',
+  tokens: LOOKS.classic,
+  colors: PALETTES.classic,
+  themeName: 'classic',
+  setLook: mockSetLook,
+  setPalette: mockSetPalette,
+  setTheme: mockSetTheme,
+};
 
 jest.mock('../../src/stores/authStore', () => ({
   useAuthStore: (selector?: any) => (selector ? selector(mockAuthState) : mockAuthState),
@@ -40,10 +56,17 @@ jest.mock('../../src/stores/themeStore', () => ({
 }));
 
 jest.mock('../../src/theme', () => {
-  const tokens: any = new Proxy({}, { get: () => '#000' });
+  // Colours can stay a blanket proxy — this suite asserts text, not colour.
+  // STRUCTURE cannot: factories now read look.spacing.lg, look.typography.*.size
+  // and so on, so a proxy returning '#000' makes every arithmetic style NaN and
+  // every nested read throw. Hand the factory the REAL classic look tokens.
+  const colors: any = new Proxy({}, { get: () => '#000' });
+  const { LOOKS: REAL_LOOKS } = jest.requireActual('../../src/theme/looks');
   return {
-    useTokens: () => tokens,
-    useStyles: (factory: any) => factory(tokens),
+    useTokens: () => colors,
+    useColors: () => colors,
+    useLook: () => REAL_LOOKS.classic,
+    useStyles: (factory: any) => factory(colors, REAL_LOOKS.classic),
   };
 });
 
@@ -59,7 +82,16 @@ describe('SettingsScreen', () => {
       notificationsEnabled: true,
       ...settingsActions,
     };
-    mockThemeState = { themeName: 'classic', setTheme: mockSetTheme };
+    mockThemeState = {
+    look: 'classic',
+    palette: 'classic',
+    tokens: LOOKS.classic,
+    colors: PALETTES.classic,
+    themeName: 'classic',
+    setLook: mockSetLook,
+    setPalette: mockSetPalette,
+    setTheme: mockSetTheme,
+  };
   });
 
   // FR-SET-001: account email and tier shown
@@ -83,12 +115,30 @@ describe('SettingsScreen', () => {
     expect(screen.getByText('knots')).toBeTruthy();
   });
 
-  // FR-SET-003: theme selector with 3 options
-  it('shows 3 theme options', () => {
+  // FR-SET-003: the palette list is now SCOPED TO THE LOOK (FEAT-003), so the
+  // old flat "always 3 options" assertion no longer describes the screen. Under
+  // `classic` the three shipped palettes are offered; under `aurora` they must
+  // NOT be, because a light palette against dark proportions is the exact
+  // failure the look/palette pairing exists to prevent.
+  it('offers the three classic palettes while the look is classic', () => {
     render(<SettingsScreen />);
     expect(screen.getByText('Classic')).toBeTruthy();
     expect(screen.getByText('Dark')).toBeTruthy();
     expect(screen.getByText('Storm')).toBeTruthy();
+  });
+
+  it('offers only the aurora palettes while the look is aurora', () => {
+    mockThemeState = {
+      ...mockThemeState,
+      look: 'aurora',
+      palette: 'timber',
+      tokens: LOOKS.aurora,
+      colors: PALETTES.timber,
+    };
+    render(<SettingsScreen />);
+    expect(screen.getByText('Timber')).toBeTruthy();
+    expect(screen.getByText('Blaze')).toBeTruthy();
+    expect(screen.queryByText('Storm')).toBeNull();
   });
 
   // FR-SET-004: notification toggle
