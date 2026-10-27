@@ -121,9 +121,15 @@ describe('privacy policy discloses feedback', () => {
     expect(text).toMatch(/Feedback:/);
   });
 
+  const section = (title: string) =>
+    PRIVACY_POLICY_CONTENT.sections.find((s) => s.title === title)?.body ?? '';
+
   it('lists feedback among the data removed on account deletion', () => {
-    const deletion = PRIVACY_POLICY_CONTENT.sections.find((s) => /delete your account/i.test(s.body));
-    expect(deletion?.body).toMatch(/feedback/i);
+    expect(section('Data Deletion Requests')).toMatch(/alert history, feedback, and device tokens/);
+  });
+
+  it('states how long feedback is retained', () => {
+    expect(section('Data Retention')).toMatch(/- Feedback: Retained until you delete your account\./);
   });
 
   it('bumps the policy version past 1.1.0', () => {

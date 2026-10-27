@@ -89,8 +89,8 @@ export const EULA_CONTENT: LegalDocument = {
 // Privacy Policy
 // ────────────────────────────────────────────────────────────
 export const PRIVACY_POLICY_CONTENT: LegalDocument = {
-  version: '1.1.0',
-  effectiveDate: 'June 8, 2026',
+  version: '1.2.0',
+  effectiveDate: 'October 27, 2026',
   title: 'Privacy Policy',
   sections: [
     {
@@ -99,7 +99,7 @@ export const PRIVACY_POLICY_CONTENT: LegalDocument = {
     },
     {
       title: 'Data Collection',
-      body: 'We collect information in the following ways:\n\nAccount Information: When you create an account, we collect your email address, display name, and authentication credentials.\n\nLocation Data: When you add monitored locations, we store the geographic coordinates (latitude and longitude) and names you provide. We do not continuously track your device location.\n\nAlert Configuration: We store your alert rules, conditions, polling intervals, and notification preferences to provide the Service.\n\nDevice Information: We collect your push notification token, device type, operating system version, and app version to deliver notifications and provide troubleshooting support.\n\nUsage Data: We collect basic usage statistics such as number of alerts triggered, features used, and error logs to improve the Service.',
+      body: 'We collect information in the following ways:\n\nAccount Information: When you create an account, we collect your email address, display name, and authentication credentials.\n\nLocation Data: When you add monitored locations, we store the geographic coordinates (latitude and longitude) and names you provide. We do not continuously track your device location.\n\nAlert Configuration: We store your alert rules, conditions, polling intervals, and notification preferences to provide the Service.\n\nDevice Information: We collect your push notification token, device type, operating system version, and app version to deliver notifications and provide troubleshooting support.\n\nUsage Data: We collect basic usage statistics such as number of alerts triggered, features used, and error logs to improve the Service.\n\nFeedback: If you send feedback in the app, we store the options you select, any comments you write, whether you agreed to be contacted, and your app version, device platform, and subscription tier. We use it only to decide what to improve. If you agree to be contacted, we may reply to the email address on your account.',
     },
     {
       title: 'How We Use Your Data',
@@ -111,7 +111,7 @@ export const PRIVACY_POLICY_CONTENT: LegalDocument = {
     },
     {
       title: 'Data Retention',
-      body: 'We retain your data as follows:\n\n- Account information: Retained until you delete your account.\n- Location data: Retained until you remove the location or delete your account.\n- Alert rules: Retained until you delete the rule or your account.\n- Alert history: Retained for the duration specified by your subscription tier (7 days Free, 30 days Pro, 90 days Premium), then automatically purged.\n- Usage data: Retained in aggregated, anonymized form indefinitely for service improvement.',
+      body: 'We retain your data as follows:\n\n- Account information: Retained until you delete your account.\n- Location data: Retained until you remove the location or delete your account.\n- Alert rules: Retained until you delete the rule or your account.\n- Alert history: Retained for the duration specified by your subscription tier (7 days Free, 30 days Pro, 90 days Premium), then automatically purged.\n- Feedback: Retained until you delete your account.\n- Usage data: Retained in aggregated, anonymized form indefinitely for service improvement.',
     },
     {
       title: 'Data Security',
@@ -135,7 +135,7 @@ export const PRIVACY_POLICY_CONTENT: LegalDocument = {
     },
     {
       title: 'Data Deletion Requests',
-      body: 'You may delete your account and all associated data at any time:\n\n- Use the Delete Account option in the app Settings for immediate, permanent deletion.\n- Upon deletion, your profile, locations, alert rules, alert history, and device tokens are permanently and immediately removed from our systems.\n- Alternatively, contact us at privacy@truthcenteredtech.com with your account email; we will process email deletion requests within 30 days.\n- We may retain anonymized, aggregated data that cannot identify you for statistical purposes.',
+      body: 'You may delete your account and all associated data at any time:\n\n- Use the Delete Account option in the app Settings for immediate, permanent deletion.\n- Upon deletion, your profile, locations, alert rules, alert history, feedback, and device tokens are permanently and immediately removed from our systems.\n- Alternatively, contact us at privacy@truthcenteredtech.com with your account email; we will process email deletion requests within 30 days.\n- We may retain anonymized, aggregated data that cannot identify you for statistical purposes.',
     },
     {
       title: 'International Data Transfers',

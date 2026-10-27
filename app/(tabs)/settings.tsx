@@ -523,6 +523,10 @@ export default function SettingsScreen() {
           <Text style={styles.label}>Watch Tutorial</Text>
           <Text style={{ fontSize: 16, color: tokens.textTertiary }}>{'›'}</Text>
         </Pressable>
+        <Pressable style={styles.row} onPress={() => router.push('/feedback')}>
+          <Text style={styles.label}>Send Feedback</Text>
+          <Text style={{ fontSize: 16, color: tokens.textTertiary }}>{'›'}</Text>
+        </Pressable>
       </View>
 
       {/* Legal */}
