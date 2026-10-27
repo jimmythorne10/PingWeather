@@ -86,7 +86,8 @@ describe('SettingsScreen', () => {
   // FR-SET-003: theme selector with 3 options
   it('shows 3 theme options', () => {
     render(<SettingsScreen />);
-    expect(screen.getByText('Classic')).toBeTruthy();
+    // "Classic" is both a look (segment) and a palette (row) — expect both.
+    expect(screen.getAllByText('Classic')).toHaveLength(2);
     expect(screen.getByText('Dark')).toBeTruthy();
     expect(screen.getByText('Storm')).toBeTruthy();
   });

@@ -141,10 +141,12 @@ describe('Onboarding — EULA', () => {
 describe('Onboarding — Location Setup', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  // FR-ONBOARD-005: GPS option present
-  it('shows "Use My Current Location" (GPS) option', () => {
+  // FR-ONBOARD-005: GPS option present. Apple 5.1.1(iv) (commit 65d18dc)
+  // requires the pre-permission CTA to read "Continue", not a feature pitch.
+  it('shows the GPS option labelled "Continue" (Apple 5.1.1(iv))', () => {
     render(<LocationSetupScreen />);
-    expect(screen.getByText(/Use My Current Location/i)).toBeTruthy();
+    expect(screen.getByText('Continue')).toBeTruthy();
+    expect(screen.queryByText(/Use My Current Location/i)).toBeNull();
   });
 
   // FR-ONBOARD-005: manual lat/long entry present
@@ -161,20 +163,22 @@ describe('Onboarding — Location Setup', () => {
     expect(screen.getByPlaceholderText(/Search.*place|address/i)).toBeTruthy();
   });
 
-  // FR-ONBOARD-005: "Skip for now" present
-  it('shows Skip option', () => {
+  // Apple 5.1.1(iv) (commit 65d18dc): a skip button on a permission
+  // pre-prompt was a rejection reason. It must stay gone.
+  it('offers no Skip option before the location permission prompt', () => {
     render(<LocationSetupScreen />);
-    expect(screen.getByText(/Skip for now/i)).toBeTruthy();
+    expect(screen.queryByText(/Skip/i)).toBeNull();
   });
 });
 
 describe('Onboarding — Notification Setup', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  // FR-ONBOARD-006: Enable Notifications button
-  it('shows Enable Notifications button', () => {
+  // FR-ONBOARD-006: enable CTA. Apple 5.1.1(iv) (commit 65d18dc) renamed it.
+  it('shows the enable button labelled "Continue" (Apple 5.1.1(iv))', () => {
     render(<NotificationSetupScreen />);
-    expect(screen.getByText('Enable Notifications')).toBeTruthy();
+    expect(screen.getByText('Continue')).toBeTruthy();
+    expect(screen.queryByText('Enable Notifications')).toBeNull();
   });
 
   // FR-ONBOARD-006: skip option

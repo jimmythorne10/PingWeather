@@ -6,11 +6,17 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import { WalkthroughModal } from '../../src/components/WalkthroughModal';
 
 jest.mock('../../src/theme', () => {
+  // Colours can be a blanket proxy; STRUCTURE cannot — factories read
+  // look.spacing.lg etc., so hand them the REAL classic look tokens.
   const tokens: any = new Proxy({}, { get: () => '#000' });
-  return { useTokens: () => tokens, useStyles: (factory: any) => factory(tokens) };
+  const { LOOKS: REAL_LOOKS } = jest.requireActual('../../src/theme/looks');
+  return {
+    useTokens: () => tokens,
+    useStyles: (factory: any) => factory(tokens, REAL_LOOKS.classic),
+  };
 });
 
-const STEPS_COUNT = 5;
+const STEPS_COUNT = 6;
 
 const STEP_1_EMOJI = '🏠';
 const STEP_1_TITLE = 'Your Home Dashboard';
