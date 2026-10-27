@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, Switch, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, Switch, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
