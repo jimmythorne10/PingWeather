@@ -368,6 +368,15 @@ expo-router ~6.0.23, expo-notifications ~0.32.16, expo-location ~19.0.8, expo-co
 **Learning:** Always run the FULL `npx jest` before quoting a failure count. Theme mocks must pass real look tokens (`jest.requireActual('../../src/theme/looks').LOOKS.classic`). Reminder: components project is still text-presence only — not verification.
 **Files:** __tests__/screens/*, __tests__/components/WalkthroughModal.test.tsx
 
+### `expo install --fix` downgrades jest — jest is excluded
+**Discovered:** 2026-10-27
+**Learning:** SDK 54 wants jest ~29.7; this project runs jest 30. `--fix` silently rolls jest/@types/jest back a major. `package.json` `expo.install.exclude` now lists both. Patch bumps can also leave duplicate native modules (expo-font) — run `npx expo-doctor` after every bump and `npm dedupe` if it flags duplicates.
+
+### runtimeVersion policy is `sdkVersion` — OTA cannot protect native changes
+**Discovered:** 2026-10-27
+**Learning:** Native patch bumps and new native modules (design-system-v2 adds expo-blur/linear-gradient/svg) do NOT change runtimeVersion under `sdkVersion`, so an `eas update` from this branch WOULD be delivered to current store binaries that lack those modules → crash. design-system-v2 ships by store build only. Consider `"policy": "fingerprint"` before the next production build.
+**Files:** app.json
+
 ### EAS build discipline
 `autoIncrement: true` handles versionCode in preview + production. Never manually bump.
 
