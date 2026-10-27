@@ -122,7 +122,8 @@ describe('SettingsScreen', () => {
   // failure the look/palette pairing exists to prevent.
   it('offers the three classic palettes while the look is classic', () => {
     render(<SettingsScreen />);
-    expect(screen.getByText('Classic')).toBeTruthy();
+    // "Classic" is both a look (segment) and a palette (row) — expect both.
+    expect(screen.getAllByText('Classic')).toHaveLength(2);
     expect(screen.getByText('Dark')).toBeTruthy();
     expect(screen.getByText('Storm')).toBeTruthy();
   });

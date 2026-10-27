@@ -35,10 +35,13 @@ jest.mock('../../src/stores/alertRulesStore', () => ({
 }));
 
 jest.mock('../../src/theme', () => {
+  // Colours can be a blanket proxy; STRUCTURE cannot — factories read
+  // look.spacing.lg etc., so hand them the REAL classic look tokens.
   const tokens: any = new Proxy({}, { get: () => '#000' });
+  const { LOOKS: REAL_LOOKS } = jest.requireActual('../../src/theme/looks');
   return {
     useTokens: () => tokens,
-    useStyles: (factory: any) => factory(tokens),
+    useStyles: (factory: any) => factory(tokens, REAL_LOOKS.classic),
   };
 });
 

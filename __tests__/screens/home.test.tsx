@@ -47,6 +47,19 @@ jest.mock('../../src/services/weatherApi', () => ({
         precipitation_probability_max: [10, 40, 0],
         wind_speed_10m_max: [5, 8, 6],
         uv_index_max: [5, 4, 6],
+        weather_code: [0, 3, 61],
+      },
+      // get-forecast always returns hourly (weatherApi requests it and the
+      // response type requires it); the home card reads it for "Now".
+      hourly: {
+        time: ['2026-04-07T00:00', '2026-04-07T01:00'],
+        temperature_2m: [55, 54],
+        relative_humidity_2m: [60, 62],
+        precipitation_probability: [0, 0],
+        wind_speed_10m: [5, 6],
+        apparent_temperature: [54, 53],
+        uv_index: [0, 0],
+        weather_code: [0, 0],
       },
     })
   ),
@@ -54,10 +67,13 @@ jest.mock('../../src/services/weatherApi', () => ({
 
 // Theme mocks (useStyles/useTokens return simple objects)
 jest.mock('../../src/theme', () => {
+  // Colours can be a blanket proxy; STRUCTURE cannot — factories read
+  // look.spacing.lg etc., so hand them the REAL classic look tokens.
   const tokens: any = new Proxy({}, { get: () => '#000' });
+  const { LOOKS: REAL_LOOKS } = jest.requireActual('../../src/theme/looks');
   return {
     useTokens: () => tokens,
-    useStyles: (factory: any) => factory(tokens),
+    useStyles: (factory: any) => factory(tokens, REAL_LOOKS.classic),
   };
 });
 

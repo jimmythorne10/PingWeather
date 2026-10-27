@@ -34,6 +34,7 @@ jest.mock('@rnmapbox/maps', () => {
     __esModule: true,
     default: {
       setAccessToken: jest.fn(),
+      setTelemetryEnabled: jest.fn(),
       StyleURL: { Dark: 'mapbox://styles/mapbox/dark-v11' },
       MapView,
       Camera,
