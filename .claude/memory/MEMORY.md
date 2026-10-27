@@ -352,6 +352,22 @@ eas update --platform android --channel production --message "..."
 ### SDK pins (Expo SDK 54)
 expo-router ~6.0.23, expo-notifications ~0.32.16, expo-location ~19.0.8, expo-constants ~18.0.13, expo-linking ~8.0.11, expo-secure-store ~15.0.8
 
+### EAS `development` environment is EMPTY — dev profile reads `preview`
+**Discovered:** 2026-10-26
+**Context:** Pre-flight before the design-system-v2 dev-client build. `eas env:list --environment development` returned no variables; preview/production carry the Mapbox download tokens + public keys.
+**Learning:** `eas.json` development profile now sets `"environment": "preview"` (matches `.env.local`, which was pulled from preview). Note `eas env:list` on eas-cli 20.1 rejects `--non-interactive`. Neither preview nor production has `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` — verify where the Android RevenueCat key actually comes from before the next production build.
+**Files:** eas.json
+
+### Dev APK will not install over the Play Store app
+**Discovered:** 2026-10-26
+**Learning:** Same package id, different signing key (Play App Signing vs EAS keystore) → "App not installed". Uninstall the store app first, reinstall after testing.
+
+### Component-suite rot hides behind one crash
+**Discovered:** 2026-10-26
+**Context:** TASK-003 recorded "2 known failures"; the real full run was 56 failed. The useStyles `(colors, look)` signature change broke 6 theme mocks, and that crash masked older drift from the Apple resubmission (65d18dc): mapbox mock missing setTelemetryEnabled, onboarding copy, Stack mock, async loaders, hourly fixture, walkthrough step count.
+**Learning:** Always run the FULL `npx jest` before quoting a failure count. Theme mocks must pass real look tokens (`jest.requireActual('../../src/theme/looks').LOOKS.classic`). Reminder: components project is still text-presence only — not verification.
+**Files:** __tests__/screens/*, __tests__/components/WalkthroughModal.test.tsx
+
 ### EAS build discipline
 `autoIncrement: true` handles versionCode in preview + production. Never manually bump.
 
