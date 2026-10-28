@@ -256,6 +256,17 @@ See `evaluateConditions.test.ts`, `processInBatches.test.ts`, `pollWeatherTimezo
 
 ## Known Bugs & Workarounds
 
+### Settings crash on iOS store build #5 (fixed on feature/user-feedback, not yet shipped)
+**Discovered:** 2026-09-11 (fix branch), escalated 2026-10-27
+**Context:** `app/(tabs)/settings.tsx` used `Platform.select` (lines 132, 404) with no import. Line 404 renders unconditionally, so Settings throws ReferenceError and lands in the ErrorBoundary. The iOS App Store binary (build #5) was compiled from 5f8c164, which contains the bug, so iOS store users are affected regardless of OTA history. Android store builds came from b8b68a2 (no bug). Not yet confirmed on an iPhone.
+**Learning:** The fix (236aa74) sat on an unmerged branch for 6 weeks while `npm test` was permanently red, so nobody noticed. Guard: `__tests__/engine/platformImportGuard.test.ts`. It ships with the feedback OTA.
+**Files:** app/(tabs)/settings.tsx
+
+### User feedback table (migration 00022, applied live 2026-10-27)
+**Learning:** `public.feedback` lets users insert their own rows only; with no select policy, users read nothing (verified live inside a rolled-back transaction: own insert OK, 0 rows visible, cross-user insert fails RLS, empty row fails `feedback_not_empty`). Read submissions in the dashboard SQL editor: `select created_at, priorities, message, contact_ok, platform, subscription_tier, app_version from feedback order by created_at desc;`. To email a user back, join `profiles.email` and only where `contact_ok` is true.
+**Files:** supabase/migrations/00022_user_feedback.sql, src/services/feedback.ts, app/feedback.tsx
+
+
 ### send-digest cron still 401 — vault key mismatch (needs migration fix)
 
 The `send-digest-hourly` pg_cron job sends `Authorization: Bearer <poll_weather_service_role_key>` from vault. The `send-digest` function validates against `SUPABASE_SERVICE_ROLE_KEY` (Supabase built-in env var). These don't match for unknown reasons — manual test with `SEND_DIGEST_SECRET` function secret works, but the scheduled cron still returns 401 every hour.
